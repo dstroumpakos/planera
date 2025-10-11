@@ -16,6 +16,12 @@ export const createAuth = (
     { optionsOnly } = { optionsOnly: false }
 ) => {
     return betterAuth({
+        socialProviders: {
+            google: {
+                clientId: process.env.GOOGLE_CLIENT_ID as string,
+                clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+            },
+        },
         // disable logging when createAuth is called just to generate options.
         // this is not required, but there's a lot of noise in logs without it.
         logger: {

@@ -24,6 +24,18 @@ export default function Index() {
                     <Text>Sign in anonymously</Text>
                 </Pressable>
             </View>
+            <View>
+                <Pressable
+                    onPress={async () => {
+                        const data = await authClient.signIn.social({
+                            provider: "google",
+                        });
+                        console.log(data);
+                    }}
+                >
+                    <Text>Sign in with Google</Text>
+                </Pressable>
+            </View>
         </View>
     );
 }
