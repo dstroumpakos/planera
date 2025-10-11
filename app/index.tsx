@@ -1,6 +1,7 @@
 import { authClient } from "@/lib/auth-client";
 import { Unauthenticated, Authenticated, AuthLoading } from "convex/react";
-import { Text, View, StyleSheet, Image, Pressable } from "react-native";
+import { useState } from "react";
+import { Text, View, StyleSheet, Image, Pressable, TextInput } from "react-native";
 
 export default function Index() {
     return (
@@ -36,6 +37,51 @@ export default function Index() {
                     <Text>Sign in with Google</Text>
                 </Pressable>
             </View>
+            <EmailSignIn />
+            <View>
+                <Pressable
+                    onPress={async () => {
+                        await authClient.signOut();
+                    }}
+                >
+                    <Text>Sign out</Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+}
+
+function EmailSignIn() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+
+    return (
+        <View>
+            <TextInput value={email} onChangeText={setEmail} />
+            <TextInput value={password} onChangeText={setPassword} />
+            <Pressable
+                onPress={async () => {
+                    const data = await authClient.signIn.email({
+                        email,
+                        password,
+                    });
+                    console.log(data);
+                }}
+            >
+                <Text>Sign in with email and password</Text>
+            </Pressable>
+            <Pressable
+                onPress={async () => {
+                    const data = await authClient.signUp.email({
+                        email,
+                        password,
+                        name: email,
+                    });
+                    console.log(data);
+                }}
+            >
+                <Text>Sign up with email and password</Text>
+            </Pressable>
         </View>
     );
 }
