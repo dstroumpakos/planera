@@ -36,9 +36,9 @@ export const createAuth = (
         },
         plugins: [
             // The Expo and Convex plugins are required
-            expo(),
-            convex(),
             anonymous(),
+            convex(),
+            expo(),
         ],
     });
 };

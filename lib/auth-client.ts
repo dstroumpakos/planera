@@ -8,12 +8,12 @@ import { anonymousClient } from "better-auth/client/plugins";
 export const authClient = createAuthClient({
     baseURL: process.env.EXPO_PUBLIC_CONVEX_SITE_URL,
     plugins: [
+        anonymousClient(),
+        convexClient(),
         expoClient({
             scheme: Constants.expoConfig?.scheme as string,
             storagePrefix: Constants.expoConfig?.scheme as string,
             storage: SecureStore,
         }),
-        convexClient(),
-        anonymousClient(),
     ],
 });
