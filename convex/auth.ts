@@ -1,5 +1,5 @@
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
-import { convex } from "@convex-dev/better-auth/plugins";
+import { convex, crossDomain } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
 import { expo } from "@better-auth/expo";
 import { components } from "./_generated/api";
@@ -10,6 +10,8 @@ import { anonymous } from "better-auth/plugins";
 // The component client has methods needed for integrating Convex with Better Auth,
 // as well as helper methods for general use.
 export const authComponent = createClient<DataModel>(components.betterAuth);
+
+const siteUrl = process.env.SITE_URL!;
 
 export const createAuth = (
     ctx: GenericCtx<DataModel>,
@@ -27,7 +29,7 @@ export const createAuth = (
         logger: {
             disabled: optionsOnly,
         },
-        trustedOrigins: ["myapp://"],
+        trustedOrigins: [siteUrl, "myapp://"],
         database: authComponent.adapter(ctx),
         // Configure simple, non-verified email/password to get started
         emailAndPassword: {
@@ -37,8 +39,9 @@ export const createAuth = (
         plugins: [
             // The Expo and Convex plugins are required
             anonymous(),
-            convex(),
             expo(),
+            convex(),
+            crossDomain({ siteUrl }),
         ],
     });
 };

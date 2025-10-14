@@ -1,7 +1,8 @@
 import { authClient } from "@/lib/auth-client";
 import { Unauthenticated, Authenticated, AuthLoading } from "convex/react";
+import Constants from "expo-constants";
 import { useState } from "react";
-import { Text, View, StyleSheet, Image, Pressable, TextInput } from "react-native";
+import { Text, View, StyleSheet, Image, Pressable, TextInput, Platform } from "react-native";
 
 export default function Index() {
     return (
@@ -30,6 +31,10 @@ export default function Index() {
                     onPress={async () => {
                         const data = await authClient.signIn.social({
                             provider: "google",
+                            callbackURL:
+                                Platform.OS === "web"
+                                    ? undefined
+                                    : `${Constants.expoConfig?.scheme}:///`,
                         });
                         console.log(data);
                     }}
