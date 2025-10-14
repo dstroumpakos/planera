@@ -1,6 +1,6 @@
-# Bloom Templates
+# Bloom Template
 
-This directory contains templates for Bloom apps with pre-configured authentication using Better Auth and Convex.
+This is a template for Bloom apps with pre-configured authentication using Better Auth and Convex.
 
 ## Authentication
 
@@ -62,6 +62,76 @@ const signOut = async () => {
     await authClient.signOut();
 };
 ```
+
+## Better Auth as a Convex Component
+
+The Better Auth integration is implemented as a Convex component, which means it runs in a sandboxed environment separate from your main app data. Key implications:
+
+- **Isolated Data**: Auth data (users, sessions, accounts) lives in the component's own schema and cannot be directly queried from your app's Convex functions
+- **Separate Functions**: The component has its own set of functions with strict boundaries
+- **Additional User Data**: If you need to store extra user information beyond what Better Auth provides, create a new table in your main app schema (see [Convex Components documentation](https://docs.convex.dev/components/using-components) for more details)
+
+### Triggers
+
+Better Auth provides **triggers** - a powerful feature for running transactional callbacks when authentication data changes. Triggers execute in the same transaction as the auth operation and can be used to:
+
+- Create user profiles in your app when a new user signs up
+- Update related data when user information changes
+- Clean up user data when accounts are deleted
+
+**Example**: Automatically create a user profile on signup
+
+```tsx
+// In your Convex component configuration
+triggers: {
+  user: {
+    onCreate: async (ctx, doc) => {
+      // Runs transactionally when a new user is created
+      await ctx.db.insert("userProfiles", {
+        userId: doc._id,
+        createdAt: Date.now(),
+      });
+    },
+    onUpdate: async (ctx, newDoc, oldDoc) => {
+      // Handle user updates
+    },
+    onDelete: async (ctx, doc) => {
+      // Clean up related data
+    }
+  }
+}
+```
+
+**Important**: If a trigger throws an error, the entire operation (including the auth change) will be rolled back.
+
+## Protecting Convex Functions with Authentication
+
+To ensure only authenticated users can run your Convex functions, use the custom functions defined in `convex/functions.ts` instead of the standard Convex functions:
+
+```typescript
+// ❌ Don't use standard functions for authenticated routes
+import { query, mutation, action } from "./_generated/server";
+
+// ✅ Use custom auth functions instead
+import { authQuery, authMutation, authAction } from "./functions";
+
+// This query will automatically reject unauthenticated users
+export const getMyData = authQuery({
+  handler: async (ctx) => {
+    // ctx.user is guaranteed to exist here
+    return await ctx.db
+      .query("data")
+      .filter((q) => q.eq(q.field("userId"), ctx.user._id))
+      .collect();
+  },
+});
+```
+
+These custom functions:
+- Automatically verify the user is authenticated
+- Throw an error if no valid session exists
+- Provide a `ctx.user` object with the authenticated user's information
+- Work for queries (`authQuery`), mutations (`authMutation`), and actions (`authAction`)
 
 ## Showing UI Based on Authentication State
 

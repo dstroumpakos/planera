@@ -1,92 +1,13 @@
-import { authClient } from "@/lib/auth-client";
-import { Unauthenticated, Authenticated, AuthLoading } from "convex/react";
-import Constants from "expo-constants";
-import { useState } from "react";
-import { Text, View, StyleSheet, Image, Pressable, TextInput, Platform } from "react-native";
+import { Text, View, StyleSheet, Image } from "react-native";
 
 export default function Index() {
     return (
         <View style={styles.container}>
-            <Unauthenticated>
-                <Text>logged out</Text>
-            </Unauthenticated>
-            <Authenticated>
-                <Text>Logged in</Text>
-            </Authenticated>
-            <AuthLoading>
-                <Text>Loading...</Text>
-            </AuthLoading>
-            <View>
-                <Pressable
-                    onPress={async () => {
-                        const user = await authClient.signIn.anonymous();
-                        console.log(user);
-                    }}
-                >
-                    <Text>Sign in anonymously</Text>
-                </Pressable>
-            </View>
-            <View>
-                <Pressable
-                    onPress={async () => {
-                        const data = await authClient.signIn.social({
-                            provider: "google",
-                            callbackURL:
-                                Platform.OS === "web"
-                                    ? undefined
-                                    : `${Constants.expoConfig?.scheme}:///`,
-                        });
-                        console.log(data);
-                    }}
-                >
-                    <Text>Sign in with Google</Text>
-                </Pressable>
-            </View>
-            <EmailSignIn />
-            <View>
-                <Pressable
-                    onPress={async () => {
-                        await authClient.signOut();
-                    }}
-                >
-                    <Text>Sign out</Text>
-                </Pressable>
-            </View>
-        </View>
-    );
-}
-
-function EmailSignIn() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-
-    return (
-        <View>
-            <TextInput value={email} onChangeText={setEmail} />
-            <TextInput value={password} onChangeText={setPassword} />
-            <Pressable
-                onPress={async () => {
-                    const data = await authClient.signIn.email({
-                        email,
-                        password,
-                    });
-                    console.log(data);
-                }}
-            >
-                <Text>Sign in with email and password</Text>
-            </Pressable>
-            <Pressable
-                onPress={async () => {
-                    const data = await authClient.signUp.email({
-                        email,
-                        password,
-                        name: email,
-                    });
-                    console.log(data);
-                }}
-            >
-                <Text>Sign up with email and password</Text>
-            </Pressable>
+            <Image source={require("../assets/images/adaptive-icon.png")} style={styles.image} />
+            <Text style={styles.heading}>Your app starts here</Text>
+            <Text style={styles.text}>
+                In just a moment, you’ll see your app begin to take shape.
+            </Text>
         </View>
     );
 }
