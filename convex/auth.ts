@@ -1,15 +1,23 @@
-import { createClient, type GenericCtx } from "@convex-dev/better-auth";
+import { AuthFunctions, createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex, crossDomain } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
 import { expo } from "@better-auth/expo";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { anonymous } from "better-auth/plugins";
 
+const authFunctions: AuthFunctions = internal.auth;
+
 // The component client has methods needed for integrating Convex with Better Auth,
 // as well as helper methods for general use.
-export const authComponent = createClient<DataModel>(components.betterAuth);
+export const authComponent = createClient<DataModel>(components.betterAuth, {
+    authFunctions,
+    triggers: {},
+});
+
+// export the trigger API functions so that triggers work
+export const { onCreate, onUpdate, onDelete } = authComponent.triggersApi();
 
 const siteUrl = process.env.SITE_URL!;
 
