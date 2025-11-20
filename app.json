@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Bloom app (rename me)",
-    "slug": "bloom-app-rename-me",
+    "name": "AI Trip Generator",
+    "slug": "ai-trip-generator",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -39,6 +39,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "displayName": "AI Trip Generator"
   }
 }
