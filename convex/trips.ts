@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { authMutation, authQuery, authAction } from "./functions";
-import { api } from "./_generated/api";
+import { authMutation, authQuery } from "./functions";
+import { internalAction, internalMutation } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 
 export const create = authMutation({
     args: {
@@ -24,13 +25,13 @@ export const create = authMutation({
         });
 
         // Schedule the generation action
-        await ctx.scheduler.runAfter(0, api.trips.generate, { tripId });
+        await ctx.scheduler.runAfter(0, internal.trips.generate, { tripId });
 
         return tripId;
     },
 });
 
-export const generate = authAction({
+export const generate = internalAction({
     args: { tripId: v.id("trips") },
     handler: async (ctx, args) => {
         // Simulate AI generation delay
@@ -74,7 +75,7 @@ export const generate = authAction({
             ],
         };
 
-        await ctx.runMutation(api.trips.updateItinerary, {
+        await ctx.runMutation(internal.trips.updateItinerary, {
             tripId: args.tripId,
             itinerary,
             status: "completed",
@@ -82,7 +83,7 @@ export const generate = authAction({
     },
 });
 
-export const updateItinerary = authMutation({
+export const updateItinerary = internalMutation({
     args: {
         tripId: v.id("trips"),
         itinerary: v.any(),
