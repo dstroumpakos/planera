@@ -1,16 +1,9 @@
-import { Text, View, StyleSheet, Image, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Link, useRouter } from "expo-router";
+import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { authClient } from "@/lib/auth-client";
-import { Ionicons } from "@expo/vector-icons";
-import { Alert } from "react-native";
-import { Id } from "@/convex/_generated/dataModel";
+import { Redirect } from "expo-router";
 
 export default function Index() {
-    const router = useRouter();
-
     return (
         <View style={styles.container}>
             <AuthLoading>
@@ -33,101 +26,8 @@ export default function Index() {
             </Unauthenticated>
 
             <Authenticated>
-                <TripList />
-                <TouchableOpacity 
-                    style={styles.fab} 
-                    onPress={() => router.push("/create-trip")}
-                >
-                    <Ionicons name="add" size={30} color="white" />
-                </TouchableOpacity>
+                <Redirect href="/(tabs)" />
             </Authenticated>
-        </View>
-    );
-}
-
-function TripList() {
-    const trips = useQuery(api.trips.list);
-    const deleteTrip = useMutation(api.trips.deleteTrip);
-    const router = useRouter();
-
-    const handleDelete = (tripId: Id<"trips">) => {
-        Alert.alert(
-            "Delete Trip",
-            "Are you sure you want to delete this trip?",
-            [
-                { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Delete", 
-                    style: "destructive", 
-                    onPress: () => deleteTrip({ tripId }) 
-                }
-            ]
-        );
-    };
-
-    if (trips === undefined) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#007AFF" />
-            </View>
-        );
-    }
-
-    if (trips.length === 0) {
-        return (
-            <View style={styles.emptyState}>
-                <Ionicons name="airplane-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>No trips yet.</Text>
-                <Text style={styles.emptySubtext}>Tap the + button to plan your first adventure!</Text>
-            </View>
-        );
-    }
-
-    return (
-        <FlatList
-            data={trips}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-                <TouchableOpacity 
-                    style={styles.card} 
-                    onPress={() => router.push(`/trip/${item._id}`)}
-                >
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.destination}>{item.destination}</Text>
-                        <View style={styles.headerRight}>
-                            <StatusBadge status={item.status} />
-                            <TouchableOpacity 
-                                onPress={() => handleDelete(item._id)}
-                                style={styles.deleteBtn}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            >
-                                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    <Text style={styles.dates}>
-                        {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
-                    </Text>
-                    <Text style={styles.details}>
-                        {item.travelers} Traveler{item.travelers > 1 ? 's' : ''} • {item.budget} Budget
-                    </Text>
-                </TouchableOpacity>
-            )}
-        />
-    );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    const colors: Record<string, string> = {
-        generating: "#FF9500",
-        completed: "#34C759",
-        failed: "#FF3B30",
-    };
-    
-    return (
-        <View style={[styles.badge, { backgroundColor: colors[status] || "#8E8E93" }]}>
-            <Text style={styles.badgeText}>{status.toUpperCase()}</Text>
         </View>
     );
 }
@@ -136,12 +36,13 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#F2F2F7",
-    },
-    authContainer: {
-        flex: 1,
         justifyContent: "center",
         alignItems: "center",
+    },
+    authContainer: {
+        width: "100%",
         padding: 20,
+        alignItems: "center",
     },
     logo: {
         width: 120,
@@ -173,97 +74,5 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 18,
         fontWeight: "600",
-    },
-    center: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    listContent: {
-        padding: 16,
-        paddingBottom: 100,
-    },
-    card: {
-        backgroundColor: "white",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    cardHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 8,
-    },
-    destination: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#1C1C1E",
-    },
-    dates: {
-        fontSize: 14,
-        color: "#8E8E93",
-        marginBottom: 4,
-    },
-    details: {
-        fontSize: 14,
-        color: "#3A3A3C",
-    },
-    badge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    badgeText: {
-        color: "white",
-        fontSize: 10,
-        fontWeight: "bold",
-    },
-    headerRight: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    deleteBtn: {
-        padding: 4,
-    },
-    fab: {
-        position: "absolute",
-        bottom: 32,
-        right: 32,
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: "#007AFF",
-        justifyContent: "center",
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    emptyState: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 32,
-    },
-    emptyText: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#1C1C1E",
-        marginTop: 16,
-    },
-    emptySubtext: {
-        fontSize: 16,
-        color: "#8E8E93",
-        textAlign: "center",
-        marginTop: 8,
     },
 });
