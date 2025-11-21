@@ -1,19 +1,22 @@
 import { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function CreateTrip() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const [formData, setFormData] = useState({
         destination: "",
+        origin: "",
         startDate: new Date().getTime(),
         endDate: new Date().getTime() + 7 * 24 * 60 * 60 * 1000, // Default 1 week
         budget: "Medium",
@@ -22,9 +25,15 @@ export default function CreateTrip() {
     });
 
     const handleNext = () => {
-        if (step === 1 && !formData.destination) {
-            Alert.alert("Required", "Please enter a destination");
-            return;
+        if (step === 1) {
+            if (!formData.destination) {
+                Alert.alert("Required", "Please enter a destination");
+                return;
+            }
+            if (!formData.origin) {
+                Alert.alert("Required", "Please enter where you are flying from");
+                return;
+            }
         }
         if (step < 4) {
             setStep(step + 1);
@@ -46,6 +55,7 @@ export default function CreateTrip() {
         try {
             const tripId = await createTrip({
                 destination: formData.destination,
+                origin: formData.origin,
                 startDate: formData.startDate,
                 endDate: formData.endDate,
                 budget: formData.budget,
@@ -86,7 +96,9 @@ export default function CreateTrip() {
             <ScrollView contentContainerStyle={styles.content}>
                 {step === 1 && (
                     <View>
-                        <Text style={styles.question}>Where do you want to go?</Text>
+                        <Text style={styles.question}>Where is your adventure?</Text>
+                        
+                        <Text style={styles.label}>Destination</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="e.g. Paris, Tokyo, New York"
@@ -94,14 +106,56 @@ export default function CreateTrip() {
                             onChangeText={(text) => setFormData({ ...formData, destination: text })}
                             autoFocus
                         />
-                        <Text style={styles.helperText}>Enter a city, country, or region.</Text>
+                        
+                        <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="e.g. Athens International Airport"
+                            value={formData.origin}
+                            onChangeText={(text) => setFormData({ ...formData, origin: text })}
+                        />
+                        <Text style={styles.helperText}>Enter your departure city or airport.</Text>
                     </View>
                 )}
 
                 {step === 2 && (
                     <View>
                         <Text style={styles.question}>When are you planning to go?</Text>
-                        <Text style={styles.label}>Duration (Days)</Text>
+                        
+                        <Text style={styles.label}>Start Date</Text>
+                        <TouchableOpacity 
+                            style={styles.dateButton}
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+                            <Text style={styles.dateText}>
+                                {new Date(formData.startDate).toLocaleDateString()}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={new Date(formData.startDate)}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                minimumDate={new Date()}
+                                onChange={(event, selectedDate) => {
+                                    setShowDatePicker(false);
+                                    if (selectedDate) {
+                                        const newStart = selectedDate.getTime();
+                                        // Maintain duration if possible, or reset end date
+                                        const duration = formData.endDate - formData.startDate;
+                                        setFormData({
+                                            ...formData,
+                                            startDate: newStart,
+                                            endDate: newStart + duration
+                                        });
+                                    }
+                                }}
+                            />
+                        )}
+
+                        <Text style={[styles.label, { marginTop: 24 }]}>Duration (Days)</Text>
                         <View style={styles.row}>
                             <TouchableOpacity 
                                 style={styles.counterBtn} 
@@ -127,7 +181,9 @@ export default function CreateTrip() {
                                 <Ionicons name="add" size={24} color="#007AFF" />
                             </TouchableOpacity>
                         </View>
-                        <Text style={styles.helperText}>We'll plan a trip starting from tomorrow.</Text>
+                        <Text style={styles.helperText}>
+                            Trip ends on {new Date(formData.endDate).toLocaleDateString()}
+                        </Text>
                     </View>
                 )}
 
@@ -346,5 +402,19 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 18,
         fontWeight: "bold",
+    },
+    dateButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F2F2F7",
+        padding: 16,
+        borderRadius: 12,
+        gap: 12,
+        marginBottom: 8,
+    },
+    dateText: {
+        fontSize: 18,
+        color: "#1C1C1E",
+        fontWeight: "500",
     },
 });

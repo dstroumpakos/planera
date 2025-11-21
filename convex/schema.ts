@@ -5,6 +5,7 @@ export default defineSchema({
     trips: defineTable({
         userId: v.string(),
         destination: v.string(),
+        origin: v.optional(v.string()), // Added origin field
         startDate: v.number(),
         endDate: v.number(),
         budget: v.string(), // e.g. "low", "medium", "high" or specific amount

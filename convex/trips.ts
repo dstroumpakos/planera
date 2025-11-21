@@ -7,6 +7,7 @@ import OpenAI from "openai";
 export const create = authMutation({
     args: {
         destination: v.string(),
+        origin: v.string(), // Added origin argument
         startDate: v.number(),
         endDate: v.number(),
         budget: v.string(),
@@ -17,6 +18,7 @@ export const create = authMutation({
         const tripId = await ctx.db.insert("trips", {
             userId: ctx.user._id,
             destination: args.destination,
+            origin: args.origin, // Store origin
             startDate: args.startDate,
             endDate: args.endDate,
             budget: args.budget,
@@ -25,7 +27,7 @@ export const create = authMutation({
             status: "generating",
         });
 
-        const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
+        const prompt = `Plan a trip to ${args.destination} from ${args.origin} for ${args.travelers} people.
         Budget: ${args.budget}.
         Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
         Interests: ${args.interests.join(", ")}.`;
