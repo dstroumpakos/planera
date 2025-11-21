@@ -57,6 +57,86 @@ export default function TripDetails() {
         if (url) Linking.openURL(url);
     };
 
+    const renderFlights = () => {
+        if (Array.isArray(itinerary.flights)) {
+            return (
+                <View style={styles.card}>
+                    {itinerary.flights.map((flight: any, index: number) => (
+                        <View key={index} style={styles.row}>
+                            <View style={styles.flightInfo}>
+                                <Text style={styles.cardTitle}>{flight.airline}</Text>
+                                <Text style={styles.cardSubtitle}>{flight.flightNumber}</Text>
+                            </View>
+                            <Text style={styles.price}>${flight.price}</Text>
+                        </View>
+                    ))}
+                </View>
+            );
+        }
+
+        if (!itinerary.flights || !itinerary.flights.outbound) {
+            return (
+                <View style={styles.card}>
+                    <Text style={styles.cardSubtitle}>Flight details unavailable</Text>
+                </View>
+            );
+        }
+
+        return (
+            <View style={styles.card}>
+                <View style={styles.flightHeader}>
+                    <Text style={styles.flightPrice}>Total: ${itinerary.flights.price}</Text>
+                    <View style={styles.luggageBadge}>
+                        <Ionicons name="briefcase-outline" size={14} color="#007AFF" />
+                        <Text style={styles.luggageText}>{itinerary.flights.luggage}</Text>
+                    </View>
+                </View>
+                
+                <View style={styles.flightSegment}>
+                    <View style={styles.segmentHeader}>
+                        <Ionicons name="airplane" size={20} color="#007AFF" />
+                        <Text style={styles.segmentTitle}>Outbound</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <View style={styles.flightInfo}>
+                            <Text style={styles.cardTitle}>{itinerary.flights.outbound.airline}</Text>
+                            <Text style={styles.cardSubtitle}>{itinerary.flights.outbound.flightNumber}</Text>
+                        </View>
+                        <Text style={styles.duration}>{itinerary.flights.outbound.duration}</Text>
+                    </View>
+                    <View style={styles.flightTimes}>
+                        <Text style={styles.time}>{itinerary.flights.outbound.departure}</Text>
+                        <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
+                        <Text style={styles.time}>{itinerary.flights.outbound.arrival}</Text>
+                    </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.flightSegment}>
+                    <View style={styles.segmentHeader}>
+                        <Ionicons name="airplane" size={20} color="#007AFF" style={{ transform: [{ rotate: '180deg' }] }} />
+                        <Text style={styles.segmentTitle}>Return</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <View style={styles.flightInfo}>
+                            <Text style={styles.cardTitle}>{itinerary.flights.return.airline}</Text>
+                            <Text style={styles.cardSubtitle}>{itinerary.flights.return.flightNumber}</Text>
+                        </View>
+                        <Text style={styles.duration}>{itinerary.flights.return.duration}</Text>
+                    </View>
+                    <View style={styles.flightTimes}>
+                        <Text style={styles.time}>{itinerary.flights.return.departure}</Text>
+                        <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
+                        <Text style={styles.time}>{itinerary.flights.return.arrival}</Text>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
+    const hotels = Array.isArray(itinerary.hotels) ? itinerary.hotels : (itinerary.hotels ? [itinerary.hotels] : []);
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
@@ -78,65 +158,17 @@ export default function TripDetails() {
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Section title="Flights">
-                    <View style={styles.card}>
-                        <View style={styles.flightHeader}>
-                            <Text style={styles.flightPrice}>Total: ${itinerary.flights.price}</Text>
-                            <View style={styles.luggageBadge}>
-                                <Ionicons name="briefcase-outline" size={14} color="#007AFF" />
-                                <Text style={styles.luggageText}>{itinerary.flights.luggage}</Text>
-                            </View>
-                        </View>
-                        
-                        <View style={styles.flightSegment}>
-                            <View style={styles.segmentHeader}>
-                                <Ionicons name="airplane" size={20} color="#007AFF" />
-                                <Text style={styles.segmentTitle}>Outbound</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <View style={styles.flightInfo}>
-                                    <Text style={styles.cardTitle}>{itinerary.flights.outbound.airline}</Text>
-                                    <Text style={styles.cardSubtitle}>{itinerary.flights.outbound.flightNumber}</Text>
-                                </View>
-                                <Text style={styles.duration}>{itinerary.flights.outbound.duration}</Text>
-                            </View>
-                            <View style={styles.flightTimes}>
-                                <Text style={styles.time}>{itinerary.flights.outbound.departure}</Text>
-                                <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-                                <Text style={styles.time}>{itinerary.flights.outbound.arrival}</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.divider} />
-
-                        <View style={styles.flightSegment}>
-                            <View style={styles.segmentHeader}>
-                                <Ionicons name="airplane" size={20} color="#007AFF" style={{ transform: [{ rotate: '180deg' }] }} />
-                                <Text style={styles.segmentTitle}>Return</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <View style={styles.flightInfo}>
-                                    <Text style={styles.cardTitle}>{itinerary.flights.return.airline}</Text>
-                                    <Text style={styles.cardSubtitle}>{itinerary.flights.return.flightNumber}</Text>
-                                </View>
-                                <Text style={styles.duration}>{itinerary.flights.return.duration}</Text>
-                            </View>
-                            <View style={styles.flightTimes}>
-                                <Text style={styles.time}>{itinerary.flights.return.departure}</Text>
-                                <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-                                <Text style={styles.time}>{itinerary.flights.return.arrival}</Text>
-                            </View>
-                        </View>
-                    </View>
+                    {renderFlights()}
                 </Section>
 
                 <Section title="Accommodation Options">
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotelList}>
-                        {itinerary.hotels.map((hotel: any, index: number) => (
+                        {hotels.map((hotel: any, index: number) => (
                             <View key={index} style={styles.hotelCard}>
                                 <View style={styles.hotelHeader}>
                                     <Text style={styles.cardTitle} numberOfLines={1}>{hotel.name}</Text>
                                     <View style={styles.stars}>
-                                        {[...Array(hotel.stars)].map((_, i) => (
+                                        {[...Array(hotel.stars || 0)].map((_, i) => (
                                             <Ionicons key={i} name="star" size={12} color="#FF9500" />
                                         ))}
                                     </View>
