@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
 import { internalAction, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
+import OpenAI from "openai";
 
 export const create = authMutation({
     args: {
@@ -24,62 +25,79 @@ export const create = authMutation({
             status: "generating",
         });
 
+        const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
+        Budget: ${args.budget}.
+        Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
+        Interests: ${args.interests.join(", ")}.`;
+
         // Schedule the generation action
-        await ctx.scheduler.runAfter(0, internal.trips.generate, { tripId });
+        await ctx.scheduler.runAfter(0, internal.trips.generate, { tripId, prompt });
 
         return tripId;
     },
 });
 
 export const generate = internalAction({
-    args: { tripId: v.id("trips") },
+    args: { tripId: v.id("trips"), prompt: v.string() },
     handler: async (ctx, args) => {
-        // Simulate AI generation delay
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const { tripId, prompt } = args;
 
-        // Mock itinerary data
-        const itinerary = {
-            flights: [
-                {
-                    airline: "SkyHigh Air",
-                    flightNumber: "SH123",
-                    departure: "10:00 AM",
-                    arrival: "2:00 PM",
-                    price: 450,
-                },
-            ],
-            hotels: [
-                {
-                    name: "Grand Plaza Hotel",
-                    stars: 4,
-                    address: "123 Main St, City Center",
-                    pricePerNight: 150,
-                },
-            ],
-            dailyPlan: [
-                {
-                    day: 1,
-                    activities: [
-                        { time: "09:00 AM", title: "Breakfast at Tiffany's", description: "Famous cafe." },
-                        { time: "11:00 AM", title: "City Museum Tour", description: "Explore the history." },
-                        { time: "02:00 PM", title: "Lunch at The Park", description: "Relaxing picnic." },
-                    ],
-                },
-                {
-                    day: 2,
-                    activities: [
-                        { time: "10:00 AM", title: "Beach Visit", description: "Sunny vibes." },
-                        { time: "01:00 PM", title: "Seafood Lunch", description: "Fresh catch." },
-                    ],
-                },
-            ],
-        };
+        try {
+            const openai = new OpenAI({
+                apiKey: process.env.OPENAI_API_KEY,
+            });
 
-        await ctx.runMutation(internal.trips.updateItinerary, {
-            tripId: args.tripId,
-            itinerary,
-            status: "completed",
-        });
+            const systemPrompt = `
+        You are an expert travel agent. Generate a complete holiday package based on the user's request.
+        Return ONLY a valid JSON object with the following structure, and NO other text:
+        {
+          "flights": [
+            { "airline": "string", "flightNumber": "string", "departure": "string (time)", "arrival": "string (time)", "price": number }
+          ],
+          "hotels": [
+            { "name": "string", "stars": number, "address": "string", "pricePerNight": number }
+          ],
+          "dailyPlan": [
+            {
+              "day": number,
+              "activities": [
+                { "time": "string", "title": "string", "description": "string" }
+              ]
+            }
+          ]
+        }
+        Make the data realistic, including real flight numbers (or realistic looking ones), real hotels, and specific local activities.
+      `;
+
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: prompt },
+                ],
+                response_format: { type: "json_object" },
+            });
+
+            const content = completion.choices[0].message.content;
+            if (!content) {
+                throw new Error("No content returned from OpenAI");
+            }
+
+            const itinerary = JSON.parse(content);
+
+            await ctx.runMutation(internal.trips.updateItinerary, {
+                tripId,
+                itinerary,
+                status: "completed",
+            });
+        } catch (error) {
+            console.error("Error generating itinerary:", error);
+            await ctx.runMutation(internal.trips.updateItinerary, {
+                tripId,
+                itinerary: {},
+                status: "failed",
+            });
+        }
     },
 });
 
