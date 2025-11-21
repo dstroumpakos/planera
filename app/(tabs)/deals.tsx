@@ -3,45 +3,7 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from "react
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-
-const DEALS = [
-    {
-        id: "1",
-        destination: "Bali, Indonesia",
-        image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4",
-        price: 899,
-        originalPrice: 1299,
-        dates: "Next Weekend",
-        discount: "30% OFF"
-    },
-    {
-        id: "2",
-        destination: "Santorini, Greece",
-        image: "https://images.unsplash.com/photo-1613395877344-13d4c280d288",
-        price: 1199,
-        originalPrice: 1599,
-        dates: "Oct 15 - Oct 22",
-        discount: "25% OFF"
-    },
-    {
-        id: "3",
-        destination: "Kyoto, Japan",
-        image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e",
-        price: 1499,
-        originalPrice: 1899,
-        dates: "Nov 1 - Nov 10",
-        discount: "20% OFF"
-    },
-    {
-        id: "4",
-        destination: "New York, USA",
-        image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9",
-        price: 799,
-        originalPrice: 999,
-        dates: "Dec 5 - Dec 10",
-        discount: "20% OFF"
-    }
-];
+import { DEALS } from "@/lib/data";
 
 export default function Deals() {
     const router = useRouter();
@@ -60,7 +22,7 @@ export default function Deals() {
                 renderItem={({ item }) => (
                     <TouchableOpacity 
                         style={styles.card}
-                        onPress={() => router.push("/create-trip")}
+                        onPress={() => router.push(`/deal/${item.id}`)}
                     >
                         <Image source={{ uri: item.image }} style={styles.cardImage} />
                         <View style={styles.discountBadge}>
