@@ -51,11 +51,14 @@ export const generate = internalAction({
         You are an expert travel agent. Generate a complete holiday package based on the user's request.
         Return ONLY a valid JSON object with the following structure, and NO other text:
         {
-          "flights": [
-            { "airline": "string", "flightNumber": "string", "departure": "string (time)", "arrival": "string (time)", "price": number }
-          ],
+          "flights": {
+            "outbound": { "airline": "string", "flightNumber": "string", "departure": "string (time)", "arrival": "string (time)", "duration": "string" },
+            "return": { "airline": "string", "flightNumber": "string", "departure": "string (time)", "arrival": "string (time)", "duration": "string" },
+            "price": number,
+            "luggage": "string"
+          },
           "hotels": [
-            { "name": "string", "stars": number, "address": "string", "pricePerNight": number }
+            { "name": "string", "stars": number, "address": "string", "pricePerNight": number, "description": "string" }
           ],
           "dailyPlan": [
             {
@@ -66,7 +69,10 @@ export const generate = internalAction({
             }
           ]
         }
-        Make the data realistic, including real flight numbers (or realistic looking ones), real hotels, and specific local activities.
+        Make the data realistic.
+        For "flights", provide a realistic round-trip option. "luggage" should specify if it's included or the cost (e.g., "20kg bag included" or "+$50 for 23kg").
+        For "hotels", provide exactly 3 different options ranging from budget-friendly to luxury (if the user's budget allows), or just 3 good options.
+        For "dailyPlan", provide a detailed itinerary for the duration of the trip.
       `;
 
             const completion = await openai.chat.completions.create({

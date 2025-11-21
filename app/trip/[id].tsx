@@ -78,45 +78,77 @@ export default function TripDetails() {
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Section title="Flights">
-                    {itinerary.flights.map((flight: any, index: number) => (
-                        <View key={index} style={styles.card}>
-                            <View style={styles.row}>
-                                <Ionicons name="airplane" size={24} color="#007AFF" />
-                                <View style={styles.flightInfo}>
-                                    <Text style={styles.cardTitle}>{flight.airline}</Text>
-                                    <Text style={styles.cardSubtitle}>{flight.flightNumber}</Text>
-                                </View>
-                                <Text style={styles.price}>${flight.price}</Text>
-                            </View>
-                            <View style={styles.flightTimes}>
-                                <Text style={styles.time}>{flight.departure}</Text>
-                                <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-                                <Text style={styles.time}>{flight.arrival}</Text>
+                    <View style={styles.card}>
+                        <View style={styles.flightHeader}>
+                            <Text style={styles.flightPrice}>Total: ${itinerary.flights.price}</Text>
+                            <View style={styles.luggageBadge}>
+                                <Ionicons name="briefcase-outline" size={14} color="#007AFF" />
+                                <Text style={styles.luggageText}>{itinerary.flights.luggage}</Text>
                             </View>
                         </View>
-                    ))}
+                        
+                        <View style={styles.flightSegment}>
+                            <View style={styles.segmentHeader}>
+                                <Ionicons name="airplane" size={20} color="#007AFF" />
+                                <Text style={styles.segmentTitle}>Outbound</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <View style={styles.flightInfo}>
+                                    <Text style={styles.cardTitle}>{itinerary.flights.outbound.airline}</Text>
+                                    <Text style={styles.cardSubtitle}>{itinerary.flights.outbound.flightNumber}</Text>
+                                </View>
+                                <Text style={styles.duration}>{itinerary.flights.outbound.duration}</Text>
+                            </View>
+                            <View style={styles.flightTimes}>
+                                <Text style={styles.time}>{itinerary.flights.outbound.departure}</Text>
+                                <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
+                                <Text style={styles.time}>{itinerary.flights.outbound.arrival}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.flightSegment}>
+                            <View style={styles.segmentHeader}>
+                                <Ionicons name="airplane" size={20} color="#007AFF" style={{ transform: [{ rotate: '180deg' }] }} />
+                                <Text style={styles.segmentTitle}>Return</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <View style={styles.flightInfo}>
+                                    <Text style={styles.cardTitle}>{itinerary.flights.return.airline}</Text>
+                                    <Text style={styles.cardSubtitle}>{itinerary.flights.return.flightNumber}</Text>
+                                </View>
+                                <Text style={styles.duration}>{itinerary.flights.return.duration}</Text>
+                            </View>
+                            <View style={styles.flightTimes}>
+                                <Text style={styles.time}>{itinerary.flights.return.departure}</Text>
+                                <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
+                                <Text style={styles.time}>{itinerary.flights.return.arrival}</Text>
+                            </View>
+                        </View>
+                    </View>
                 </Section>
 
-                <Section title="Accommodation">
-                    {itinerary.hotels.map((hotel: any, index: number) => (
-                        <View key={index} style={styles.card}>
-                            <View style={styles.row}>
-                                <Ionicons name="bed" size={24} color="#007AFF" />
-                                <View style={styles.flightInfo}>
-                                    <Text style={styles.cardTitle}>{hotel.name}</Text>
+                <Section title="Accommodation Options">
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotelList}>
+                        {itinerary.hotels.map((hotel: any, index: number) => (
+                            <View key={index} style={styles.hotelCard}>
+                                <View style={styles.hotelHeader}>
+                                    <Text style={styles.cardTitle} numberOfLines={1}>{hotel.name}</Text>
                                     <View style={styles.stars}>
                                         {[...Array(hotel.stars)].map((_, i) => (
-                                            <Ionicons key={i} name="star" size={14} color="#FF9500" />
+                                            <Ionicons key={i} name="star" size={12} color="#FF9500" />
                                         ))}
                                     </View>
                                 </View>
+                                <Text style={styles.hotelDesc} numberOfLines={2}>{hotel.description}</Text>
                                 <Text style={styles.price}>${hotel.pricePerNight}/night</Text>
+                                <TouchableOpacity onPress={() => openMap(hotel.address)}>
+                                    <Text style={styles.address} numberOfLines={1}>{hotel.address} <Ionicons name="map" size={12} color="#007AFF" /></Text>
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity onPress={() => openMap(hotel.address)}>
-                                <Text style={styles.address}>{hotel.address} <Ionicons name="map" size={14} color="#007AFF" /></Text>
-                            </TouchableOpacity>
-                        </View>
-                    ))}
+                        ))}
+                    </ScrollView>
                 </Section>
 
                 <Section title="Daily Itinerary">
@@ -334,5 +366,80 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: "#007AFF",
         fontWeight: "500",
+    },
+    flightHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    flightPrice: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#007AFF",
+    },
+    luggageBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#E1F0FF",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        gap: 4,
+    },
+    luggageText: {
+        fontSize: 12,
+        color: "#007AFF",
+        fontWeight: "600",
+    },
+    flightSegment: {
+        marginBottom: 8,
+    },
+    segmentHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 8,
+    },
+    segmentTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#8E8E93",
+    },
+    duration: {
+        fontSize: 14,
+        color: "#8E8E93",
+    },
+    divider: {
+        height: 1,
+        backgroundColor: "#F2F2F7",
+        marginVertical: 16,
+    },
+    hotelList: {
+        paddingRight: 16,
+        gap: 12,
+    },
+    hotelCard: {
+        width: 280,
+        backgroundColor: "white",
+        borderRadius: 16,
+        padding: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    hotelHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    hotelDesc: {
+        fontSize: 13,
+        color: "#3A3A3C",
+        marginBottom: 8,
+        lineHeight: 18,
     },
 });
