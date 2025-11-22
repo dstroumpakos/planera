@@ -91,6 +91,14 @@ export default function TripDetails() {
         Linking.openURL(url);
     };
 
+    const handleBookTrip = () => {
+        // For now, we'll link to a general travel booking site or a specific package deal
+        // In a real app, this would likely add items to a cart or redirect to a checkout flow
+        const query = `${trip.origin} to ${trip.destination} package`;
+        const url = `https://www.expedia.com/Hotel-Search?destination=${encodeURIComponent(trip.destination)}`;
+        Linking.openURL(url);
+    };
+
     const renderFlights = () => {
         if (Array.isArray(itinerary.flights)) {
             return (
@@ -295,7 +303,7 @@ export default function TripDetails() {
                     </View>
                     <Text style={styles.perPersonPrice}>${Math.round(pricePerPerson).toLocaleString()} per person</Text>
                 </View>
-                <TouchableOpacity style={styles.bookButton}>
+                <TouchableOpacity style={styles.bookButton} onPress={handleBookTrip}>
                     <Text style={styles.bookButtonText}>Book This Trip</Text>
                 </TouchableOpacity>
             </View>
