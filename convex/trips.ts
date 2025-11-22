@@ -56,7 +56,7 @@ export const generate = internalAction({
           "flights": {
             "outbound": { "airline": "string", "flightNumber": "string", "departure": "string (time)", "arrival": "string (time)", "duration": "string" },
             "return": { "airline": "string", "flightNumber": "string", "departure": "string (time)", "arrival": "string (time)", "duration": "string" },
-            "price": number,
+            "pricePerPerson": number,
             "luggage": "string"
           },
           "hotels": [
@@ -69,12 +69,14 @@ export const generate = internalAction({
                 { "time": "string", "title": "string", "description": "string" }
               ]
             }
-          ]
+          ],
+          "estimatedDailyExpenses": number
         }
         Make the data realistic.
-        For "flights", provide a realistic round-trip option. "luggage" should specify if it's included or the cost (e.g., "20kg bag included" or "+$50 for 23kg").
+        For "flights", provide a realistic round-trip option. "pricePerPerson" should be the cost for one adult. "luggage" should specify if it's included or the cost (e.g., "20kg bag included" or "+$50 for 23kg").
         For "hotels", provide exactly 3 different options ranging from budget-friendly to luxury (if the user's budget allows), or just 3 good options.
         For "dailyPlan", provide a detailed itinerary for the duration of the trip.
+        For "estimatedDailyExpenses", provide a realistic estimate per person per day for food, transport, and activities (excluding hotel and flights).
       `;
 
             const completion = await openai.chat.completions.create({

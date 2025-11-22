@@ -5,11 +5,13 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useState, useEffect } from "react";
 
 export default function TripDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const trip = useQuery(api.trips.get, { tripId: id as Id<"trips"> });
+    const [selectedHotelIndex, setSelectedHotelIndex] = useState(0);
 
     if (trip === undefined) {
         return (
@@ -48,6 +50,25 @@ export default function TripDetails() {
 
     const { itinerary } = trip;
 
+    // Calculate duration in days
+    const duration = Math.ceil((trip.endDate - trip.startDate) / (1000 * 60 * 60 * 24));
+    const travelers = trip.travelers || 1;
+
+    const hotels = Array.isArray(itinerary.hotels) ? itinerary.hotels : (itinerary.hotels ? [itinerary.hotels] : []);
+    const selectedHotel = hotels[selectedHotelIndex] || hotels[0];
+    
+    // Calculate costs
+    const flightPricePerPerson = itinerary.flights?.pricePerPerson || (itinerary.flights?.price ? itinerary.flights.price / travelers : 0);
+    const hotelPricePerNight = selectedHotel?.pricePerNight || 0;
+    const dailyExpensesPerPerson = itinerary.estimatedDailyExpenses || 50; // Fallback
+
+    const totalFlightCost = flightPricePerPerson * travelers;
+    const totalHotelCost = hotelPricePerNight * duration;
+    const totalDailyExpenses = dailyExpensesPerPerson * travelers * duration;
+    
+    const grandTotal = totalFlightCost + totalHotelCost + totalDailyExpenses;
+    const pricePerPerson = grandTotal / travelers;
+
     const openMap = (query: string) => {
         const url = Platform.select({
             ios: `maps:0,0?q=${encodeURIComponent(query)}`,
@@ -85,7 +106,7 @@ export default function TripDetails() {
         return (
             <View style={styles.card}>
                 <View style={styles.flightHeader}>
-                    <Text style={styles.flightPrice}>Total: ${itinerary.flights.price}</Text>
+                    <Text style={styles.flightPrice}>${flightPricePerPerson}/person</Text>
                     <View style={styles.luggageBadge}>
                         <Ionicons name="briefcase-outline" size={14} color="#007AFF" />
                         <Text style={styles.luggageText}>{itinerary.flights.luggage}</Text>
@@ -135,8 +156,6 @@ export default function TripDetails() {
         );
     };
 
-    const hotels = Array.isArray(itinerary.hotels) ? itinerary.hotels : (itinerary.hotels ? [itinerary.hotels] : []);
-
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
@@ -164,7 +183,15 @@ export default function TripDetails() {
                 <Section title="Accommodation Options">
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotelList}>
                         {hotels.map((hotel: any, index: number) => (
-                            <View key={index} style={styles.hotelCard}>
+                            <TouchableOpacity 
+                                key={index} 
+                                onPress={() => setSelectedHotelIndex(index)}
+                                activeOpacity={0.9}
+                                style={[
+                                    styles.hotelCard,
+                                    selectedHotelIndex === index && styles.selectedHotelCard
+                                ]}
+                            >
                                 <View style={styles.hotelHeader}>
                                     <Text style={styles.cardTitle} numberOfLines={1}>{hotel.name}</Text>
                                     <View style={styles.stars}>
@@ -178,7 +205,12 @@ export default function TripDetails() {
                                 <TouchableOpacity onPress={() => openMap(hotel.address)}>
                                     <Text style={styles.address} numberOfLines={1}>{hotel.address} <Ionicons name="map" size={12} color="#007AFF" /></Text>
                                 </TouchableOpacity>
-                            </View>
+                                {selectedHotelIndex === index && (
+                                    <View style={styles.selectedBadge}>
+                                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                         ))}
                     </ScrollView>
                 </Section>
@@ -205,6 +237,19 @@ export default function TripDetails() {
                     ))}
                 </Section>
             </ScrollView>
+
+            <View style={styles.footer}>
+                <View style={styles.priceBreakdown}>
+                    <View style={styles.priceRow}>
+                        <Text style={styles.priceLabel}>Total for {travelers} travelers</Text>
+                        <Text style={styles.totalPrice}>${Math.round(grandTotal).toLocaleString()}</Text>
+                    </View>
+                    <Text style={styles.perPersonPrice}>${Math.round(pricePerPerson).toLocaleString()} per person</Text>
+                </View>
+                <TouchableOpacity style={styles.bookButton}>
+                    <Text style={styles.bookButtonText}>Book This Trip</Text>
+                </TouchableOpacity>
+            </View>
         </SafeAreaView>
     );
 }
@@ -282,7 +327,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 16,
-        paddingBottom: 40,
+        paddingBottom: 100,
     },
     section: {
         marginBottom: 24,
@@ -461,6 +506,17 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    selectedHotelCard: {
+        borderColor: "#007AFF",
+        backgroundColor: "#F0F8FF",
+    },
+    selectedBadge: {
+        position: "absolute",
+        top: 8,
+        right: 8,
     },
     hotelHeader: {
         flexDirection: "row",
@@ -473,5 +529,58 @@ const styles = StyleSheet.create({
         color: "#3A3A3C",
         marginBottom: 8,
         lineHeight: 18,
+    },
+    footer: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: "white",
+        padding: 16,
+        paddingBottom: Platform.OS === "ios" ? 32 : 16,
+        borderTopWidth: 1,
+        borderTopColor: "#E5E5EA",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    priceBreakdown: {
+        flex: 1,
+    },
+    priceRow: {
+        flexDirection: "row",
+        alignItems: "baseline",
+        gap: 8,
+    },
+    priceLabel: {
+        fontSize: 12,
+        color: "#8E8E93",
+    },
+    totalPrice: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#007AFF",
+    },
+    perPersonPrice: {
+        fontSize: 14,
+        color: "#3A3A3C",
+        fontWeight: "500",
+    },
+    bookButton: {
+        backgroundColor: "#007AFF",
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 24,
+        marginLeft: 16,
+    },
+    bookButtonText: {
+        color: "white",
+        fontWeight: "bold",
+        fontSize: 16,
     },
 });
