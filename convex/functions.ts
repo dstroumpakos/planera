@@ -1,4 +1,5 @@
 import { action, mutation, query } from "./_generated/server";
+import { ConvexError } from "convex/values";
 import {
     customQuery,
     customCtx,
@@ -20,7 +21,7 @@ export const authQuery = customQuery(
         } catch (e) {
             user = null;
         }
-        if (!user) throw new Error("Authentication required");
+        if (!user) throw new ConvexError("Authentication required");
         // Pass in a user to use in evaluating rules,
         // which validate data access at access / write time.
         // This new ctx will be applied to the function's.
@@ -38,7 +39,7 @@ export const authMutation = customMutation(
         } catch (e) {
             user = null;
         }
-        if (!user) throw new Error("Authentication required");
+        if (!user) throw new ConvexError("Authentication required");
         return { user };
     })
 );
@@ -52,7 +53,7 @@ export const authAction = customAction(
         } catch (e) {
             user = null;
         }
-        if (!user) throw new Error("Authentication required");
+        if (!user) throw new ConvexError("Authentication required");
         return { user };
     })
 );
