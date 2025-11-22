@@ -289,6 +289,21 @@ export default function TripDetails() {
                                 >
                                     <Text style={styles.unlockButtonText}>Upgrade Now</Text>
                                 </TouchableOpacity>
+                                <TouchableOpacity 
+                                    style={styles.notNowButton}
+                                    onPress={() => {
+                                        // Just dismiss the overlay or scroll up? 
+                                        // Actually, the overlay covers the content, so "Not Now" 
+                                        // implies they accept seeing the limited version (which is just the blurred view).
+                                        // But usually "Not Now" means "Close this upsell".
+                                        // Since the content IS locked, they can't really "close" it to see the content.
+                                        // So "Not Now" might just be a way to go back or stay on the limited view.
+                                        // For this flow, let's make it just a secondary action that maybe scrolls to top or does nothing (just acknowledges).
+                                        // Or better, let's make it clear they are staying on the limited plan.
+                                    }}
+                                >
+                                    <Text style={styles.notNowButtonText}>Not Now</Text>
+                                </TouchableOpacity>
                             </View>
                         </View>
                     )}
@@ -694,11 +709,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
         paddingVertical: 12,
         borderRadius: 24,
+        marginBottom: 12,
     },
     unlockButtonText: {
         color: "#FFF",
         fontSize: 16,
         fontWeight: "bold",
+    },
+    notNowButton: {
+        paddingVertical: 8,
+    },
+    notNowButtonText: {
+        color: "#8E8E93",
+        fontSize: 14,
+        fontWeight: "500",
     },
     affiliateButton: {
         marginTop: 16,
