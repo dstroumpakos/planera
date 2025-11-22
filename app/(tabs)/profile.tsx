@@ -5,11 +5,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useState } from "react";
 
 export default function Profile() {
     const router = useRouter();
     const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list);
+    const userPlan = useQuery(api.users.getPlan);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
     const handleSignOut = async () => {
         try {
@@ -57,6 +60,7 @@ export default function Profile() {
     const user = session?.user;
     const tripCount = trips?.length || 0;
     const completedTrips = trips?.filter(t => t.status === "completed").length || 0;
+    const isPremium = userPlan?.plan === "premium";
 
     return (
         <SafeAreaView style={styles.container}>
