@@ -14,4 +14,9 @@ export default defineSchema({
         status: v.union(v.literal("generating"), v.literal("completed"), v.literal("failed")),
         itinerary: v.optional(v.any()), // Storing the complex JSON structure of the itinerary
     }).index("by_user", ["userId"]),
+    userPlans: defineTable({
+        userId: v.string(),
+        plan: v.union(v.literal("free"), v.literal("premium")),
+        tripsGenerated: v.number(),
+    }).index("by_user", ["userId"]),
 });

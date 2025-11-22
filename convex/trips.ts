@@ -15,6 +15,30 @@ export const create = authMutation({
         interests: v.array(v.string()),
     },
     handler: async (ctx, args) => {
+        // Check user plan and limits
+        const userPlan = await ctx.db
+            .query("userPlans")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        const currentPlan = userPlan?.plan ?? "free";
+        const tripsGenerated = userPlan?.tripsGenerated ?? 0;
+
+        if (currentPlan === "free" && tripsGenerated >= 3) {
+            throw new Error("Free plan limit reached. Upgrade to Premium to generate more trips.");
+        }
+
+        // Increment trip count
+        if (userPlan) {
+            await ctx.db.patch(userPlan._id, { tripsGenerated: tripsGenerated + 1 });
+        } else {
+            await ctx.db.insert("userPlans", {
+                userId: ctx.user._id,
+                plan: "free",
+                tripsGenerated: 1,
+            });
+        }
+
         const tripId = await ctx.db.insert("trips", {
             userId: ctx.user._id,
             destination: args.destination,
@@ -139,7 +163,18 @@ export const list = authQuery({
 export const get = authQuery({
     args: { tripId: v.id("trips") },
     handler: async (ctx, args) => {
-        return await ctx.db.get(args.tripId);
+        const trip = await ctx.db.get(args.tripId);
+        if (!trip) return null;
+
+        const userPlan = await ctx.db
+            .query("userPlans")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        return {
+            ...trip,
+            userPlan: userPlan?.plan ?? "free",
+        };
     },
 });
 

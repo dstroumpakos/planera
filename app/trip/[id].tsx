@@ -6,12 +6,13 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
+import { BlurView } from "expo-blur";
 
 export default function TripDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const trip = useQuery(api.trips.get, { tripId: id as Id<"trips"> });
-    const [selectedHotelIndex, setSelectedHotelIndex] = useState(0);
+    const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
 
     if (trip === undefined) {
         return (
@@ -54,8 +55,8 @@ export default function TripDetails() {
     const duration = Math.ceil((trip.endDate - trip.startDate) / (1000 * 60 * 60 * 24));
     const travelers = trip.travelers || 1;
 
-    const hotels = Array.isArray(itinerary.hotels) ? itinerary.hotels : (itinerary.hotels ? [itinerary.hotels] : []);
-    const selectedHotel = hotels[selectedHotelIndex] || hotels[0];
+    const hotels = trip.itinerary?.hotels || [];
+    const selectedHotel = selectedHotelIndex !== null ? hotels[selectedHotelIndex] : hotels[0];
     
     // Calculate costs
     const flightPricePerPerson = itinerary.flights?.pricePerPerson || (itinerary.flights?.price ? itinerary.flights.price / travelers : 0);
@@ -156,6 +157,8 @@ export default function TripDetails() {
         );
     };
 
+    const isPremium = trip.userPlan === "premium";
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
@@ -216,25 +219,43 @@ export default function TripDetails() {
                 </Section>
 
                 <Section title="Daily Itinerary">
-                    {itinerary.dailyPlan.map((day: any, index: number) => (
-                        <View key={index} style={styles.dayContainer}>
+                    {trip.itinerary?.dailyPlan?.map((day: any, index: number) => (
+                        <View key={index} style={styles.dayCard}>
                             <View style={styles.dayHeader}>
-                                <Text style={styles.dayTitle}>Day {day.day}</Text>
+                                <View style={styles.dayBadge}>
+                                    <Text style={styles.dayBadgeText}>Day {day.day}</Text>
+                                </View>
                             </View>
                             {day.activities.map((activity: any, actIndex: number) => (
-                                <View key={actIndex} style={styles.activityRow}>
+                                <View key={actIndex} style={styles.activityItem}>
                                     <Text style={styles.activityTime}>{activity.time}</Text>
                                     <View style={styles.activityContent}>
                                         <Text style={styles.activityTitle}>{activity.title}</Text>
                                         <Text style={styles.activityDesc}>{activity.description}</Text>
-                                        <TouchableOpacity onPress={() => openMap(`${activity.title} ${trip.destination}`)} style={styles.mapLink}>
-                                            <Text style={styles.mapLinkText}>View on Map</Text>
-                                        </TouchableOpacity>
                                     </View>
                                 </View>
                             ))}
                         </View>
                     ))}
+                    
+                    {!isPremium && (
+                        <View style={styles.blurContainer}>
+                            <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+                            <View style={styles.lockContent}>
+                                <Ionicons name="lock-closed" size={48} color="#007AFF" />
+                                <Text style={styles.lockTitle}>Unlock Full Itinerary</Text>
+                                <Text style={styles.lockText}>
+                                    Upgrade to Premium to see the detailed daily plan, maps, and more.
+                                </Text>
+                                <TouchableOpacity 
+                                    style={styles.unlockButton}
+                                    onPress={() => router.push("/subscription")}
+                                >
+                                    <Text style={styles.unlockButtonText}>Upgrade Now</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
                 </Section>
             </ScrollView>
 
@@ -395,35 +416,54 @@ const styles = StyleSheet.create({
         color: "#8E8E93",
         marginTop: 8,
     },
-    dayContainer: {
-        backgroundColor: "white",
+    dayCard: {
+        backgroundColor: "#F8F9FA",
         borderRadius: 16,
         padding: 16,
         marginBottom: 16,
     },
     dayHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
         marginBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#F2F2F7",
-        paddingBottom: 12,
+    },
+    dayBadge: {
+        backgroundColor: "#E1F5FE",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+    },
+    dayBadgeText: {
+        color: "#0288D1",
+        fontWeight: "bold",
+        fontSize: 14,
     },
     dayTitle: {
         fontSize: 18,
         fontWeight: "bold",
         color: "#1C1C1E",
     },
+    activityItem: {
+        flexDirection: "row",
+        marginBottom: 20,
+    },
     activityRow: {
         flexDirection: "row",
         marginBottom: 20,
     },
     activityTime: {
-        width: 70,
+        width: 80,
         fontSize: 14,
         fontWeight: "600",
-        color: "#8E8E93",
+        color: "#666",
     },
     activityContent: {
         flex: 1,
+        paddingLeft: 16,
+        borderLeftWidth: 2,
+        borderLeftColor: "#E0E0E0",
+        paddingBottom: 4,
     },
     activityTitle: {
         fontSize: 16,
@@ -582,5 +622,46 @@ const styles = StyleSheet.create({
         color: "white",
         fontWeight: "bold",
         fontSize: 16,
+    },
+    blurContainer: {
+        position: "absolute",
+        top: 50,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(255,255,255,0.8)",
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 16,
+        zIndex: 10,
+    },
+    lockContent: {
+        alignItems: "center",
+        padding: 24,
+    },
+    lockTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#333",
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    lockText: {
+        fontSize: 14,
+        color: "#666",
+        textAlign: "center",
+        marginBottom: 24,
+        lineHeight: 20,
+    },
+    unlockButton: {
+        backgroundColor: "#007AFF",
+        paddingHorizontal: 32,
+        paddingVertical: 12,
+        borderRadius: 24,
+    },
+    unlockButtonText: {
+        color: "#FFF",
+        fontSize: 16,
+        fontWeight: "bold",
     },
 });
