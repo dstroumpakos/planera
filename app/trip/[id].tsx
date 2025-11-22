@@ -15,6 +15,7 @@ export default function TripDetails() {
     const trip = useQuery(api.trips.get, { tripId: id as Id<"trips"> });
     const updateTrip = useMutation(api.trips.update);
     const regenerateTrip = useMutation(api.trips.regenerate);
+    const trackClick = useMutation(api.bookings.trackClick);
     
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -148,7 +149,7 @@ export default function TripDetails() {
         if (url) Linking.openURL(url);
     };
 
-    const openAffiliateLink = (type: 'flight' | 'hotel', query: string) => {
+    const openAffiliateLink = async (type: 'flight' | 'hotel', query: string) => {
         // In a real app, you would use your actual affiliate IDs and endpoints
         // Examples: Skyscanner, Booking.com, Expedia, etc.
         let url = "";
@@ -157,7 +158,34 @@ export default function TripDetails() {
         } else {
             url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(query)}`;
         }
-        Linking.openURL(url);
+
+        // Track the click
+        try {
+            await trackClick({
+                tripId: id as Id<"trips">,
+                type: type,
+                item: query,
+                url: url
+            });
+        } catch (e) {
+            console.error("Failed to track click", e);
+        }
+
+        // Show alert to confirm tracking (User Flow Requirement)
+        Alert.alert(
+            "Redirecting to Supplier",
+            "We are taking you to the booking page. Your booking will be tracked for rewards!",
+            [
+                { 
+                    text: "Continue", 
+                    onPress: () => Linking.openURL(url)
+                },
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                }
+            ]
+        );
     };
 
     const handleBookTrip = () => {

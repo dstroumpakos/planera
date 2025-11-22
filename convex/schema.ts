@@ -19,4 +19,13 @@ export default defineSchema({
         plan: v.union(v.literal("free"), v.literal("premium")),
         tripsGenerated: v.number(),
     }).index("by_user", ["userId"]),
+    bookings: defineTable({
+        userId: v.string(),
+        tripId: v.id("trips"),
+        type: v.string(), // "flight", "hotel", "activity"
+        item: v.string(), // Name of the item
+        url: v.string(),
+        status: v.string(), // "clicked", "booked"
+        clickedAt: v.number(),
+    }).index("by_user", ["userId"]),
 });
