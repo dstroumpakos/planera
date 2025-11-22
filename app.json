@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AI Trip Generator",
-    "slug": "ai-trip-generator",
+    "name": "voyage buddy",
+    "slug": "voyage-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -40,6 +40,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "displayName": "AI Trip Generator"
+    "displayName": "voyage buddy"
   }
 }
