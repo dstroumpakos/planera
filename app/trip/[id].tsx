@@ -79,6 +79,18 @@ export default function TripDetails() {
         if (url) Linking.openURL(url);
     };
 
+    const openAffiliateLink = (type: 'flight' | 'hotel', query: string) => {
+        // In a real app, you would use your actual affiliate IDs and endpoints
+        // Examples: Skyscanner, Booking.com, Expedia, etc.
+        let url = "";
+        if (type === 'flight') {
+            url = `https://www.skyscanner.com/transport/flights?q=${encodeURIComponent(query)}`;
+        } else {
+            url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(query)}`;
+        }
+        Linking.openURL(url);
+    };
+
     const renderFlights = () => {
         if (Array.isArray(itinerary.flights)) {
             return (
@@ -153,6 +165,14 @@ export default function TripDetails() {
                         <Text style={styles.time}>{itinerary.flights.return.arrival}</Text>
                     </View>
                 </View>
+
+                <TouchableOpacity 
+                    style={styles.affiliateButton}
+                    onPress={() => openAffiliateLink('flight', `${trip.origin} to ${trip.destination}`)}
+                >
+                    <Text style={styles.affiliateButtonText}>Check Flight Availability</Text>
+                    <Ionicons name="open-outline" size={16} color="#007AFF" />
+                </TouchableOpacity>
             </View>
         );
     };
@@ -208,6 +228,14 @@ export default function TripDetails() {
                                 <TouchableOpacity onPress={() => openMap(hotel.address)}>
                                     <Text style={styles.address} numberOfLines={1}>{hotel.address} <Ionicons name="map" size={12} color="#007AFF" /></Text>
                                 </TouchableOpacity>
+                                
+                                <TouchableOpacity 
+                                    style={styles.miniBookButton}
+                                    onPress={() => openAffiliateLink('hotel', hotel.name + " " + trip.destination)}
+                                >
+                                    <Text style={styles.miniBookButtonText}>Book Hotel</Text>
+                                </TouchableOpacity>
+
                                 {selectedHotelIndex === index && (
                                     <View style={styles.selectedBadge}>
                                         <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
@@ -663,5 +691,32 @@ const styles = StyleSheet.create({
         color: "#FFF",
         fontSize: 16,
         fontWeight: "bold",
+    },
+    affiliateButton: {
+        marginTop: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 12,
+        backgroundColor: "#F0F8FF",
+        borderRadius: 12,
+        gap: 8,
+    },
+    affiliateButtonText: {
+        color: "#007AFF",
+        fontWeight: "600",
+        fontSize: 14,
+    },
+    miniBookButton: {
+        marginTop: 12,
+        backgroundColor: "#007AFF",
+        paddingVertical: 8,
+        borderRadius: 8,
+        alignItems: "center",
+    },
+    miniBookButtonText: {
+        color: "white",
+        fontSize: 12,
+        fontWeight: "600",
     },
 });

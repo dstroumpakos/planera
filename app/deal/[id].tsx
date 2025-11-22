@@ -1,6 +1,6 @@
 
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { DEALS } from "@/lib/data";
@@ -12,6 +12,12 @@ export default function DealDetails() {
     const router = useRouter();
     
     const deal = DEALS.find(d => d.id === id);
+
+    const openBookingLink = (query: string) => {
+        // Example affiliate link
+        const url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(query)}`;
+        Linking.openURL(url);
+    };
 
     if (!deal) {
         return (
@@ -123,6 +129,13 @@ export default function DealDetails() {
                                             <Text style={styles.hotelPrice}>{hotel.price}</Text>
                                         </View>
                                         <Text style={styles.hotelAddress} numberOfLines={1}>{hotel.address}</Text>
+                                        
+                                        <TouchableOpacity 
+                                            style={styles.miniBookButton}
+                                            onPress={() => openBookingLink(hotel.name + " " + deal.destination)}
+                                        >
+                                            <Text style={styles.miniBookButtonText}>View Deal</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
                             ))}
@@ -156,7 +169,10 @@ export default function DealDetails() {
                     <Text style={styles.totalPriceLabel}>Total Price</Text>
                     <Text style={styles.totalPrice}>${deal.price}</Text>
                 </View>
-                <TouchableOpacity style={styles.bookButton}>
+                <TouchableOpacity 
+                    style={styles.bookButton}
+                    onPress={() => openBookingLink(deal.destination)}
+                >
                     <Text style={styles.bookButtonText}>Book This Deal</Text>
                 </TouchableOpacity>
             </SafeAreaView>
@@ -480,5 +496,17 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
+    },
+    miniBookButton: {
+        marginTop: 8,
+        backgroundColor: "#E1F0FF",
+        paddingVertical: 6,
+        borderRadius: 6,
+        alignItems: "center",
+    },
+    miniBookButtonText: {
+        color: "#007AFF",
+        fontSize: 12,
+        fontWeight: "600",
     },
 });
