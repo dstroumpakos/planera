@@ -109,11 +109,20 @@ export const generate = internalAction({
 
             const result = JSON.parse(content);
 
-            // Transform result to match frontend expectation (frontend expects dailyPlan, AI returns itinerary)
-            if (result.itinerary && Array.isArray(result.itinerary)) {
+            // Safety check: Ensure dailyPlan exists
+            if (!result.dailyPlan && result.itinerary && Array.isArray(result.itinerary)) {
                 result.dailyPlan = result.itinerary;
-                // Keep result.itinerary as well just in case, or delete it. 
-                // Let's keep it to be safe, but frontend uses dailyPlan.
+                delete result.itinerary;
+            }
+
+            // Safety check: Ensure flights structure
+            if (Array.isArray(result.flights)) {
+                // If AI returned array, try to structure it or wrap it
+                const flights = result.flights;
+                result.flights = {
+                    outbound: flights,
+                    return: []
+                };
             }
 
             // Calculate totals based on the first hotel option as a default
