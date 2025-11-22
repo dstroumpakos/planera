@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function TripDetails() {
     const { id } = useLocalSearchParams();
@@ -17,7 +18,14 @@ export default function TripDetails() {
     
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [isEditing, setIsEditing] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
+
     const [editForm, setEditForm] = useState({
+        destination: "",
+        origin: "",
+        startDate: new Date().getTime(),
+        endDate: new Date().getTime(),
         budget: "",
         travelers: "1",
         interests: "",
@@ -26,6 +34,10 @@ export default function TripDetails() {
     useEffect(() => {
         if (trip) {
             setEditForm({
+                destination: trip.destination,
+                origin: trip.origin || "",
+                startDate: trip.startDate,
+                endDate: trip.endDate,
                 budget: trip.budget || "",
                 travelers: (trip.travelers || 1).toString(),
                 interests: (trip.interests || []).join(", "),
@@ -38,12 +50,37 @@ export default function TripDetails() {
         
         await updateTrip({
             tripId: trip._id,
+            destination: editForm.destination,
+            origin: editForm.origin,
+            startDate: editForm.startDate,
+            endDate: editForm.endDate,
             budget: editForm.budget,
             travelers: parseInt(editForm.travelers) || 1,
             interests: editForm.interests.split(",").map(s => s.trim()).filter(s => s.length > 0),
         });
         await regenerateTrip({ tripId: trip._id });
         setIsEditing(false);
+    };
+
+    const onDateChange = (event: any, selectedDate?: Date) => {
+        setShowDatePicker(false);
+        if (selectedDate) {
+            if (datePickerMode === 'start') {
+                const newStart = selectedDate.getTime();
+                // Maintain duration if possible
+                const duration = editForm.endDate - editForm.startDate;
+                setEditForm(prev => ({
+                    ...prev,
+                    startDate: newStart,
+                    endDate: newStart + duration
+                }));
+            } else {
+                setEditForm(prev => ({
+                    ...prev,
+                    endDate: selectedDate.getTime()
+                }));
+            }
+        }
     };
 
     if (trip === undefined) {
@@ -417,9 +454,66 @@ export default function TripDetails() {
                     
                     <ScrollView contentContainerStyle={styles.modalContent}>
                         <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Destination</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={editForm.destination}
+                                onChangeText={(text) => setEditForm(prev => ({ ...prev, destination: text }))}
+                                placeholder="e.g. Paris, Tokyo"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Flying from</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={editForm.origin}
+                                onChangeText={(text) => setEditForm(prev => ({ ...prev, origin: text }))}
+                                placeholder="e.g. New York"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Dates</Text>
+                            <View style={styles.dateRow}>
+                                <TouchableOpacity 
+                                    style={styles.dateInput}
+                                    onPress={() => {
+                                        setDatePickerMode('start');
+                                        setShowDatePicker(true);
+                                    }}
+                                >
+                                    <Text style={styles.dateLabel}>Start</Text>
+                                    <Text style={styles.dateValue}>{new Date(editForm.startDate).toLocaleDateString()}</Text>
+                                </TouchableOpacity>
+                                <Ionicons name="arrow-forward" size={20} color="#8E8E93" />
+                                <TouchableOpacity 
+                                    style={styles.dateInput}
+                                    onPress={() => {
+                                        setDatePickerMode('end');
+                                        setShowDatePicker(true);
+                                    }}
+                                >
+                                    <Text style={styles.dateLabel}>End</Text>
+                                    <Text style={styles.dateValue}>{new Date(editForm.endDate).toLocaleDateString()}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={new Date(datePickerMode === 'start' ? editForm.startDate : editForm.endDate)}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                minimumDate={new Date()}
+                                onChange={onDateChange}
+                            />
+                        )}
+
+                        <View style={styles.inputGroup}>
                             <Text style={styles.label}>Budget</Text>
                             <View style={styles.budgetOptions}>
-                                {["Cheap", "Moderate", "Luxury"].map((opt) => (
+                                {["Low", "Medium", "High", "Luxury"].map((opt) => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[
@@ -465,6 +559,7 @@ export default function TripDetails() {
                         >
                             <Text style={styles.saveButtonText}>Save & Regenerate</Text>
                         </TouchableOpacity>
+                        <View style={{ height: 40 }} />
                     </ScrollView>
                 </KeyboardAvoidingView>
             </Modal>
@@ -975,6 +1070,29 @@ const styles = StyleSheet.create({
     },
     budgetOptionTextSelected: {
         color: "white",
+    },
+    dateRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    dateInput: {
+        flex: 1,
+        backgroundColor: "white",
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E5E5EA",
+    },
+    dateLabel: {
+        fontSize: 12,
+        color: "#8E8E93",
+        marginBottom: 4,
+    },
+    dateValue: {
+        fontSize: 16,
+        color: "#1C1C1E",
+        fontWeight: "500",
     },
     saveButton: {
         backgroundColor: "#007AFF",
