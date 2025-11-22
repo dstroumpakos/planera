@@ -13,6 +13,7 @@ export default function CreateTrip() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
     const [formData, setFormData] = useState({
         destination: "",
@@ -51,7 +52,7 @@ export default function CreateTrip() {
     };
 
     const handleSubmit = async () => {
-        setLoading(true);
+        setShowLoadingScreen(true);
         try {
             const tripId = await createTrip({
                 destination: formData.destination,
@@ -62,12 +63,14 @@ export default function CreateTrip() {
                 travelers: formData.travelers,
                 interests: formData.interests,
             });
-            router.replace(`/trip/${tripId}`);
+            // Wait a bit to show the animation
+            setTimeout(() => {
+                router.replace(`/trip/${tripId}`);
+            }, 2000);
         } catch (error) {
             console.error(error);
             Alert.alert("Error", "Failed to create trip");
-        } finally {
-            setLoading(false);
+            setShowLoadingScreen(false);
         }
     };
 
@@ -78,6 +81,16 @@ export default function CreateTrip() {
             setFormData({ ...formData, interests: [...formData.interests, interest] });
         }
     };
+
+    if (showLoadingScreen) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>Generating your dream trip...</Text>
+                <Text style={styles.loadingSubtext}>Finding the best flights, hotels, and activities for you.</Text>
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -416,5 +429,26 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: "#1C1C1E",
         fontWeight: "500",
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "white",
+        padding: 24,
+    },
+    loadingText: {
+        marginTop: 24,
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#1C1C1E",
+        textAlign: "center",
+    },
+    loadingSubtext: {
+        marginTop: 12,
+        fontSize: 16,
+        color: "#8E8E93",
+        textAlign: "center",
+        lineHeight: 24,
     },
 });
