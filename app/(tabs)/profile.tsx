@@ -1,5 +1,4 @@
-
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ScrollView, Switch } from "react-native";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +21,39 @@ export default function Profile() {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await authClient.signOut();
+            router.replace("/");
+        } catch (error) {
+            console.error("Logout failed:", error);
+            Alert.alert("Error", "Failed to log out");
+        }
+    };
+
+    const menuItems = [
+        {
+            title: "Personal Info",
+            icon: "person-outline",
+            action: () => Alert.alert("Personal Info", "Edit profile feature coming soon!")
+        },
+        {
+            title: "Payment (Subscriptions)",
+            icon: "card-outline",
+            action: () => router.push("/subscription")
+        },
+        {
+            title: "Travel Preferences",
+            icon: "airplane-outline",
+            action: () => Alert.alert("Travel Preferences", "Preferences feature coming soon!")
+        },
+        {
+            title: "App Language",
+            icon: "language-outline",
+            action: () => Alert.alert("Language", "Language selection coming soon!")
+        }
+    ];
+
     const user = session?.user;
     const tripCount = trips?.length || 0;
     const completedTrips = trips?.filter(t => t.status === "completed").length || 0;
@@ -29,68 +61,69 @@ export default function Profile() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Profile</Text>
+                <Text style={styles.headerTitle}>Settings</Text>
             </View>
 
-            <View style={styles.content}>
-                <View style={styles.profileHeader}>
+            <ScrollView style={styles.content}>
+                {/* User Profile Card */}
+                <View style={styles.profileCard}>
                     <View style={styles.avatarContainer}>
-                        {user?.image ? (
-                            <Image source={{ uri: user.image }} style={styles.avatar} />
-                        ) : (
-                            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                                <Text style={styles.avatarText}>
-                                    {user?.name?.charAt(0).toUpperCase() || "U"}
-                                </Text>
+                        <Text style={styles.avatarText}>
+                            {user?.name?.[0]?.toUpperCase() || "U"}
+                        </Text>
+                    </View>
+                    <View style={styles.userInfo}>
+                        <Text style={styles.userName}>{user?.name || "Traveler"}</Text>
+                        <Text style={styles.userEmail}>{user?.email}</Text>
+                        <View style={styles.planBadge}>
+                            <Text style={styles.planText}>
+                                {isPremium ? "PREMIUM PLAN" : "FREE PLAN"}
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Settings Menu */}
+                <View style={styles.section}>
+                    {menuItems.map((item, index) => (
+                        <TouchableOpacity 
+                            key={index} 
+                            style={styles.menuItem}
+                            onPress={item.action}
+                        >
+                            <View style={styles.menuIconContainer}>
+                                <Ionicons name={item.icon as any} size={22} color="#1B3F92" />
                             </View>
-                        )}
+                            <Text style={styles.menuText}>{item.title}</Text>
+                            <Ionicons name="chevron-forward" size={20} color="#CFD8DC" />
+                        </TouchableOpacity>
+                    ))}
+
+                    {/* Notifications Toggle */}
+                    <View style={styles.menuItem}>
+                        <View style={styles.menuIconContainer}>
+                            <Ionicons name="notifications-outline" size={22} color="#1B3F92" />
+                        </View>
+                        <Text style={styles.menuText}>Notifications</Text>
+                        <Switch
+                            value={notificationsEnabled}
+                            onValueChange={setNotificationsEnabled}
+                            trackColor={{ false: "#CFD8DC", true: "#1B3F92" }}
+                            thumbColor={"#FFFFFF"}
+                        />
                     </View>
-                    <Text style={styles.name}>{user?.name || "Traveler"}</Text>
-                    <Text style={styles.email}>{user?.email || "Anonymous User"}</Text>
                 </View>
 
-                <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>{tripCount}</Text>
-                        <Text style={styles.statLabel}>Total Trips</Text>
-                    </View>
-                    <View style={styles.divider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>{completedTrips}</Text>
-                        <Text style={styles.statLabel}>Completed</Text>
-                    </View>
-                </View>
-
-                <View style={styles.menu}>
-                    <TouchableOpacity style={styles.menuItem}>
-                        <View style={styles.menuIcon}>
-                            <Ionicons name="settings-outline" size={22} color="#1C1C1E" />
-                        </View>
-                        <Text style={styles.menuText}>Settings</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity style={styles.menuItem}>
-                        <View style={styles.menuIcon}>
-                            <Ionicons name="heart-outline" size={22} color="#1C1C1E" />
-                        </View>
-                        <Text style={styles.menuText}>Saved Places</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.menuItem}>
-                        <View style={styles.menuIcon}>
-                            <Ionicons name="help-circle-outline" size={22} color="#1C1C1E" />
-                        </View>
-                        <Text style={styles.menuText}>Help & Support</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-                    </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                    <Text style={styles.signOutText}>Sign Out</Text>
+                {/* Logout Button */}
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                    <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+                    <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
-            </View>
+
+                <View style={styles.versionInfo}>
+                    <Text style={styles.versionText}>Version 1.0.0</Text>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -98,124 +131,130 @@ export default function Profile() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F2F2F7",
+        backgroundColor: '#F4F6F8',
     },
     header: {
+        backgroundColor: '#FFFFFF',
         paddingHorizontal: 20,
         paddingVertical: 16,
-        backgroundColor: "white",
         borderBottomWidth: 1,
-        borderBottomColor: "#E5E5EA",
+        borderBottomColor: '#E0E0E0',
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#1C1C1E",
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#1B3F92',
+        textAlign: 'center',
     },
     content: {
         flex: 1,
         padding: 20,
     },
-    profileHeader: {
-        alignItems: "center",
-        marginBottom: 32,
-    },
-    avatarContainer: {
-        marginBottom: 16,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: "white",
-    },
-    avatarPlaceholder: {
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#E1F0FF",
-    },
-    avatarText: {
-        fontSize: 40,
-        fontWeight: "bold",
-        color: "#007AFF",
-    },
-    name: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#1C1C1E",
-        marginBottom: 4,
-    },
-    email: {
-        fontSize: 16,
-        color: "#8E8E93",
-    },
-    statsContainer: {
-        flexDirection: "row",
-        backgroundColor: "white",
-        borderRadius: 16,
+    profileCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
         padding: 20,
-        marginBottom: 32,
-        shadowColor: "#000",
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 24,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
     },
-    statItem: {
-        flex: 1,
-        alignItems: "center",
+    avatarContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#1B3F92',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
     },
-    statValue: {
+    avatarText: {
+        color: '#FFFFFF',
         fontSize: 24,
-        fontWeight: "bold",
-        color: "#007AFF",
+        fontWeight: '600',
+    },
+    userInfo: {
+        flex: 1,
+    },
+    userName: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#263238',
         marginBottom: 4,
     },
-    statLabel: {
+    userEmail: {
         fontSize: 14,
-        color: "#8E8E93",
+        color: '#78909C',
+        marginBottom: 8,
     },
-    divider: {
-        width: 1,
-        backgroundColor: "#E5E5EA",
+    planBadge: {
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
     },
-    menu: {
-        backgroundColor: "white",
-        borderRadius: 16,
-        marginBottom: 32,
-        overflow: "hidden",
+    planText: {
+        color: '#1B3F92',
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    section: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        overflow: 'hidden',
+        marginBottom: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     menuItem: {
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: "#F2F2F7",
+        borderBottomColor: '#F5F5F5',
     },
-    menuIcon: {
+    menuIconContainer: {
         width: 32,
-        alignItems: "center",
+        alignItems: 'center',
         marginRight: 12,
     },
     menuText: {
         flex: 1,
         fontSize: 16,
-        color: "#1C1C1E",
+        color: '#37474F',
     },
-    signOutButton: {
-        backgroundColor: "#FF3B30",
-        paddingVertical: 16,
-        borderRadius: 16,
-        alignItems: "center",
+    logoutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 32,
+        borderWidth: 1,
+        borderColor: '#FFEBEE',
     },
-    signOutText: {
-        color: "white",
+    logoutText: {
+        color: '#FF3B30',
         fontSize: 16,
-        fontWeight: "bold",
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+    versionInfo: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    versionText: {
+        color: '#B0BEC5',
+        fontSize: 12,
     },
 });
