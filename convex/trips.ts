@@ -178,6 +178,40 @@ export const get = authQuery({
     },
 });
 
+export const update = authMutation({
+    args: {
+        tripId: v.id("trips"),
+        destination: v.optional(v.string()),
+        origin: v.optional(v.string()),
+        startDate: v.optional(v.number()),
+        endDate: v.optional(v.number()),
+        budget: v.optional(v.string()),
+        travelers: v.optional(v.number()),
+        interests: v.optional(v.array(v.string())),
+    },
+    handler: async (ctx, args) => {
+        const { tripId, ...updates } = args;
+        await ctx.db.patch(tripId, updates);
+    },
+});
+
+export const regenerate = authMutation({
+    args: { tripId: v.id("trips") },
+    handler: async (ctx, args) => {
+        const trip = await ctx.db.get(args.tripId);
+        if (!trip) throw new Error("Trip not found");
+
+        await ctx.db.patch(args.tripId, { status: "generating" });
+
+        const prompt = `Plan a trip to ${trip.destination} from ${trip.origin} for ${trip.travelers} people.
+        Budget: ${trip.budget}.
+        Dates: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
+        Interests: ${trip.interests.join(", ")}.`;
+
+        await ctx.scheduler.runAfter(0, internal.trips.generate, { tripId: args.tripId, prompt });
+    },
+});
+
 export const deleteTrip = authMutation({
     args: { tripId: v.id("trips") },
     handler: async (ctx, args) => {

@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Image, Linking, Platform } from "react-native";
-import { useQuery } from "convex/react";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Image, Linking, Platform, Alert, Modal, TextInput, KeyboardAvoidingView } from "react-native";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +12,39 @@ export default function TripDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const trip = useQuery(api.trips.get, { tripId: id as Id<"trips"> });
+    const updateTrip = useMutation(api.trips.update);
+    const regenerateTrip = useMutation(api.trips.regenerate);
+    
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({
+        budget: "",
+        travelers: "1",
+        interests: "",
+    });
+
+    useEffect(() => {
+        if (trip) {
+            setEditForm({
+                budget: trip.budget || "",
+                travelers: (trip.travelers || 1).toString(),
+                interests: (trip.interests || []).join(", "),
+            });
+        }
+    }, [trip]);
+
+    const handleSaveAndRegenerate = async () => {
+        if (!trip) return;
+        
+        await updateTrip({
+            tripId: trip._id,
+            budget: editForm.budget,
+            travelers: parseInt(editForm.travelers) || 1,
+            interests: editForm.interests.split(",").map(s => s.trim()).filter(s => s.length > 0),
+        });
+        await regenerateTrip({ tripId: trip._id });
+        setIsEditing(false);
+    };
 
     if (trip === undefined) {
         return (
@@ -97,6 +129,36 @@ export default function TripDetails() {
         const query = `${trip.origin} to ${trip.destination} package`;
         const url = `https://www.expedia.com/Hotel-Search?destination=${encodeURIComponent(trip.destination)}`;
         Linking.openURL(url);
+    };
+
+    const handleRegenerate = () => {
+        // In a real app, this would trigger a re-generation of the itinerary
+        // For now, we'll just show an alert or navigate back to create-trip with pre-filled data
+        Alert.alert(
+            "Regenerate Trip",
+            "Do you want to regenerate this itinerary? This will create a new version of your trip.",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Regenerate", 
+                    onPress: () => {
+                        // Navigate to create-trip with params to pre-fill
+                        router.push({
+                            pathname: "/create-trip",
+                            params: {
+                                destination: trip.destination,
+                                startDate: trip.startDate,
+                                endDate: trip.endDate,
+                                budget: trip.budget,
+                                travelers: trip.travelers,
+                                origin: trip.origin,
+                                regenerate: "true" // Flag to indicate regeneration
+                            }
+                        });
+                    } 
+                }
+            ]
+        );
     };
 
     const renderFlights = () => {
@@ -193,6 +255,19 @@ export default function TripDetails() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="white" />
                 </TouchableOpacity>
+                
+                <View style={styles.headerRightButtons}>
+                    <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.iconButton}>
+                        <Ionicons name="pencil" size={20} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={() => regenerateTrip({ tripId: trip._id })} 
+                        style={styles.iconButton}
+                    >
+                        <Ionicons name="refresh" size={20} color="white" />
+                    </TouchableOpacity>
+                </View>
+
                 <Image 
                     source={{ uri: `https://source.unsplash.com/800x600/?${trip.destination}` }} 
                     style={styles.headerImage} 
@@ -322,6 +397,77 @@ export default function TripDetails() {
                     <Text style={styles.bookButtonText}>Book This Trip</Text>
                 </TouchableOpacity>
             </View>
+
+            <Modal 
+                visible={isEditing} 
+                animationType="slide" 
+                presentationStyle="pageSheet"
+                onRequestClose={() => setIsEditing(false)}
+            >
+                <KeyboardAvoidingView 
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.modalContainer}
+                >
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Edit Trip Details</Text>
+                        <TouchableOpacity onPress={() => setIsEditing(false)}>
+                            <Ionicons name="close" size={24} color="#1C1C1E" />
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <ScrollView contentContainerStyle={styles.modalContent}>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Budget</Text>
+                            <View style={styles.budgetOptions}>
+                                {["Cheap", "Moderate", "Luxury"].map((opt) => (
+                                    <TouchableOpacity
+                                        key={opt}
+                                        style={[
+                                            styles.budgetOption,
+                                            editForm.budget === opt && styles.budgetOptionSelected
+                                        ]}
+                                        onPress={() => setEditForm(prev => ({ ...prev, budget: opt }))}
+                                    >
+                                        <Text style={[
+                                            styles.budgetOptionText,
+                                            editForm.budget === opt && styles.budgetOptionTextSelected
+                                        ]}>{opt}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Travelers</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={editForm.travelers}
+                                onChangeText={(text) => setEditForm(prev => ({ ...prev, travelers: text }))}
+                                keyboardType="number-pad"
+                                placeholder="Number of travelers"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Interests (comma separated)</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={editForm.interests}
+                                onChangeText={(text) => setEditForm(prev => ({ ...prev, interests: text }))}
+                                multiline
+                                placeholder="e.g. Food, History, Nature"
+                            />
+                        </View>
+
+                        <TouchableOpacity 
+                            style={styles.saveButton}
+                            onPress={handleSaveAndRegenerate}
+                        >
+                            <Text style={styles.saveButtonText}>Save & Regenerate</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -383,6 +529,19 @@ const styles = StyleSheet.create({
         top: 16,
         left: 16,
         zIndex: 10,
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: "rgba(0,0,0,0.3)",
+    },
+    headerRightButtons: {
+        position: "absolute",
+        top: 16,
+        right: 16,
+        zIndex: 10,
+        flexDirection: "row",
+        gap: 8,
+    },
+    iconButton: {
         padding: 8,
         borderRadius: 20,
         backgroundColor: "rgba(0,0,0,0.3)",
@@ -750,5 +909,83 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 12,
         fontWeight: "600",
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: "#F2F2F7",
+    },
+    modalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
+        backgroundColor: "white",
+        borderBottomWidth: 1,
+        borderBottomColor: "#E5E5EA",
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+    },
+    modalContent: {
+        padding: 16,
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    label: {
+        fontSize: 16,
+        fontWeight: "600",
+        marginBottom: 8,
+        color: "#1C1C1E",
+    },
+    input: {
+        backgroundColor: "white",
+        padding: 12,
+        borderRadius: 12,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: "#E5E5EA",
+    },
+    textArea: {
+        height: 100,
+        textAlignVertical: "top",
+    },
+    budgetOptions: {
+        flexDirection: "row",
+        gap: 8,
+    },
+    budgetOption: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 12,
+        backgroundColor: "white",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#E5E5EA",
+    },
+    budgetOptionSelected: {
+        backgroundColor: "#007AFF",
+        borderColor: "#007AFF",
+    },
+    budgetOptionText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1C1C1E",
+    },
+    budgetOptionTextSelected: {
+        color: "white",
+    },
+    saveButton: {
+        backgroundColor: "#007AFF",
+        padding: 16,
+        borderRadius: 16,
+        alignItems: "center",
+        marginTop: 20,
+    },
+    saveButtonText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "bold",
     },
 });
