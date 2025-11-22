@@ -166,23 +166,25 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     logo: {
-        width: 120,
-        height: 120,
-        marginBottom: 20,
-        borderRadius: 20,
+        width: 100,
+        height: 100,
+        marginBottom: 30,
+        borderRadius: 12,
     },
     title: {
-        fontSize: 32,
-        fontWeight: "bold",
-        marginBottom: 10,
-        color: "#1C1C1E",
+        fontSize: 28,
+        fontWeight: "300", // Lighter, more elegant font weight
+        marginBottom: 8,
+        color: "#1B3F92", // Aegean Blue
         textAlign: "center",
+        letterSpacing: 1,
     },
     subtitle: {
-        fontSize: 18,
-        color: "#8E8E93",
+        fontSize: 16,
+        color: "#546E7A",
         textAlign: "center",
-        marginBottom: 40,
+        marginBottom: 48,
+        lineHeight: 24,
     },
     optionsContainer: {
         width: "100%",
@@ -195,20 +197,26 @@ const styles = StyleSheet.create({
     input: {
         backgroundColor: "white",
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 4, // Sharper corners
         fontSize: 16,
         borderWidth: 1,
-        borderColor: "#E5E5EA",
+        borderColor: "#CFD8DC",
+        color: "#1C1C1E",
     },
     button: {
-        backgroundColor: "#007AFF",
+        backgroundColor: "#1B3F92", // Aegean Deep Blue
         paddingHorizontal: 30,
         paddingVertical: 16,
-        borderRadius: 12,
+        borderRadius: 4, // Sharper corners like Aegean
         width: "100%",
         alignItems: "center",
         flexDirection: "row",
         justifyContent: "center",
+        shadowColor: "#1B3F92",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     buttonIcon: {
         marginRight: 10,
@@ -216,21 +224,26 @@ const styles = StyleSheet.create({
     buttonText: {
         color: "white",
         fontSize: 16,
-        fontWeight: "600",
+        fontWeight: "700", // Bolder text
+        letterSpacing: 0.5,
     },
     googleButton: {
-        backgroundColor: "#DB4437",
+        backgroundColor: "white",
+        borderWidth: 1,
+        borderColor: "#E5E5EA",
     },
     emailButton: {
-        backgroundColor: "#34C759",
+        backgroundColor: "#1B3F92", // Aegean Blue
     },
     guestButton: {
         backgroundColor: "transparent",
-        borderWidth: 2,
-        borderColor: "#007AFF",
+        borderWidth: 1,
+        borderColor: "#1B3F92",
+        borderRadius: 4,
     },
     guestButtonText: {
-        color: "#007AFF",
+        color: "#1B3F92",
+        fontWeight: "600",
     },
     switchButton: {
         alignItems: "center",

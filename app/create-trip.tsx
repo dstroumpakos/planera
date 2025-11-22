@@ -85,7 +85,7 @@ export default function CreateTrip() {
     if (showLoadingScreen) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#1B3F92" />
                 <Text style={styles.loadingText}>Generating your dream trip...</Text>
                 <Text style={styles.loadingSubtext}>Finding the best flights, hotels, and activities for you.</Text>
             </View>
@@ -96,7 +96,7 @@ export default function CreateTrip() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
+                    <Ionicons name="arrow-back" size={24} color="#1B3F92" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Step {step} of 4</Text>
                 <View style={{ width: 24 }} />
@@ -115,6 +115,7 @@ export default function CreateTrip() {
                         <TextInput
                             style={styles.input}
                             placeholder="e.g. Paris, Tokyo, New York"
+                            placeholderTextColor="#90A4AE"
                             value={formData.destination}
                             onChangeText={(text) => setFormData({ ...formData, destination: text })}
                             autoFocus
@@ -124,6 +125,7 @@ export default function CreateTrip() {
                         <TextInput
                             style={styles.input}
                             placeholder="e.g. Athens International Airport"
+                            placeholderTextColor="#90A4AE"
                             value={formData.origin}
                             onChangeText={(text) => setFormData({ ...formData, origin: text })}
                         />
@@ -140,7 +142,7 @@ export default function CreateTrip() {
                             style={styles.dateButton}
                             onPress={() => setShowDatePicker(true)}
                         >
-                            <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+                            <Ionicons name="calendar-outline" size={24} color="#1B3F92" />
                             <Text style={styles.dateText}>
                                 {new Date(formData.startDate).toLocaleDateString()}
                             </Text>
@@ -179,7 +181,7 @@ export default function CreateTrip() {
                                     }
                                 }}
                             >
-                                <Ionicons name="remove" size={24} color="#007AFF" />
+                                <Ionicons name="remove" size={24} color="#1B3F92" />
                             </TouchableOpacity>
                             <Text style={styles.counterText}>
                                 {Math.round((formData.endDate - formData.startDate) / (24 * 60 * 60 * 1000))} Days
@@ -191,7 +193,7 @@ export default function CreateTrip() {
                                     setFormData({ ...formData, endDate: newEnd });
                                 }}
                             >
-                                <Ionicons name="add" size={24} color="#007AFF" />
+                                <Ionicons name="add" size={24} color="#1B3F92" />
                             </TouchableOpacity>
                         </View>
                         <Text style={styles.helperText}>
@@ -223,14 +225,14 @@ export default function CreateTrip() {
                                 style={styles.counterBtn}
                                 onPress={() => setFormData({ ...formData, travelers: Math.max(1, formData.travelers - 1) })}
                             >
-                                <Ionicons name="remove" size={24} color="#007AFF" />
+                                <Ionicons name="remove" size={24} color="#1B3F92" />
                             </TouchableOpacity>
                             <Text style={styles.counterText}>{formData.travelers}</Text>
                             <TouchableOpacity 
                                 style={styles.counterBtn}
                                 onPress={() => setFormData({ ...formData, travelers: formData.travelers + 1 })}
                             >
-                                <Ionicons name="add" size={24} color="#007AFF" />
+                                <Ionicons name="add" size={24} color="#1B3F92" />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -276,14 +278,17 @@ export default function CreateTrip() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "white",
+        backgroundColor: "#F4F6F8", // Light Gray Background
     },
     header: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 16,
+        backgroundColor: "white",
+        borderBottomWidth: 1,
+        borderBottomColor: "#ECEFF1",
     },
     backButton: {
         padding: 8,
@@ -291,42 +296,49 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#1C1C1E",
+        color: "#1B3F92", // Aegean Blue
+        letterSpacing: 0.5,
     },
     progressBar: {
         height: 4,
-        backgroundColor: "#E5E5EA",
+        backgroundColor: "#CFD8DC",
         width: "100%",
     },
     progressFill: {
         height: "100%",
-        backgroundColor: "#007AFF",
+        backgroundColor: "#1B3F92", // Aegean Blue
     },
     content: {
         padding: 24,
     },
     question: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: "#1C1C1E",
+        fontSize: 24,
+        fontWeight: "300", // Elegant light weight
+        color: "#1B3F92", // Aegean Blue
         marginBottom: 32,
+        letterSpacing: 0.5,
     },
     input: {
-        fontSize: 20,
-        borderBottomWidth: 2,
-        borderBottomColor: "#007AFF",
-        paddingVertical: 8,
+        fontSize: 18,
+        backgroundColor: "white",
+        borderWidth: 1,
+        borderColor: "#CFD8DC",
+        borderRadius: 4, // Sharp corners
+        padding: 16,
         marginBottom: 16,
+        color: "#263238",
     },
     helperText: {
         fontSize: 14,
-        color: "#8E8E93",
+        color: "#78909C",
     },
     label: {
-        fontSize: 18,
-        fontWeight: "600",
-        marginBottom: 16,
-        color: "#1C1C1E",
+        fontSize: 14,
+        fontWeight: "700",
+        marginBottom: 8,
+        color: "#546E7A",
+        textTransform: "uppercase",
+        letterSpacing: 1,
     },
     optionsContainer: {
         flexDirection: "row",
@@ -336,21 +348,21 @@ const styles = StyleSheet.create({
     option: {
         paddingHorizontal: 20,
         paddingVertical: 12,
-        borderRadius: 24,
-        backgroundColor: "#F2F2F7",
+        borderRadius: 4, // Sharp corners
+        backgroundColor: "white",
         borderWidth: 1,
-        borderColor: "transparent",
+        borderColor: "#CFD8DC",
     },
     optionSelected: {
-        backgroundColor: "#E1F0FF",
-        borderColor: "#007AFF",
+        backgroundColor: "#1B3F92", // Aegean Blue
+        borderColor: "#1B3F92",
     },
     optionText: {
         fontSize: 16,
-        color: "#1C1C1E",
+        color: "#546E7A",
     },
     optionTextSelected: {
-        color: "#007AFF",
+        color: "white",
         fontWeight: "600",
     },
     row: {
@@ -362,15 +374,17 @@ const styles = StyleSheet.create({
     counterBtn: {
         width: 44,
         height: 44,
-        borderRadius: 22,
-        backgroundColor: "#F2F2F7",
+        borderRadius: 4, // Sharp corners
+        backgroundColor: "white",
+        borderWidth: 1,
+        borderColor: "#CFD8DC",
         justifyContent: "center",
         alignItems: "center",
     },
     counterText: {
         fontSize: 24,
         fontWeight: "bold",
-        color: "#1C1C1E",
+        color: "#263238",
     },
     tagsContainer: {
         flexDirection: "row",
@@ -380,74 +394,84 @@ const styles = StyleSheet.create({
     tag: {
         paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 20,
-        backgroundColor: "#F2F2F7",
+        borderRadius: 4, // Sharp corners
+        backgroundColor: "white",
         borderWidth: 1,
-        borderColor: "transparent",
+        borderColor: "#CFD8DC",
     },
     tagSelected: {
-        backgroundColor: "#E1F0FF",
-        borderColor: "#007AFF",
+        backgroundColor: "#1B3F92", // Aegean Blue
+        borderColor: "#1B3F92",
     },
     tagText: {
         fontSize: 16,
-        color: "#1C1C1E",
+        color: "#546E7A",
     },
     tagTextSelected: {
-        color: "#007AFF",
+        color: "white",
         fontWeight: "600",
     },
     footer: {
         padding: 24,
+        backgroundColor: "white",
         borderTopWidth: 1,
-        borderTopColor: "#E5E5EA",
+        borderTopColor: "#ECEFF1",
     },
     nextButton: {
-        backgroundColor: "#007AFF",
+        backgroundColor: "#1B3F92", // Aegean Blue
         paddingVertical: 16,
-        borderRadius: 16,
+        borderRadius: 4, // Sharp corners
         alignItems: "center",
+        shadowColor: "#1B3F92",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     disabledButton: {
         opacity: 0.7,
     },
     nextButtonText: {
         color: "white",
-        fontSize: 18,
-        fontWeight: "bold",
+        fontSize: 16,
+        fontWeight: "700",
+        letterSpacing: 1,
+        textTransform: "uppercase",
     },
     dateButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#F2F2F7",
+        backgroundColor: "white",
+        borderWidth: 1,
+        borderColor: "#CFD8DC",
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 4, // Sharp corners
         gap: 12,
         marginBottom: 8,
     },
     dateText: {
         fontSize: 18,
-        color: "#1C1C1E",
+        color: "#263238",
         fontWeight: "500",
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "white",
+        backgroundColor: "#F4F6F8",
         padding: 24,
     },
     loadingText: {
         marginTop: 24,
         fontSize: 24,
-        fontWeight: "bold",
-        color: "#1C1C1E",
+        fontWeight: "300",
+        color: "#1B3F92",
         textAlign: "center",
     },
     loadingSubtext: {
         marginTop: 12,
         fontSize: 16,
-        color: "#8E8E93",
+        color: "#546E7A",
         textAlign: "center",
         lineHeight: 24,
     },

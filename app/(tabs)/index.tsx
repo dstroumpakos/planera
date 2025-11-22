@@ -38,12 +38,15 @@ export default function TripListScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>My Trips</Text>
+                <View>
+                    <Text style={styles.headerSubtitle}>Welcome back</Text>
+                    <Text style={styles.headerTitle}>My Trips</Text>
+                </View>
                 <TouchableOpacity 
                     style={styles.addButton}
                     onPress={() => router.push("/create-trip")}
                 >
-                    <Ionicons name="add" size={24} color="white" />
+                    <Ionicons name="add" size={28} color="white" />
                 </TouchableOpacity>
             </View>
 
@@ -62,26 +65,37 @@ export default function TripListScreen() {
                         <TouchableOpacity 
                             style={styles.card} 
                             onPress={() => router.push(`/trip/${item._id}`)}
+                            activeOpacity={0.9}
                         >
-                            <View style={styles.cardHeader}>
-                                <Text style={styles.destination}>{item.destination}</Text>
-                                <View style={styles.headerRight}>
+                            <View style={styles.cardImagePlaceholder}>
+                                <Ionicons name="airplane" size={32} color="white" />
+                            </View>
+                            <View style={styles.cardContent}>
+                                <View style={styles.cardHeader}>
+                                    <Text style={styles.destination}>{item.destination}</Text>
                                     <StatusBadge status={item.status} />
+                                </View>
+                                <Text style={styles.dates}>
+                                    {new Date(item.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(item.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </Text>
+                                <View style={styles.cardFooter}>
+                                    <View style={styles.detailItem}>
+                                        <Ionicons name="people-outline" size={16} color="#546E7A" />
+                                        <Text style={styles.details}>{item.travelers}</Text>
+                                    </View>
+                                    <View style={styles.detailItem}>
+                                        <Ionicons name="wallet-outline" size={16} color="#546E7A" />
+                                        <Text style={styles.details}>{item.budget}</Text>
+                                    </View>
                                     <TouchableOpacity 
                                         onPress={() => handleDelete(item._id)}
                                         style={styles.deleteBtn}
                                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                     >
-                                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                                        <Ionicons name="trash-outline" size={18} color="#B0BEC5" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
-                            <Text style={styles.dates}>
-                                {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
-                            </Text>
-                            <Text style={styles.details}>
-                                {item.travelers} Traveler{item.travelers > 1 ? 's' : ''} • {item.budget} Budget
-                            </Text>
                         </TouchableOpacity>
                     )}
                 />
@@ -92,13 +106,13 @@ export default function TripListScreen() {
 
 function StatusBadge({ status }: { status: string }) {
     const colors: Record<string, string> = {
-        generating: "#FF9500",
-        completed: "#34C759",
-        failed: "#FF3B30",
+        generating: "#FFB300", // Amber
+        completed: "#1B3F92", // Aegean Blue
+        failed: "#D32F2F", // Red
     };
     
     return (
-        <View style={[styles.badge, { backgroundColor: colors[status] || "#8E8E93" }]}>
+        <View style={[styles.badge, { backgroundColor: colors[status] || "#90A4AE" }]}>
             <Text style={styles.badgeText}>{status.toUpperCase()}</Text>
         </View>
     );
@@ -107,35 +121,42 @@ function StatusBadge({ status }: { status: string }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F2F2F7",
+        backgroundColor: "#F4F6F8", // Light Gray Background
     },
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: 24,
+        paddingVertical: 20,
         backgroundColor: "white",
         borderBottomWidth: 1,
-        borderBottomColor: "#E5E5EA",
+        borderBottomColor: "#ECEFF1",
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: "#546E7A",
+        fontWeight: "600",
+        textTransform: "uppercase",
+        letterSpacing: 1,
     },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: "#1C1C1E",
+        fontSize: 32,
+        fontWeight: "300", // Elegant light weight
+        color: "#1B3F92", // Aegean Blue
     },
     addButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#007AFF",
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: "#1B3F92", // Aegean Blue
         justifyContent: "center",
         alignItems: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
+        shadowColor: "#1B3F92",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
     },
     center: {
         flex: 1,
@@ -143,49 +164,76 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     listContent: {
-        padding: 16,
+        padding: 20,
         paddingBottom: 100,
     },
     card: {
         backgroundColor: "white",
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 8, // Sharper corners
         marginBottom: 16,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+        flexDirection: "row",
+        overflow: "hidden",
+    },
+    cardImagePlaceholder: {
+        width: 80,
+        backgroundColor: "#1B3F92",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    cardContent: {
+        flex: 1,
+        padding: 16,
     },
     cardHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 8,
+        alignItems: "flex-start",
+        marginBottom: 4,
     },
     destination: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#1C1C1E",
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#263238",
+        flex: 1,
+        marginRight: 8,
     },
     dates: {
         fontSize: 14,
-        color: "#8E8E93",
-        marginBottom: 4,
+        color: "#546E7A",
+        marginBottom: 12,
+    },
+    cardFooter: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 4,
+    },
+    detailItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginRight: 16,
     },
     details: {
-        fontSize: 14,
-        color: "#3A3A3C",
+        fontSize: 13,
+        color: "#546E7A",
+        fontWeight: "500",
     },
     badge: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 8,
+        borderRadius: 4,
     },
     badgeText: {
         color: "white",
         fontSize: 10,
-        fontWeight: "bold",
+        fontWeight: "700",
+        letterSpacing: 0.5,
     },
     headerRight: {
         flexDirection: "row",
@@ -194,6 +242,7 @@ const styles = StyleSheet.create({
     },
     deleteBtn: {
         padding: 4,
+        marginLeft: "auto",
     },
     emptyState: {
         flex: 1,
@@ -203,14 +252,15 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 20,
-        fontWeight: "bold",
-        color: "#1C1C1E",
+        fontWeight: "600",
+        color: "#263238",
         marginTop: 16,
     },
     emptySubtext: {
         fontSize: 16,
-        color: "#8E8E93",
+        color: "#78909C",
         textAlign: "center",
         marginTop: 8,
+        lineHeight: 24,
     },
 });

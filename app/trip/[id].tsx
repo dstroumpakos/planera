@@ -86,7 +86,7 @@ export default function TripDetails() {
     if (trip === undefined) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#1B3F92" />
             </View>
         );
     }
@@ -102,7 +102,7 @@ export default function TripDetails() {
     if (trip.status === "generating") {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#1B3F92" />
                 <Text style={styles.generatingText}>Generating your dream trip...</Text>
                 <Text style={styles.generatingSubtext}>This usually takes a few seconds.</Text>
             </View>
@@ -228,14 +228,14 @@ export default function TripDetails() {
                 <View style={styles.flightHeader}>
                     <Text style={styles.flightPrice}>${flightPricePerPerson}/person</Text>
                     <View style={styles.luggageBadge}>
-                        <Ionicons name="briefcase-outline" size={14} color="#007AFF" />
+                        <Ionicons name="briefcase-outline" size={14} color="#1B3F92" />
                         <Text style={styles.luggageText}>{itinerary.flights.luggage}</Text>
                     </View>
                 </View>
                 
                 <View style={styles.flightSegment}>
                     <View style={styles.segmentHeader}>
-                        <Ionicons name="airplane" size={20} color="#007AFF" />
+                        <Ionicons name="airplane" size={20} color="#1B3F92" />
                         <Text style={styles.segmentTitle}>Outbound</Text>
                     </View>
                     <View style={styles.row}>
@@ -256,7 +256,7 @@ export default function TripDetails() {
 
                 <View style={styles.flightSegment}>
                     <View style={styles.segmentHeader}>
-                        <Ionicons name="airplane" size={20} color="#007AFF" style={{ transform: [{ rotate: '180deg' }] }} />
+                        <Ionicons name="airplane" size={20} color="#1B3F92" style={{ transform: [{ rotate: '180deg' }] }} />
                         <Text style={styles.segmentTitle}>Return</Text>
                     </View>
                     <View style={styles.row}>
@@ -278,7 +278,7 @@ export default function TripDetails() {
                     onPress={() => openAffiliateLink('flight', `${trip.origin} to ${trip.destination}`)}
                 >
                     <Text style={styles.affiliateButtonText}>Check Flight Availability</Text>
-                    <Ionicons name="open-outline" size={16} color="#007AFF" />
+                    <Ionicons name="open-outline" size={16} color="#1B3F92" />
                 </TouchableOpacity>
             </View>
         );
@@ -339,14 +339,14 @@ export default function TripDetails() {
                                     <Text style={styles.cardTitle} numberOfLines={1}>{hotel.name}</Text>
                                     <View style={styles.stars}>
                                         {[...Array(hotel.stars || 0)].map((_, i) => (
-                                            <Ionicons key={i} name="star" size={12} color="#FF9500" />
+                                            <Ionicons key={i} name="star" size={12} color="#FFB300" />
                                         ))}
                                     </View>
                                 </View>
                                 <Text style={styles.hotelDesc} numberOfLines={2}>{hotel.description}</Text>
                                 <Text style={styles.price}>${hotel.pricePerNight}/night</Text>
                                 <TouchableOpacity onPress={() => openMap(hotel.address)}>
-                                    <Text style={styles.address} numberOfLines={1}>{hotel.address} <Ionicons name="map" size={12} color="#007AFF" /></Text>
+                                    <Text style={styles.address} numberOfLines={1}>{hotel.address} <Ionicons name="map" size={12} color="#1B3F92" /></Text>
                                 </TouchableOpacity>
                                 
                                 <TouchableOpacity 
@@ -358,7 +358,7 @@ export default function TripDetails() {
 
                                 {selectedHotelIndex === index && (
                                     <View style={styles.selectedBadge}>
-                                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                                        <Ionicons name="checkmark-circle" size={20} color="#1B3F92" />
                                     </View>
                                 )}
                             </TouchableOpacity>
@@ -390,7 +390,7 @@ export default function TripDetails() {
                         <View style={styles.blurContainer}>
                             <BlurView intensity={20} style={StyleSheet.absoluteFill} />
                             <View style={styles.lockContent}>
-                                <Ionicons name="lock-closed" size={48} color="#007AFF" />
+                                <Ionicons name="lock-closed" size={48} color="#1B3F92" />
                                 <Text style={styles.lockTitle}>Unlock Full Itinerary</Text>
                                 <Text style={styles.lockText}>
                                     Upgrade to Premium to see the detailed daily plan, maps, and more.
@@ -579,7 +579,7 @@ function Section({ title, children }: { title: string, children: React.ReactNode
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F2F2F7",
+        backgroundColor: "#F4F6F8", // Light Gray
     },
     center: {
         flex: 1,
@@ -589,18 +589,18 @@ const styles = StyleSheet.create({
     generatingText: {
         marginTop: 16,
         fontSize: 18,
-        fontWeight: "600",
-        color: "#1C1C1E",
+        fontWeight: "300",
+        color: "#1B3F92",
     },
     generatingSubtext: {
         marginTop: 8,
         fontSize: 14,
-        color: "#8E8E93",
+        color: "#546E7A",
     },
     errorText: {
         marginTop: 16,
         fontSize: 18,
-        color: "#FF3B30",
+        color: "#D32F2F",
     },
     header: {
         height: 200,
@@ -612,12 +612,12 @@ const styles = StyleSheet.create({
     },
     headerOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0,0,0,0.4)",
+        backgroundColor: "rgba(27, 63, 146, 0.4)", // Blue tint
     },
     headerContent: {
         position: "absolute",
-        bottom: 16,
-        left: 16,
+        bottom: 20,
+        left: 20,
     },
     backButton: {
         position: "absolute",
@@ -642,38 +642,43 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0,0,0,0.3)",
     },
     destination: {
-        fontSize: 32,
-        fontWeight: "bold",
+        fontSize: 36,
+        fontWeight: "300",
         color: "white",
+        letterSpacing: 1,
     },
     dates: {
         fontSize: 16,
         color: "rgba(255,255,255,0.9)",
         marginTop: 4,
+        fontWeight: "500",
     },
     content: {
-        padding: 16,
+        padding: 20,
         paddingBottom: 100,
     },
     section: {
-        marginBottom: 24,
+        marginBottom: 32,
     },
     sectionTitle: {
         fontSize: 20,
-        fontWeight: "bold",
-        color: "#1C1C1E",
-        marginBottom: 12,
+        fontWeight: "300",
+        color: "#1B3F92",
+        marginBottom: 16,
+        letterSpacing: 0.5,
     },
     card: {
         backgroundColor: "white",
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 4, // Sharp corners
+        padding: 20,
         marginBottom: 12,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
+        borderWidth: 1,
+        borderColor: "#ECEFF1",
     },
     row: {
         flexDirection: "row",
@@ -685,64 +690,72 @@ const styles = StyleSheet.create({
     },
     cardTitle: {
         fontSize: 16,
-        fontWeight: "600",
-        color: "#1C1C1E",
+        fontWeight: "700",
+        color: "#263238",
     },
     cardSubtitle: {
         fontSize: 14,
-        color: "#8E8E93",
+        color: "#546E7A",
     },
     price: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: "#007AFF",
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#1B3F92",
     },
     flightTimes: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginTop: 12,
-        paddingTop: 12,
+        marginTop: 16,
+        paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: "#F2F2F7",
+        borderTopColor: "#ECEFF1",
     },
     time: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: "500",
-        color: "#1C1C1E",
+        color: "#263238",
     },
     stars: {
         flexDirection: "row",
         gap: 2,
-        marginTop: 2,
+        marginTop: 4,
     },
     address: {
-        fontSize: 14,
-        color: "#8E8E93",
+        fontSize: 13,
+        color: "#78909C",
         marginTop: 8,
     },
     dayCard: {
-        backgroundColor: "#F8F9FA",
-        borderRadius: 16,
-        padding: 16,
+        backgroundColor: "white",
+        borderRadius: 4, // Sharp corners
+        padding: 20,
         marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#ECEFF1",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 1,
     },
     dayHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 16,
+        marginBottom: 20,
     },
     dayBadge: {
-        backgroundColor: "#E1F5FE",
+        backgroundColor: "#E3F2FD",
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 12,
+        borderRadius: 4,
     },
     dayBadgeText: {
-        color: "#0288D1",
-        fontWeight: "bold",
-        fontSize: 14,
+        color: "#1B3F92",
+        fontWeight: "700",
+        fontSize: 12,
+        textTransform: "uppercase",
     },
     dayTitle: {
         fontSize: 18,
@@ -751,71 +764,71 @@ const styles = StyleSheet.create({
     },
     activityItem: {
         flexDirection: "row",
-        marginBottom: 20,
+        marginBottom: 24,
     },
     activityRow: {
         flexDirection: "row",
         marginBottom: 20,
     },
     activityTime: {
-        width: 80,
+        width: 70,
         fontSize: 14,
         fontWeight: "600",
-        color: "#666",
+        color: "#546E7A",
     },
     activityContent: {
         flex: 1,
         paddingLeft: 16,
         borderLeftWidth: 2,
-        borderLeftColor: "#E0E0E0",
+        borderLeftColor: "#ECEFF1",
         paddingBottom: 4,
     },
     activityTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#1C1C1E",
+        color: "#263238",
         marginBottom: 4,
     },
     activityDesc: {
         fontSize: 14,
-        color: "#3A3A3C",
-        lineHeight: 20,
+        color: "#546E7A",
+        lineHeight: 22,
     },
     mapLink: {
         marginTop: 4,
     },
     mapLinkText: {
         fontSize: 12,
-        color: "#007AFF",
+        color: "#1B3F92",
         fontWeight: "500",
     },
     flightHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 16,
+        marginBottom: 20,
     },
     flightPrice: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#007AFF",
+        fontSize: 24,
+        fontWeight: "300",
+        color: "#1B3F92",
     },
     luggageBadge: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#E1F0FF",
+        backgroundColor: "#E3F2FD",
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 8,
+        borderRadius: 4,
         gap: 4,
     },
     luggageText: {
         fontSize: 12,
-        color: "#007AFF",
+        color: "#1B3F92",
         fontWeight: "600",
     },
     flightSegment: {
-        marginBottom: 8,
+        marginBottom: 12,
     },
     segmentHeader: {
         flexDirection: "row",
@@ -824,27 +837,29 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     segmentTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#8E8E93",
+        fontSize: 12,
+        fontWeight: "700",
+        color: "#78909C",
+        textTransform: "uppercase",
+        letterSpacing: 1,
     },
     duration: {
         fontSize: 14,
-        color: "#8E8E93",
+        color: "#546E7A",
     },
     divider: {
         height: 1,
-        backgroundColor: "#F2F2F7",
-        marginVertical: 16,
+        backgroundColor: "#ECEFF1",
+        marginVertical: 20,
     },
     hotelList: {
         paddingRight: 16,
-        gap: 12,
+        gap: 16,
     },
     hotelCard: {
         width: 280,
         backgroundColor: "white",
-        borderRadius: 16,
+        borderRadius: 4, // Sharp corners
         padding: 16,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
@@ -855,8 +870,8 @@ const styles = StyleSheet.create({
         borderColor: "transparent",
     },
     selectedHotelCard: {
-        borderColor: "#007AFF",
-        backgroundColor: "#F0F8FF",
+        borderColor: "#1B3F92",
+        backgroundColor: "#F4F6F8",
     },
     selectedBadge: {
         position: "absolute",
@@ -871,9 +886,9 @@ const styles = StyleSheet.create({
     },
     hotelDesc: {
         fontSize: 13,
-        color: "#3A3A3C",
-        marginBottom: 8,
-        lineHeight: 18,
+        color: "#546E7A",
+        marginBottom: 12,
+        lineHeight: 20,
     },
     footer: {
         position: "absolute",
@@ -881,18 +896,18 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         backgroundColor: "white",
-        padding: 16,
-        paddingBottom: Platform.OS === "ios" ? 32 : 16,
+        padding: 20,
+        paddingBottom: Platform.OS === "ios" ? 32 : 20,
         borderTopWidth: 1,
-        borderTopColor: "#E5E5EA",
+        borderTopColor: "#ECEFF1",
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 10,
     },
     priceBreakdown: {
         flex: 1,
@@ -904,29 +919,37 @@ const styles = StyleSheet.create({
     },
     priceLabel: {
         fontSize: 12,
-        color: "#8E8E93",
+        color: "#78909C",
+        textTransform: "uppercase",
     },
     totalPrice: {
         fontSize: 24,
-        fontWeight: "bold",
-        color: "#007AFF",
+        fontWeight: "700",
+        color: "#1B3F92",
     },
     perPersonPrice: {
         fontSize: 14,
-        color: "#3A3A3C",
+        color: "#546E7A",
         fontWeight: "500",
     },
     bookButton: {
-        backgroundColor: "#007AFF",
+        backgroundColor: "#1B3F92",
         paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 24,
+        paddingVertical: 14,
+        borderRadius: 4, // Sharp corners
         marginLeft: 16,
+        shadowColor: "#1B3F92",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     bookButtonText: {
         color: "white",
-        fontWeight: "bold",
+        fontWeight: "700",
         fontSize: 16,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
     blurContainer: {
         position: "absolute",
@@ -934,10 +957,10 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(255,255,255,0.8)",
+        backgroundColor: "rgba(255,255,255,0.9)",
         justifyContent: "center",
         alignItems: "center",
-        borderRadius: 16,
+        borderRadius: 4,
         zIndex: 10,
     },
     lockContent: {
@@ -946,101 +969,108 @@ const styles = StyleSheet.create({
     },
     lockTitle: {
         fontSize: 20,
-        fontWeight: "bold",
-        color: "#333",
+        fontWeight: "300",
+        color: "#1B3F92",
         marginTop: 16,
         marginBottom: 8,
     },
     lockText: {
         fontSize: 14,
-        color: "#666",
+        color: "#546E7A",
         textAlign: "center",
         marginBottom: 24,
-        lineHeight: 20,
+        lineHeight: 22,
     },
     unlockButton: {
-        backgroundColor: "#007AFF",
+        backgroundColor: "#1B3F92",
         paddingHorizontal: 32,
         paddingVertical: 12,
-        borderRadius: 24,
+        borderRadius: 4,
         marginBottom: 12,
     },
     unlockButtonText: {
         color: "#FFF",
         fontSize: 16,
-        fontWeight: "bold",
+        fontWeight: "700",
+        textTransform: "uppercase",
     },
     notNowButton: {
         paddingVertical: 8,
     },
     notNowButtonText: {
-        color: "#8E8E93",
+        color: "#78909C",
         fontSize: 14,
         fontWeight: "500",
     },
     affiliateButton: {
-        marginTop: 16,
+        marginTop: 20,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        padding: 12,
-        backgroundColor: "#F0F8FF",
-        borderRadius: 12,
+        padding: 14,
+        backgroundColor: "#E3F2FD",
+        borderRadius: 4,
         gap: 8,
     },
     affiliateButtonText: {
-        color: "#007AFF",
-        fontWeight: "600",
+        color: "#1B3F92",
+        fontWeight: "700",
         fontSize: 14,
+        textTransform: "uppercase",
     },
     miniBookButton: {
-        marginTop: 12,
-        backgroundColor: "#007AFF",
-        paddingVertical: 8,
-        borderRadius: 8,
+        marginTop: 16,
+        backgroundColor: "#1B3F92",
+        paddingVertical: 10,
+        borderRadius: 4,
         alignItems: "center",
     },
     miniBookButtonText: {
         color: "white",
         fontSize: 12,
-        fontWeight: "600",
+        fontWeight: "700",
+        textTransform: "uppercase",
     },
     modalContainer: {
         flex: 1,
-        backgroundColor: "#F2F2F7",
+        backgroundColor: "#F4F6F8",
     },
     modalHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: 16,
+        padding: 20,
         backgroundColor: "white",
         borderBottomWidth: 1,
-        borderBottomColor: "#E5E5EA",
+        borderBottomColor: "#ECEFF1",
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: "bold",
+        fontWeight: "700",
+        color: "#1B3F92",
     },
     modalContent: {
-        padding: 16,
+        padding: 20,
     },
     inputGroup: {
-        marginBottom: 20,
+        marginBottom: 24,
     },
     label: {
-        fontSize: 16,
-        fontWeight: "600",
+        fontSize: 14,
+        fontWeight: "700",
         marginBottom: 8,
-        color: "#1C1C1E",
+        color: "#546E7A",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
     input: {
         backgroundColor: "white",
-        padding: 12,
-        borderRadius: 12,
+        padding: 14,
+        borderRadius: 4,
         fontSize: 16,
         borderWidth: 1,
-        borderColor: "#E5E5EA",
+        borderColor: "#CFD8DC",
+        color: "#263238",
     },
     textArea: {
         height: 100,
@@ -1053,20 +1083,20 @@ const styles = StyleSheet.create({
     budgetOption: {
         flex: 1,
         padding: 12,
-        borderRadius: 12,
+        borderRadius: 4,
         backgroundColor: "white",
         alignItems: "center",
         borderWidth: 1,
-        borderColor: "#E5E5EA",
+        borderColor: "#CFD8DC",
     },
     budgetOptionSelected: {
-        backgroundColor: "#007AFF",
-        borderColor: "#007AFF",
+        backgroundColor: "#1B3F92",
+        borderColor: "#1B3F92",
     },
     budgetOptionText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#1C1C1E",
+        color: "#546E7A",
     },
     budgetOptionTextSelected: {
         color: "white",
@@ -1079,31 +1109,39 @@ const styles = StyleSheet.create({
     dateInput: {
         flex: 1,
         backgroundColor: "white",
-        padding: 12,
-        borderRadius: 12,
+        padding: 14,
+        borderRadius: 4,
         borderWidth: 1,
-        borderColor: "#E5E5EA",
+        borderColor: "#CFD8DC",
     },
     dateLabel: {
         fontSize: 12,
-        color: "#8E8E93",
+        color: "#78909C",
         marginBottom: 4,
+        textTransform: "uppercase",
     },
     dateValue: {
         fontSize: 16,
-        color: "#1C1C1E",
+        color: "#263238",
         fontWeight: "500",
     },
     saveButton: {
-        backgroundColor: "#007AFF",
+        backgroundColor: "#1B3F92",
         padding: 16,
-        borderRadius: 16,
+        borderRadius: 4,
         alignItems: "center",
-        marginTop: 20,
+        marginTop: 24,
+        shadowColor: "#1B3F92",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     saveButtonText: {
         color: "white",
         fontSize: 16,
-        fontWeight: "bold",
+        fontWeight: "700",
+        textTransform: "uppercase",
+        letterSpacing: 1,
     },
 });
