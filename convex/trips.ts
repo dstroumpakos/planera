@@ -109,6 +109,13 @@ export const generate = internalAction({
 
             const result = JSON.parse(content);
 
+            // Transform result to match frontend expectation (frontend expects dailyPlan, AI returns itinerary)
+            if (result.itinerary && Array.isArray(result.itinerary)) {
+                result.dailyPlan = result.itinerary;
+                // Keep result.itinerary as well just in case, or delete it. 
+                // Let's keep it to be safe, but frontend uses dailyPlan.
+            }
+
             // Calculate totals based on the first hotel option as a default
             const flightPrice = parseFloat(result.flights[0]?.price.replace(/[^0-9.]/g, "") || "0");
             const hotelPrice = parseFloat(result.hotels[0]?.price.replace(/[^0-9.]/g, "") || "0");
@@ -117,7 +124,8 @@ export const generate = internalAction({
             
             await ctx.runMutation(internal.trips.updateItinerary, {
                 tripId: args.tripId,
-                result: content,
+                itinerary: result,
+                status: "completed",
             });
         } catch (error) {
             console.error("Error generating itinerary:", error);
@@ -141,31 +149,34 @@ export const generate = internalAction({
                     { name: "The Local Bite", priceRange: "€€", cuisine: "Local", rating: 4.5, coordinates: { latitude: 48.8566, longitude: 2.3522 } },
                     { name: "Gourmet Corner", priceRange: "€€€", cuisine: "Fine Dining", rating: 4.8, coordinates: { latitude: 48.8606, longitude: 2.3376 } }
                 ],
-                itinerary: [
-                    {
-                        day: 1,
-                        title: "Arrival & Exploration",
-                        activities: [
-                            { time: "10:00 AM", title: "Arrival", description: "Arrive at the airport and transfer to hotel." },
-                            { time: "2:00 PM", title: "City Walk", description: "Leisurely walk around the city center." },
-                            { time: "7:00 PM", title: "Dinner", description: "Enjoy a local meal." }
-                        ]
-                    },
-                    {
-                        day: 2,
-                        title: "Culture & History",
-                        activities: [
-                            { time: "9:00 AM", title: "Museum Visit", description: "Visit the main museum." },
-                            { time: "1:00 PM", title: "Lunch", description: "Lunch at a nearby cafe." },
-                            { time: "3:00 PM", title: "Park Stroll", description: "Relax in the city park." }
-                        ]
-                    }
-                ]
+                itinerary: {
+                    dailyPlan: [
+                        {
+                            day: 1,
+                            title: "Arrival & Exploration",
+                            activities: [
+                                { time: "10:00 AM", title: "Arrival", description: "Arrive at the airport and transfer to hotel." },
+                                { time: "2:00 PM", title: "City Walk", description: "Leisurely walk around the city center." },
+                                { time: "7:00 PM", title: "Dinner", description: "Enjoy a local meal." }
+                            ]
+                        },
+                        {
+                            day: 2,
+                            title: "Culture & History",
+                            activities: [
+                                { time: "9:00 AM", title: "Museum Visit", description: "Visit the main museum." },
+                                { time: "1:00 PM", title: "Lunch", description: "Lunch at a nearby cafe." },
+                                { time: "3:00 PM", title: "Park Stroll", description: "Relax in the city park." }
+                            ]
+                        }
+                    ]
+                }
             };
 
             await ctx.runMutation(internal.trips.updateItinerary, {
                 tripId: args.tripId,
-                result: JSON.stringify(fallbackItinerary),
+                itinerary: fallbackItinerary,
+                status: "completed",
             });
         }
     },
