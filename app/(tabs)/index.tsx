@@ -1,6 +1,5 @@
-
 import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from "react-native";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,7 +8,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TripListScreen() {
     const router = useRouter();
-    const trips = useQuery(api.trips.list);
+    const { isAuthenticated } = useConvexAuth();
+    const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
     const deleteTrip = useMutation(api.trips.deleteTrip);
 
     const handleDelete = (tripId: Id<"trips">) => {

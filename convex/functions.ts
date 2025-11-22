@@ -14,7 +14,12 @@ export const authQuery = customQuery(
     // only modifies the `ctx` argument to the function.
     customCtx(async (ctx) => {
         // Look up the logged in user
-        const user = await authComponent.getAuthUser(ctx);
+        let user;
+        try {
+            user = await authComponent.getAuthUser(ctx);
+        } catch (e) {
+            user = null;
+        }
         if (!user) throw new Error("Authentication required");
         // Pass in a user to use in evaluating rules,
         // which validate data access at access / write time.
@@ -27,7 +32,12 @@ export const authQuery = customQuery(
 export const authMutation = customMutation(
     mutation,
     customCtx(async (ctx) => {
-        const user = await authComponent.getAuthUser(ctx);
+        let user;
+        try {
+            user = await authComponent.getAuthUser(ctx);
+        } catch (e) {
+            user = null;
+        }
         if (!user) throw new Error("Authentication required");
         return { user };
     })
@@ -36,7 +46,12 @@ export const authMutation = customMutation(
 export const authAction = customAction(
     action,
     customCtx(async (ctx) => {
-        const user = await authComponent.getAuthUser(ctx);
+        let user;
+        try {
+            user = await authComponent.getAuthUser(ctx);
+        } catch (e) {
+            user = null;
+        }
         if (!user) throw new Error("Authentication required");
         return { user };
     })
