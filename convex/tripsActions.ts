@@ -174,7 +174,8 @@ async function searchFlights(
 
     console.log(`🔍 Searching flights: ${origin} (${originCode}) → ${destination} (${destCode}), ${departureDate} to ${returnDate}, ${adults} adults`);
 
-    const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${originCode}&destinationLocationCode=${destCode}&departureDate=${departureDate}&returnDate=${returnDate}&adults=${adults}&max=3`;
+    // Search for round-trip flights (outbound + return in one request)
+    const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${originCode}&destinationLocationCode=${destCode}&departureDate=${departureDate}&adults=${adults}&nonStop=false&max=5`;
 
     const response = await fetch(url, {
         headers: {
@@ -190,16 +191,34 @@ async function searchFlights(
     }
     
     if (!data.data || data.data.length === 0) {
-        console.error("❌ No flights found for:", { originCode, destCode, departureDate, returnDate });
+        console.error("❌ No flights found for:", { originCode, destCode, departureDate });
         throw new Error(`No flights found from ${origin} (${originCode}) to ${destination} (${destCode}). Try different dates or destinations.`);
     }
 
     console.log(`✅ Found ${data.data.length} flight offers`);
 
-    // Take the first offer and format it for the frontend
-    const offer = data.data[0];
-    const outbound = offer.itineraries[0];
-    const returnFlight = offer.itineraries[1];
+    // Now search for return flights separately
+    const returnUrl = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${destCode}&destinationLocationCode=${originCode}&departureDate=${returnDate}&adults=${adults}&nonStop=false&max=5`;
+
+    const returnResponse = await fetch(returnUrl, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    const returnData = await returnResponse.json();
+    
+    if (!returnResponse.ok || !returnData.data || returnData.data.length === 0) {
+        console.warn("⚠️ No return flights found, using outbound data for both directions");
+    }
+
+    // Take the first offer for outbound
+    const outboundOffer = data.data[0];
+    const outbound = outboundOffer.itineraries[0];
+    
+    // Take the first offer for return (or use outbound as fallback)
+    const returnOffer = returnData.data?.[0] || outboundOffer;
+    const returnFlight = returnOffer.itineraries[0];
     
     return {
         outbound: {
@@ -216,8 +235,8 @@ async function searchFlights(
             departure: formatTime(returnFlight.segments[0].departure.at),
             arrival: formatTime(returnFlight.segments[returnFlight.segments.length - 1].arrival.at),
         },
-        luggage: `${offer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags?.quantity || 0} bag(s) included`,
-        pricePerPerson: parseFloat(offer.price.total),
+        luggage: `${outboundOffer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags?.quantity || 0} bag(s) included`,
+        pricePerPerson: parseFloat(outboundOffer.price.total) + (returnData.data?.[0] ? parseFloat(returnOffer.price.total) : parseFloat(outboundOffer.price.total)),
     };
 }
 
