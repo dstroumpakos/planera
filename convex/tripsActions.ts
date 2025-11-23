@@ -15,11 +15,16 @@ export const generate = internalAction({
         if (!trip) throw new Error("Trip not found");
         if (!trip.origin) throw new Error("Trip origin is required");
 
+        console.log(`🚀 Starting trip generation for: ${trip.origin} → ${trip.destination}`);
+
         try {
             // 1. Get Amadeus access token
+            console.log("🔑 Getting Amadeus access token...");
             const amadeusToken = await getAmadeusToken();
+            console.log("✅ Amadeus token obtained");
 
             // 2. Fetch real flights
+            console.log("✈️ Fetching flights...");
             const flights = await searchFlights(
                 amadeusToken,
                 trip.origin,
@@ -28,8 +33,10 @@ export const generate = internalAction({
                 new Date(trip.endDate).toISOString().split('T')[0],
                 trip.travelers
             );
+            console.log("✅ Flights fetched:", JSON.stringify(flights, null, 2));
 
             // 3. Fetch real hotels
+            console.log("🏨 Fetching hotels...");
             const hotels = await searchHotels(
                 amadeusToken,
                 trip.destination,
@@ -37,10 +44,13 @@ export const generate = internalAction({
                 new Date(trip.endDate).toISOString().split('T')[0],
                 trip.travelers
             );
+            console.log(`✅ Hotels fetched: ${hotels.length} options`);
 
             // 4. Fetch real activities and restaurants
+            console.log("🎯 Fetching activities and restaurants...");
             const activities = await searchActivities(trip.destination);
             const restaurants = await searchRestaurants(trip.destination);
+            console.log(`✅ Activities: ${activities.length}, Restaurants: ${restaurants.length}`);
 
             // 5. Use OpenAI to generate day-by-day itinerary based on real data
             const openai = new OpenAI({
@@ -86,8 +96,11 @@ export const generate = internalAction({
                 hotels,
                 activities,
                 restaurants,
-                itinerary: itineraryData,
+                dailyPlan: itineraryData.dailyPlan,
+                estimatedDailyExpenses: 100, // Fallback
             };
+
+            console.log("✅ Trip generation complete!");
 
             await ctx.runMutation(internal.trips.updateItinerary, {
                 tripId,
@@ -95,7 +108,12 @@ export const generate = internalAction({
                 status: "completed",
             });
         } catch (error: any) {
-            console.error("Error generating itinerary:", error);
+            console.error("❌ Error generating itinerary:", error);
+            console.error("Error details:", {
+                message: error.message,
+                stack: error.stack,
+                response: error.response?.data
+            });
             
             await ctx.runMutation(internal.trips.updateItinerary, {
                 tripId,
