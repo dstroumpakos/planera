@@ -248,79 +248,79 @@ async function searchHotels(
 
     console.log(`🏨 Searching hotels in ${destination} (${cityCode}), ${checkInDate} to ${checkOutDate}, ${adults} adults`);
 
-    const url = `https://test.api.amadeus.com/v3/shopping/hotel-offers?cityCode=${cityCode}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&radius=5&radiusUnit=KM&ratings=3,4,5&bestRateOnly=true`;
-
-    const response = await fetch(url, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-        console.error("❌ Amadeus Hotel API error:", data);
-        throw new Error(`Amadeus Hotel API error: ${data.errors?.[0]?.detail || "Unknown error"}`);
-    }
-    
-    if (!data.data || data.data.length === 0) {
-        console.warn(`⚠️ No hotels found in ${destination} (${cityCode}). Using fallback data.`);
-        // Return fallback hotels instead of throwing
-        return [
-            {
-                name: `Hotel in ${destination}`,
-                pricePerNight: 120,
-                stars: 4,
-                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-                description: "Comfortable accommodation with modern amenities",
-                amenities: ["WiFi", "Breakfast", "Pool"],
-                address: `City Center, ${destination}`,
-                coordinates: { latitude: 0, longitude: 0 },
-            },
-            {
-                name: `Budget Hotel ${destination}`,
-                pricePerNight: 80,
-                stars: 3,
-                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-                description: "Affordable and clean accommodation",
-                amenities: ["WiFi", "Breakfast"],
-                address: `Downtown, ${destination}`,
-                coordinates: { latitude: 0, longitude: 0 },
-            },
-            {
-                name: `Luxury ${destination} Hotel`,
-                pricePerNight: 250,
-                stars: 5,
-                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-                description: "Premium accommodation with exceptional service",
-                amenities: ["WiFi", "Breakfast", "Pool", "Spa", "Gym"],
-                address: `Premium District, ${destination}`,
-                coordinates: { latitude: 0, longitude: 0 },
-            },
-        ];
-    }
-
-    console.log(`✅ Found ${data.data.length} hotels`);
-
-    return data.data.slice(0, 3).map((hotel: any) => {
-        const totalPrice = parseFloat(hotel.offers[0].price.total);
-        const nights = Math.ceil((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24));
-        const pricePerNight = totalPrice / nights;
+    try {
+        // Step 1: Search for hotels by city to get hotel IDs
+        const searchUrl = `https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city?cityCode=${cityCode}&radius=5&radiusUnit=KM&hotelSource=ALL`;
         
-        return {
-            name: hotel.hotel.name,
-            pricePerNight: Math.round(pricePerNight),
-            stars: hotel.hotel.rating ? Math.round(hotel.hotel.rating) : 4,
-            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-            description: hotel.hotel.description?.text || "Comfortable accommodation with modern amenities",
-            amenities: hotel.hotel.amenities || ["WiFi", "Breakfast"],
-            address: hotel.hotel.address?.lines?.[0] || `${hotel.hotel.name}, ${destination}`,
-            coordinates: {
-                latitude: hotel.hotel.latitude,
-                longitude: hotel.hotel.longitude,
+        const searchResponse = await fetch(searchUrl, {
+            headers: {
+                Authorization: `Bearer ${token}`,
             },
-        };
-    });
+        });
+
+        const searchData = await searchResponse.json();
+        
+        if (!searchResponse.ok) {
+            console.error("❌ Amadeus Hotel Search API error:", searchData);
+            throw new Error(`Amadeus Hotel Search API error: ${searchData.errors?.[0]?.detail || "Unknown error"}`);
+        }
+        
+        if (!searchData.data || searchData.data.length === 0) {
+            console.warn(`⚠️ No hotels found in ${destination} (${cityCode}). Using fallback data.`);
+            return getFallbackHotels(destination);
+        }
+
+        // Step 2: Get offers for the first 3 hotels
+        const hotelIds = searchData.data.slice(0, 3).map((hotel: any) => hotel.hotelId).join(',');
+        
+        console.log(`🏨 Getting offers for hotels: ${hotelIds}`);
+        
+        const offersUrl = `https://test.api.amadeus.com/v3/shopping/hotel-offers?hotelIds=${hotelIds}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&bestRateOnly=true`;
+
+        const offersResponse = await fetch(offersUrl, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        const offersData = await offersResponse.json();
+        
+        if (!offersResponse.ok) {
+            console.error("❌ Amadeus Hotel Offers API error:", offersData);
+            throw new Error(`Amadeus Hotel Offers API error: ${offersData.errors?.[0]?.detail || "Unknown error"}`);
+        }
+        
+        if (!offersData.data || offersData.data.length === 0) {
+            console.warn(`⚠️ No hotel offers found. Using fallback data.`);
+            return getFallbackHotels(destination);
+        }
+
+        console.log(`✅ Found ${offersData.data.length} hotel offers`);
+
+        return offersData.data.map((hotel: any) => {
+            const totalPrice = parseFloat(hotel.offers[0].price.total);
+            const nights = Math.ceil((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24));
+            const pricePerNight = totalPrice / nights;
+            
+            return {
+                name: hotel.hotel.name,
+                pricePerNight: Math.round(pricePerNight),
+                stars: hotel.hotel.rating ? Math.round(hotel.hotel.rating) : 4,
+                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+                description: hotel.hotel.description?.text || "Comfortable accommodation with modern amenities",
+                amenities: hotel.hotel.amenities || ["WiFi", "Breakfast"],
+                address: hotel.hotel.address?.lines?.[0] || `${hotel.hotel.name}, ${destination}`,
+                coordinates: {
+                    latitude: hotel.hotel.latitude,
+                    longitude: hotel.hotel.longitude,
+                },
+            };
+        });
+    } catch (error: any) {
+        console.error("❌ Error in hotel search:", error);
+        console.warn(`⚠️ Falling back to example hotels for ${destination}`);
+        return getFallbackHotels(destination);
+    }
 }
 
 // Helper function to search activities
@@ -424,6 +424,42 @@ function getFallbackRestaurants(destination: string) {
         { name: "Casual Dining Spot", priceRange: "€", cuisine: "International", rating: 4.0 },
         { name: "Fine Dining Experience", priceRange: "€€€€", cuisine: "Fusion", rating: 4.7 },
         { name: "Street Food Market", priceRange: "€", cuisine: "Various", rating: 4.2 },
+    ];
+}
+
+// Fallback hotels
+function getFallbackHotels(destination: string) {
+    return [
+        {
+            name: `Hotel in ${destination}`,
+            pricePerNight: 120,
+            stars: 4,
+            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+            description: "Comfortable accommodation with modern amenities",
+            amenities: ["WiFi", "Breakfast", "Pool"],
+            address: `City Center, ${destination}`,
+            coordinates: { latitude: 0, longitude: 0 },
+        },
+        {
+            name: `Budget Hotel ${destination}`,
+            pricePerNight: 80,
+            stars: 3,
+            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+            description: "Affordable and clean accommodation",
+            amenities: ["WiFi", "Breakfast"],
+            address: `Downtown, ${destination}`,
+            coordinates: { latitude: 0, longitude: 0 },
+        },
+        {
+            name: `Luxury ${destination} Hotel`,
+            pricePerNight: 250,
+            stars: 5,
+            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+            description: "Premium accommodation with exceptional service",
+            amenities: ["WiFi", "Breakfast", "Pool", "Spa", "Gym"],
+            address: `Premium District, ${destination}`,
+            coordinates: { latitude: 0, longitude: 0 },
+        },
     ];
 }
 
