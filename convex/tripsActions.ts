@@ -144,6 +144,18 @@ async function getAmadeusToken(): Promise<string> {
     });
 
     const data = await response.json();
+    
+    if (!response.ok) {
+        console.error("❌ Failed to get Amadeus token:", data);
+        throw new Error(`Amadeus authentication failed: ${data.error_description || data.error || "Unknown error"}`);
+    }
+    
+    if (!data.access_token) {
+        console.error("❌ No access token in response:", data);
+        throw new Error("Amadeus API did not return an access token");
+    }
+    
+    console.log("✅ Amadeus token obtained successfully");
     return data.access_token;
 }
 
