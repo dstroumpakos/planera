@@ -334,7 +334,7 @@ export default function TripDetails() {
                 </View>
 
                 <Image 
-                    source={{ uri: `https://source.unsplash.com/800x600/?${trip.destination}` }} 
+                    source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
                     style={styles.headerImage} 
                 />
                 <View style={styles.headerOverlay} />
