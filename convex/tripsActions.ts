@@ -94,48 +94,16 @@ export const generate = internalAction({
                 itinerary: result,
                 status: "completed",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error generating itinerary:", error);
             
-            // Fallback mock data
-            const fallbackItinerary = {
-                flights: [
-                    { airline: "Mock Airlines", price: "€250", duration: "3h 30m", departureTime: "10:00 AM", arrivalTime: "1:30 PM", isReturn: false },
-                    { airline: "Mock Airlines", price: "€250", duration: "3h 30m", departureTime: "6:00 PM", arrivalTime: "9:30 PM", isReturn: true }
-                ],
-                hotels: [
-                    { name: "Grand Plaza Hotel", price: "€120", rating: 4.5, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800", description: "Luxury stay in the city center.", amenities: ["Pool", "Spa", "WiFi"], coordinates: { latitude: 48.8566, longitude: 2.3522 } },
-                    { name: "City Comfort Inn", price: "€85", rating: 4.0, image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800", description: "Affordable and convenient.", amenities: ["WiFi", "Breakfast"], coordinates: { latitude: 48.8606, longitude: 2.3376 } },
-                    { name: "Boutique Stay", price: "€150", rating: 4.8, image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800", description: "Unique and stylish.", amenities: ["Bar", "Gym"], coordinates: { latitude: 48.8530, longitude: 2.3499 } }
-                ],
-                activities: [
-                    { title: "City Walking Tour", price: "€20", duration: "2h", description: "Explore the historic streets.", coordinates: { latitude: 48.8566, longitude: 2.3522 } },
-                    { title: "Museum Visit", price: "€15", duration: "3h", description: "See famous art and artifacts.", coordinates: { latitude: 48.8606, longitude: 2.3376 } }
-                ],
-                restaurants: [
-                    { name: "The Local Bite", priceRange: "€€", cuisine: "Local", rating: 4.5, coordinates: { latitude: 48.8566, longitude: 2.3522 } },
-                    { name: "Gourmet Corner", priceRange: "€€€", cuisine: "Fine Dining", rating: 4.8, coordinates: { latitude: 48.8606, longitude: 2.3376 } }
-                ],
-                itinerary: {
-                    dailyPlan: [
-                        {
-                            day: 1,
-                            title: "Arrival & Exploration",
-                            activities: [
-                                { time: "10:00 AM", title: "Arrival", description: "Arrive at the airport and transfer to hotel." },
-                                { time: "2:00 PM", title: "City Walk", description: "Leisurely walk around the city center." },
-                                { time: "7:00 PM", title: "Dinner", description: "Enjoy a local meal." }
-                            ]
-                        }
-                    ]
-                }
-            };
-
             await ctx.runMutation(internal.trips.updateItinerary, {
                 tripId,
-                itinerary: fallbackItinerary,
-                status: "completed",
+                itinerary: null,
+                status: "failed",
             });
+            
+            throw new Error(`Failed to generate trip: ${error.message || "Unknown error"}`);
         }
     },
 });
