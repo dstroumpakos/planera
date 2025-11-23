@@ -162,14 +162,14 @@ async function searchFlights(
         const returnFlight = offer.itineraries[1];
         
         return {
-            airline: outbound.segments[0].carrierCode,
+            airline: getAirlineName(outbound.segments[0].carrierCode),
             price: `€${offer.price.total}`,
             duration: outbound.duration,
             departureTime: outbound.segments[0].departure.at,
             arrivalTime: outbound.segments[outbound.segments.length - 1].arrival.at,
             isReturn: false,
             returnFlight: returnFlight ? {
-                airline: returnFlight.segments[0].carrierCode,
+                airline: getAirlineName(returnFlight.segments[0].carrierCode),
                 price: `€${offer.price.total}`,
                 duration: returnFlight.duration,
                 departureTime: returnFlight.segments[0].departure.at,
@@ -302,4 +302,56 @@ function extractIATACode(cityName: string): string {
 
     const normalized = cityName.split(',')[0].trim();
     return cityMap[normalized] || "ATH"; // Default to Athens if not found
+}
+
+// Helper function to convert airline carrier codes to full names
+function getAirlineName(carrierCode: string): string {
+    const airlineMap: Record<string, string> = {
+        "AA": "American Airlines",
+        "BA": "British Airways",
+        "AF": "Air France",
+        "LH": "Lufthansa",
+        "EK": "Emirates",
+        "QR": "Qatar Airways",
+        "TK": "Turkish Airlines",
+        "KL": "KLM Royal Dutch Airlines",
+        "IB": "Iberia",
+        "AZ": "ITA Airways",
+        "LX": "Swiss International Air Lines",
+        "OS": "Austrian Airlines",
+        "SN": "Brussels Airlines",
+        "TP": "TAP Air Portugal",
+        "SK": "SAS Scandinavian Airlines",
+        "AY": "Finnair",
+        "FR": "Ryanair",
+        "U2": "easyJet",
+        "W6": "Wizz Air",
+        "VY": "Vueling",
+        "A3": "Aegean Airlines",
+        "OA": "Olympic Air",
+        "DL": "Delta Air Lines",
+        "UA": "United Airlines",
+        "AC": "Air Canada",
+        "NH": "All Nippon Airways",
+        "JL": "Japan Airlines",
+        "SQ": "Singapore Airlines",
+        "CX": "Cathay Pacific",
+        "QF": "Qantas",
+        "EY": "Etihad Airways",
+        "SV": "Saudia",
+        "MS": "EgyptAir",
+        "ET": "Ethiopian Airlines",
+        "KE": "Korean Air",
+        "OZ": "Asiana Airlines",
+        "CI": "China Airlines",
+        "BR": "EVA Air",
+        "TG": "Thai Airways",
+        "MH": "Malaysia Airlines",
+        "GA": "Garuda Indonesia",
+        "PR": "Philippine Airlines",
+        "VN": "Vietnam Airlines",
+        // Add more as needed
+    };
+
+    return airlineMap[carrierCode] || `${carrierCode} Airlines`;
 }
