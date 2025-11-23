@@ -157,31 +157,44 @@ async function searchFlights(
         throw new Error("No flights found");
     }
 
-    return data.data.slice(0, 3).map((offer: any) => {
-        const outbound = offer.itineraries[0];
-        const returnFlight = offer.itineraries[1];
-        
-        return {
+    // Take the first offer and format it for the frontend
+    const offer = data.data[0];
+    const outbound = offer.itineraries[0];
+    const returnFlight = offer.itineraries[1];
+    
+    return {
+        outbound: {
             airline: getAirlineName(outbound.segments[0].carrierCode),
-            price: `€${offer.price.total}`,
-            duration: outbound.duration,
-            departureTime: outbound.segments[0].departure.at,
-            arrivalTime: outbound.segments[outbound.segments.length - 1].arrival.at,
-            isReturn: false,
-            returnFlight: returnFlight ? {
-                airline: getAirlineName(returnFlight.segments[0].carrierCode),
-                price: `€${offer.price.total}`,
-                duration: returnFlight.duration,
-                departureTime: returnFlight.segments[0].departure.at,
-                arrivalTime: returnFlight.segments[returnFlight.segments.length - 1].arrival.at,
-                isReturn: true,
-            } : null,
-            luggage: {
-                included: offer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags?.quantity || 0,
-                additionalPrice: "€50",
-            },
-        };
-    });
+            flightNumber: `${outbound.segments[0].carrierCode}${outbound.segments[0].number}`,
+            duration: formatDuration(outbound.duration),
+            departure: formatTime(outbound.segments[0].departure.at),
+            arrival: formatTime(outbound.segments[outbound.segments.length - 1].arrival.at),
+        },
+        return: {
+            airline: getAirlineName(returnFlight.segments[0].carrierCode),
+            flightNumber: `${returnFlight.segments[0].carrierCode}${returnFlight.segments[0].number}`,
+            duration: formatDuration(returnFlight.duration),
+            departure: formatTime(returnFlight.segments[0].departure.at),
+            arrival: formatTime(returnFlight.segments[returnFlight.segments.length - 1].arrival.at),
+        },
+        luggage: `${offer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags?.quantity || 0} bag(s) included`,
+        pricePerPerson: parseFloat(offer.price.total),
+    };
+}
+
+// Helper function to format duration from ISO 8601 (e.g., "PT2H30M" -> "2h 30m")
+function formatDuration(duration: string): string {
+    const match = duration.match(/PT(\d+H)?(\d+M)?/);
+    if (!match) return duration;
+    const hours = match[1] ? match[1].replace('H', 'h ') : '';
+    const minutes = match[2] ? match[2].replace('M', 'm') : '';
+    return (hours + minutes).trim();
+}
+
+// Helper function to format time (e.g., "2025-11-23T10:00:00" -> "10:00 AM")
+function formatTime(isoString: string): string {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 // Helper function to search hotels
@@ -209,18 +222,25 @@ async function searchHotels(
         throw new Error("No hotels found");
     }
 
-    return data.data.slice(0, 3).map((hotel: any) => ({
-        name: hotel.hotel.name,
-        price: `€${hotel.offers[0].price.total}`,
-        rating: hotel.hotel.rating || 4.0,
-        image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-        description: hotel.hotel.description?.text || "Comfortable accommodation",
-        amenities: hotel.hotel.amenities || ["WiFi", "Breakfast"],
-        coordinates: {
-            latitude: hotel.hotel.latitude,
-            longitude: hotel.hotel.longitude,
-        },
-    }));
+    return data.data.slice(0, 3).map((hotel: any) => {
+        const totalPrice = parseFloat(hotel.offers[0].price.total);
+        const nights = Math.ceil((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24));
+        const pricePerNight = totalPrice / nights;
+        
+        return {
+            name: hotel.hotel.name,
+            pricePerNight: Math.round(pricePerNight),
+            stars: hotel.hotel.rating ? Math.round(hotel.hotel.rating) : 4,
+            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+            description: hotel.hotel.description?.text || "Comfortable accommodation with modern amenities",
+            amenities: hotel.hotel.amenities || ["WiFi", "Breakfast"],
+            address: hotel.hotel.address?.lines?.[0] || `${hotel.hotel.name}, ${destination}`,
+            coordinates: {
+                latitude: hotel.hotel.latitude,
+                longitude: hotel.hotel.longitude,
+            },
+        };
+    });
 }
 
 // Helper function to search activities
