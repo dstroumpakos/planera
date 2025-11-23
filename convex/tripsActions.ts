@@ -142,20 +142,29 @@ async function searchFlights(
     const originCode = extractIATACode(origin);
     const destCode = extractIATACode(destination);
 
-    const response = await fetch(
-        `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${originCode}&destinationLocationCode=${destCode}&departureDate=${departureDate}&returnDate=${returnDate}&adults=${adults}&max=3`,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
+    console.log(`🔍 Searching flights: ${origin} (${originCode}) → ${destination} (${destCode}), ${departureDate} to ${returnDate}, ${adults} adults`);
+
+    const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${originCode}&destinationLocationCode=${destCode}&departureDate=${departureDate}&returnDate=${returnDate}&adults=${adults}&max=3`;
+
+    const response = await fetch(url, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
 
     const data = await response.json();
     
-    if (!data.data || data.data.length === 0) {
-        throw new Error("No flights found");
+    if (!response.ok) {
+        console.error("❌ Amadeus API error:", data);
+        throw new Error(`Amadeus API error: ${data.errors?.[0]?.detail || data.error_description || "Unknown error"}`);
     }
+    
+    if (!data.data || data.data.length === 0) {
+        console.error("❌ No flights found for:", { originCode, destCode, departureDate, returnDate });
+        throw new Error(`No flights found from ${origin} (${originCode}) to ${destination} (${destCode}). Try different dates or destinations.`);
+    }
+
+    console.log(`✅ Found ${data.data.length} flight offers`);
 
     // Take the first offer and format it for the frontend
     const offer = data.data[0];
@@ -207,20 +216,61 @@ async function searchHotels(
 ) {
     const cityCode = extractIATACode(destination);
 
-    const response = await fetch(
-        `https://test.api.amadeus.com/v3/shopping/hotel-offers?cityCode=${cityCode}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&radius=5&radiusUnit=KM&ratings=3,4,5&bestRateOnly=true`,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
+    console.log(`🏨 Searching hotels in ${destination} (${cityCode}), ${checkInDate} to ${checkOutDate}, ${adults} adults`);
+
+    const url = `https://test.api.amadeus.com/v3/shopping/hotel-offers?cityCode=${cityCode}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&radius=5&radiusUnit=KM&ratings=3,4,5&bestRateOnly=true`;
+
+    const response = await fetch(url, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
 
     const data = await response.json();
     
-    if (!data.data || data.data.length === 0) {
-        throw new Error("No hotels found");
+    if (!response.ok) {
+        console.error("❌ Amadeus Hotel API error:", data);
+        throw new Error(`Amadeus Hotel API error: ${data.errors?.[0]?.detail || "Unknown error"}`);
     }
+    
+    if (!data.data || data.data.length === 0) {
+        console.warn(`⚠️ No hotels found in ${destination} (${cityCode}). Using fallback data.`);
+        // Return fallback hotels instead of throwing
+        return [
+            {
+                name: `Hotel in ${destination}`,
+                pricePerNight: 120,
+                stars: 4,
+                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+                description: "Comfortable accommodation with modern amenities",
+                amenities: ["WiFi", "Breakfast", "Pool"],
+                address: `City Center, ${destination}`,
+                coordinates: { latitude: 0, longitude: 0 },
+            },
+            {
+                name: `Budget Hotel ${destination}`,
+                pricePerNight: 80,
+                stars: 3,
+                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+                description: "Affordable and clean accommodation",
+                amenities: ["WiFi", "Breakfast"],
+                address: `Downtown, ${destination}`,
+                coordinates: { latitude: 0, longitude: 0 },
+            },
+            {
+                name: `Luxury ${destination} Hotel`,
+                pricePerNight: 250,
+                stars: 5,
+                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+                description: "Premium accommodation with exceptional service",
+                amenities: ["WiFi", "Breakfast", "Pool", "Spa", "Gym"],
+                address: `Premium District, ${destination}`,
+                coordinates: { latitude: 0, longitude: 0 },
+            },
+        ];
+    }
+
+    console.log(`✅ Found ${data.data.length} hotels`);
 
     return data.data.slice(0, 3).map((hotel: any) => {
         const totalPrice = parseFloat(hotel.offers[0].price.total);
@@ -248,30 +298,40 @@ async function searchActivities(destination: string) {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     
     if (!apiKey) {
-        throw new Error("Google Places API key not configured");
+        console.warn("⚠️ Google Places API key not configured. Using fallback activities.");
+        return getFallbackActivities(destination);
     }
 
-    // Simplified - in production, geocode the destination first
-    const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=things+to+do+in+${encodeURIComponent(destination)}&key=${apiKey}`
-    );
+    console.log(`🎯 Searching activities in ${destination}`);
 
-    const data = await response.json();
-    
-    if (!data.results || data.results.length === 0) {
-        throw new Error("No activities found");
+    try {
+        const response = await fetch(
+            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=things+to+do+in+${encodeURIComponent(destination)}&key=${apiKey}`
+        );
+
+        const data = await response.json();
+        
+        if (data.status !== "OK" || !data.results || data.results.length === 0) {
+            console.warn(`⚠️ No activities found via Google Places. Using fallback. Status: ${data.status}`);
+            return getFallbackActivities(destination);
+        }
+
+        console.log(`✅ Found ${data.results.length} activities`);
+
+        return data.results.slice(0, 5).map((place: any) => ({
+            title: place.name,
+            price: "€20",
+            duration: "2-3h",
+            description: place.formatted_address,
+            coordinates: {
+                latitude: place.geometry.location.lat,
+                longitude: place.geometry.location.lng,
+            },
+        }));
+    } catch (error) {
+        console.error("❌ Error fetching activities:", error);
+        return getFallbackActivities(destination);
     }
-
-    return data.results.slice(0, 5).map((place: any) => ({
-        title: place.name,
-        price: "€20",
-        duration: "2-3h",
-        description: place.formatted_address,
-        coordinates: {
-            latitude: place.geometry.location.lat,
-            longitude: place.geometry.location.lng,
-        },
-    }));
 }
 
 // Helper function to search restaurants
@@ -279,49 +339,164 @@ async function searchRestaurants(destination: string) {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     
     if (!apiKey) {
-        throw new Error("Google Places API key not configured");
+        console.warn("⚠️ Google Places API key not configured. Using fallback restaurants.");
+        return getFallbackRestaurants(destination);
     }
 
-    const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=restaurants+in+${encodeURIComponent(destination)}&key=${apiKey}`
-    );
+    console.log(`🍽️ Searching restaurants in ${destination}`);
 
-    const data = await response.json();
-    
-    if (!data.results || data.results.length === 0) {
-        throw new Error("No restaurants found");
+    try {
+        const response = await fetch(
+            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=restaurants+in+${encodeURIComponent(destination)}&key=${apiKey}`
+        );
+
+        const data = await response.json();
+        
+        if (data.status !== "OK" || !data.results || data.results.length === 0) {
+            console.warn(`⚠️ No restaurants found via Google Places. Using fallback. Status: ${data.status}`);
+            return getFallbackRestaurants(destination);
+        }
+
+        console.log(`✅ Found ${data.results.length} restaurants`);
+
+        return data.results.slice(0, 5).map((place: any) => ({
+            name: place.name,
+            priceRange: "€€",
+            cuisine: place.types?.[0] || "International",
+            rating: place.rating || 4.0,
+            coordinates: {
+                latitude: place.geometry.location.lat,
+                longitude: place.geometry.location.lng,
+            },
+        }));
+    } catch (error) {
+        console.error("❌ Error fetching restaurants:", error);
+        return getFallbackRestaurants(destination);
     }
+}
 
-    return data.results.slice(0, 5).map((place: any) => ({
-        name: place.name,
-        priceRange: "€€",
-        cuisine: place.types?.[0] || "International",
-        rating: place.rating || 4.0,
-        coordinates: {
-            latitude: place.geometry.location.lat,
-            longitude: place.geometry.location.lng,
-        },
-    }));
+// Fallback activities
+function getFallbackActivities(destination: string) {
+    return [
+        { title: `City Tour of ${destination}`, price: "€25", duration: "3h", description: "Explore the main attractions" },
+        { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
+        { title: "Walking Tour", price: "€10", duration: "2h", description: "Guided walking tour of historic sites" },
+        { title: "Local Market", price: "Free", duration: "1-2h", description: "Experience local life and cuisine" },
+        { title: "Sunset Viewpoint", price: "Free", duration: "1h", description: "Best views of the city" },
+    ];
+}
+
+// Fallback restaurants
+function getFallbackRestaurants(destination: string) {
+    return [
+        { name: `Traditional ${destination} Restaurant`, priceRange: "€€", cuisine: "Local", rating: 4.5 },
+        { name: "Mediterranean Bistro", priceRange: "€€€", cuisine: "Mediterranean", rating: 4.3 },
+        { name: "Casual Dining Spot", priceRange: "€", cuisine: "International", rating: 4.0 },
+        { name: "Fine Dining Experience", priceRange: "€€€€", cuisine: "Fusion", rating: 4.7 },
+        { name: "Street Food Market", priceRange: "€", cuisine: "Various", rating: 4.2 },
+    ];
 }
 
 // Helper function to extract IATA code from city name (simplified)
 function extractIATACode(cityName: string): string {
     const cityMap: Record<string, string> = {
-        "Athens": "ATH",
-        "Paris": "PAR",
-        "London": "LON",
-        "New York": "NYC",
-        "Tokyo": "TYO",
-        "Rome": "ROM",
-        "Barcelona": "BCN",
-        "Dubai": "DXB",
-        "Singapore": "SIN",
-        "Istanbul": "IST",
-        // Add more as needed
+        // Europe
+        "athens": "ATH",
+        "athens international airport": "ATH",
+        "paris": "CDG",
+        "charles de gaulle": "CDG",
+        "london": "LHR",
+        "heathrow": "LHR",
+        "rome": "FCO",
+        "fiumicino": "FCO",
+        "barcelona": "BCN",
+        "madrid": "MAD",
+        "amsterdam": "AMS",
+        "schiphol": "AMS",
+        "berlin": "BER",
+        "munich": "MUC",
+        "frankfurt": "FRA",
+        "vienna": "VIE",
+        "zurich": "ZRH",
+        "brussels": "BRU",
+        "lisbon": "LIS",
+        "dublin": "DUB",
+        "copenhagen": "CPH",
+        "stockholm": "ARN",
+        "oslo": "OSL",
+        "helsinki": "HEL",
+        "milan": "MXP",
+        "malpensa": "MXP",
+        "venice": "VCE",
+        "istanbul": "IST",
+        "prague": "PRG",
+        "budapest": "BUD",
+        "warsaw": "WAW",
+        
+        // Americas
+        "new york": "JFK",
+        "jfk": "JFK",
+        "los angeles": "LAX",
+        "chicago": "ORD",
+        "miami": "MIA",
+        "san francisco": "SFO",
+        "boston": "BOS",
+        "washington": "IAD",
+        "toronto": "YYZ",
+        "vancouver": "YVR",
+        "mexico city": "MEX",
+        "sao paulo": "GRU",
+        "buenos aires": "EZE",
+        
+        // Middle East & Africa
+        "dubai": "DXB",
+        "abu dhabi": "AUH",
+        "doha": "DOH",
+        "riyadh": "RUH",
+        "jeddah": "JED",
+        "cairo": "CAI",
+        "tel aviv": "TLV",
+        "johannesburg": "JNB",
+        "cape town": "CPT",
+        
+        // Asia & Pacific
+        "tokyo": "NRT",
+        "narita": "NRT",
+        "singapore": "SIN",
+        "hong kong": "HKG",
+        "beijing": "PEK",
+        "shanghai": "PVG",
+        "seoul": "ICN",
+        "incheon": "ICN",
+        "bangkok": "BKK",
+        "kuala lumpur": "KUL",
+        "jakarta": "CGK",
+        "manila": "MNL",
+        "delhi": "DEL",
+        "mumbai": "BOM",
+        "sydney": "SYD",
+        "melbourne": "MEL",
+        "auckland": "AKL",
     };
 
-    const normalized = cityName.split(',')[0].trim();
-    return cityMap[normalized] || "ATH"; // Default to Athens if not found
+    // Normalize: lowercase, remove extra spaces, remove "airport" suffix
+    const normalized = cityName
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/ airport$/i, '')
+        .replace(/ international$/i, '')
+        .split(',')[0]
+        .trim();
+
+    const code = cityMap[normalized];
+    
+    if (!code) {
+        console.warn(`⚠️ Unknown city/airport: "${cityName}". Using ATH as fallback. Please add "${normalized}" to the city map.`);
+        return "ATH"; // Default fallback
+    }
+    
+    return code;
 }
 
 // Helper function to convert airline carrier codes to full names
