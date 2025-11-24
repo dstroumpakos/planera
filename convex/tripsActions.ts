@@ -435,89 +435,74 @@ function formatTime(isoString: string): string {
 
 // Helper function to search hotels
 async function searchHotels(
-    token: string,
-    destination: string,
-    checkInDate: string,
-    checkOutDate: string,
-    adults: number
-) {
-    const cityCode = extractIATACode(destination);
+  token: string,
+  cityCode: string,
+  checkInDate: string,
+  checkOutDate: string,
+  adults: number
+): Promise<any[]> {
+  try {
+    // First, get hotel IDs by city
+    const searchUrl = `https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city?cityCode=${cityCode}&radius=50&radiusUnit=KM&hotelSource=ALL`;
+    
+    const searchResponse = await fetch(searchUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    console.log(`🏨 Searching hotels in ${destination} (${cityCode}), ${checkInDate} to ${checkOutDate}, ${adults} adults`);
-
-    try {
-        // Step 1: Search for hotels by city to get hotel IDs
-        const searchUrl = `https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city?cityCode=${cityCode}&radius=5&radiusUnit=KM&hotelSource=ALL`;
-        
-        const searchResponse = await fetch(searchUrl, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-
-        const searchData = await searchResponse.json();
-        
-        if (!searchResponse.ok) {
-            console.error("❌ Amadeus Hotel Search API error:", searchData);
-            throw new Error(`Amadeus Hotel Search API error: ${searchData.errors?.[0]?.detail || "Unknown error"}`);
-        }
-        
-        if (!searchData.data || searchData.data.length === 0) {
-            console.warn(`⚠️ No hotels found in ${destination} (${cityCode}). Using fallback data.`);
-            return getFallbackHotels(destination);
-        }
-
-        // Step 2: Get offers for the first 3 hotels
-        const hotelIds = searchData.data.slice(0, 3).map((hotel: any) => hotel.hotelId).join(',');
-        
-        console.log(`🏨 Getting offers for hotels: ${hotelIds}`);
-        
-        const offersUrl = `https://test.api.amadeus.com/v3/shopping/hotel-offers?hotelIds=${hotelIds}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&bestRateOnly=true`;
-
-        const offersResponse = await fetch(offersUrl, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-
-        const offersData = await offersResponse.json();
-        
-        if (!offersResponse.ok) {
-            console.error("❌ Amadeus Hotel Offers API error:", offersData);
-            throw new Error(`Amadeus Hotel Offers API error: ${offersData.errors?.[0]?.detail || "Unknown error"}`);
-        }
-        
-        if (!offersData.data || offersData.data.length === 0) {
-            console.warn(`⚠️ No hotel offers found. Using fallback data.`);
-            return getFallbackHotels(destination);
-        }
-
-        console.log(`✅ Found ${offersData.data.length} hotel offers`);
-
-        return offersData.data.map((hotel: any) => {
-            const totalPrice = parseFloat(hotel.offers[0].price.total);
-            const nights = Math.ceil((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24));
-            const pricePerNight = totalPrice / nights;
-            
-            return {
-                name: hotel.hotel.name,
-                pricePerNight: Math.round(pricePerNight),
-                stars: hotel.hotel.rating ? Math.round(hotel.hotel.rating) : 4,
-                image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-                description: hotel.hotel.description?.text || "Comfortable accommodation with modern amenities",
-                amenities: hotel.hotel.amenities || ["WiFi", "Breakfast"],
-                address: hotel.hotel.address?.lines?.[0] || `${hotel.hotel.name}, ${destination}`,
-                coordinates: {
-                    latitude: hotel.hotel.latitude,
-                    longitude: hotel.hotel.longitude,
-                },
-            };
-        });
-    } catch (error: any) {
-        console.error("❌ Error in hotel search:", error);
-        console.warn(`⚠️ Falling back to example hotels for ${destination}`);
-        return getFallbackHotels(destination);
+    if (!searchResponse.ok) {
+      const errorData = await searchResponse.json();
+      console.log("❌ Amadeus Hotel Search API error:", errorData);
+      // Return empty array instead of throwing
+      return [];
     }
+
+    const searchData = await searchResponse.json();
+    const hotelIds = searchData.data?.slice(0, 10).map((h: any) => h.hotelId) || [];
+
+    if (hotelIds.length === 0) {
+      console.log("⚠️ No hotels found in this area");
+      return [];
+    }
+
+    // Get hotel offers
+    const offersUrl = `https://test.api.amadeus.com/v3/shopping/hotel-offers?hotelIds=${hotelIds.join(",")}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&roomQuantity=1&currency=EUR&bestRateOnly=true`;
+
+    const offersResponse = await fetch(offersUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!offersResponse.ok) {
+      const errorData = await offersResponse.json();
+      console.log("❌ Amadeus Hotel Offers API error:", errorData);
+      // Return empty array instead of throwing
+      return [];
+    }
+
+    const offersData = await offersResponse.json();
+
+    if (!offersData.data || offersData.data.length === 0) {
+      console.log("⚠️ No hotel offers available for these dates");
+      return [];
+    }
+
+    // Return up to 3 hotels
+    return offersData.data.slice(0, 3).map((hotel: any) => {
+      const offer = hotel.offers?.[0];
+      return {
+        name: hotel.hotel?.name || "Hotel",
+        rating: hotel.hotel?.rating || "4",
+        price: offer?.price?.total || "150",
+        currency: offer?.price?.currency || "EUR",
+        amenities: hotel.hotel?.amenities?.slice(0, 5) || ["WiFi", "Breakfast", "Pool"],
+        address: hotel.hotel?.address?.lines?.[0] || "City Center",
+        description: hotel.hotel?.description?.text || `Comfortable accommodation in the heart of the city`,
+      };
+    });
+  } catch (error: any) {
+    console.error("❌ Error in hotel search:", error);
+    // Return empty array instead of throwing
+    return [];
+  }
 }
 
 // Helper function to search activities
