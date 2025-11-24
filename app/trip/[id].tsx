@@ -261,6 +261,14 @@ export default function TripDetails() {
                     </View>
                 </View>
                 
+                {/* Data source badge */}
+                {itinerary.flights.dataSource === "ai-generated" && (
+                    <View style={styles.dataSourceBadge}>
+                        <Ionicons name="sparkles" size={14} color="#FF9500" />
+                        <Text style={styles.dataSourceText}>AI-Generated Flight Data</Text>
+                    </View>
+                )}
+                
                 <View style={styles.flightSegment}>
                     <View style={styles.segmentHeader}>
                         <Ionicons name="airplane" size={20} color="#1B3F92" />
@@ -1171,5 +1179,34 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         textTransform: "uppercase",
         letterSpacing: 1,
+    },
+    upgradeButton: {
+        backgroundColor: "#1B3F92",
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 4,
+        alignItems: "center",
+        marginTop: 16,
+    },
+    upgradeButtonText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    dataSourceBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFF3E0",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 4,
+        marginTop: 8,
+        marginBottom: 12,
+        gap: 6,
+    },
+    dataSourceText: {
+        fontSize: 12,
+        color: "#FF9500",
+        fontWeight: "600",
     },
 });
