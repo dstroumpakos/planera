@@ -9,7 +9,7 @@ export const create = authMutation({
         origin: v.string(),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.string(),
+        budget: v.union(v.string(), v.number()), // Accept both for migration
         travelers: v.number(),
         interests: v.array(v.string()),
     },
@@ -120,7 +120,7 @@ export const update = authMutation({
         origin: v.optional(v.string()),
         startDate: v.optional(v.number()),
         endDate: v.optional(v.number()),
-        budget: v.optional(v.string()),
+        budget: v.optional(v.union(v.string(), v.number())), // Accept both for migration
         travelers: v.optional(v.number()),
         interests: v.optional(v.array(v.string())),
     },

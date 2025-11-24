@@ -27,20 +27,35 @@ export default function TripDetails() {
         origin: "",
         startDate: new Date().getTime(),
         endDate: new Date().getTime(),
-        budget: "",
-        travelers: "1",
+        budget: 0, // Changed to number
+        travelers: 1, // Changed to number
         interests: "",
     });
 
     useEffect(() => {
         if (trip) {
+            // Convert old string budget to number
+            let budgetValue = 0;
+            if (typeof trip.budget === "number") {
+                budgetValue = trip.budget;
+            } else if (typeof trip.budget === "string") {
+                // Convert old string format to numbers
+                const budgetMap: Record<string, number> = {
+                    "Low": 1000,
+                    "Medium": 2000,
+                    "High": 4000,
+                    "Luxury": 8000,
+                };
+                budgetValue = budgetMap[trip.budget] || 2000;
+            }
+            
             setEditForm({
                 destination: trip.destination,
                 origin: trip.origin || "",
                 startDate: trip.startDate,
                 endDate: trip.endDate,
-                budget: trip.budget || "",
-                travelers: (trip.travelers || 1).toString(),
+                budget: budgetValue,
+                travelers: trip.travelers || 1,
                 interests: (trip.interests || []).join(", "),
             });
         }
@@ -55,8 +70,8 @@ export default function TripDetails() {
             origin: editForm.origin,
             startDate: editForm.startDate,
             endDate: editForm.endDate,
-            budget: editForm.budget,
-            travelers: parseInt(editForm.travelers) || 1,
+            budget: editForm.budget, // Already a number
+            travelers: editForm.travelers, // Already a number
             interests: editForm.interests.split(",").map(s => s.trim()).filter(s => s.length > 0),
         });
         await regenerateTrip({ tripId: trip._id });
@@ -547,32 +562,28 @@ export default function TripDetails() {
                         )}
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Budget</Text>
-                            <View style={styles.budgetOptions}>
-                                {["Low", "Medium", "High", "Luxury"].map((opt) => (
-                                    <TouchableOpacity
-                                        key={opt}
-                                        style={[
-                                            styles.budgetOption,
-                                            editForm.budget === opt && styles.budgetOptionSelected
-                                        ]}
-                                        onPress={() => setEditForm(prev => ({ ...prev, budget: opt }))}
-                                    >
-                                        <Text style={[
-                                            styles.budgetOptionText,
-                                            editForm.budget === opt && styles.budgetOptionTextSelected
-                                        ]}>{opt}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                            <Text style={styles.label}>Budget (€)</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={editForm.budget.toString()}
+                                onChangeText={(text) => {
+                                    const numValue = parseInt(text) || 0;
+                                    setEditForm(prev => ({ ...prev, budget: numValue }));
+                                }}
+                                keyboardType="numeric"
+                                placeholder="e.g. 2000"
+                            />
                         </View>
 
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Travelers</Text>
                             <TextInput
                                 style={styles.input}
-                                value={editForm.travelers}
-                                onChangeText={(text) => setEditForm(prev => ({ ...prev, travelers: text }))}
+                                value={editForm.travelers.toString()}
+                                onChangeText={(text) => {
+                                    const numValue = parseInt(text) || 1;
+                                    setEditForm(prev => ({ ...prev, travelers: numValue }));
+                                }}
                                 keyboardType="number-pad"
                                 placeholder="Number of travelers"
                             />

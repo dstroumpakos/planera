@@ -8,7 +8,7 @@ export default defineSchema({
         origin: v.optional(v.string()), // Added origin field
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.string(), // e.g. "low", "medium", "high" or specific amount
+        budget: v.union(v.string(), v.number()), // Accept both string (old) and number (new) for migration
         travelers: v.number(),
         interests: v.array(v.string()),
         status: v.union(v.literal("generating"), v.literal("completed"), v.literal("failed")),

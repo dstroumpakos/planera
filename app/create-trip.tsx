@@ -20,7 +20,7 @@ export default function CreateTrip() {
         origin: "",
         startDate: new Date().getTime(),
         endDate: new Date().getTime() + 7 * 24 * 60 * 60 * 1000, // Default 1 week
-        budget: "Medium",
+        budget: 2000, // Changed to number with default value
         travelers: 1,
         interests: [] as string[],
     });
@@ -206,18 +206,19 @@ export default function CreateTrip() {
                     <View>
                         <Text style={styles.question}>Travel Style</Text>
                         
-                        <Text style={styles.label}>Budget</Text>
-                        <View style={styles.optionsContainer}>
-                            {["Low", "Medium", "High", "Luxury"].map((b) => (
-                                <TouchableOpacity
-                                    key={b}
-                                    style={[styles.option, formData.budget === b && styles.optionSelected]}
-                                    onPress={() => setFormData({ ...formData, budget: b })}
-                                >
-                                    <Text style={[styles.optionText, formData.budget === b && styles.optionTextSelected]}>{b}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                        <Text style={styles.label}>Budget (€)</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="e.g. 2000"
+                            placeholderTextColor="#90A4AE"
+                            value={formData.budget.toString()}
+                            onChangeText={(text) => {
+                                const numValue = parseInt(text) || 0;
+                                setFormData({ ...formData, budget: numValue });
+                            }}
+                            keyboardType="numeric"
+                        />
+                        <Text style={styles.helperText}>Enter your total budget in euros.</Text>
 
                         <Text style={[styles.label, { marginTop: 24 }]}>Travelers</Text>
                         <View style={styles.row}>

@@ -111,56 +111,45 @@ export const generate = internalAction({
             restaurants = await searchRestaurants(trip.destination);
             console.log(`✅ Restaurants ready: ${restaurants.length} options`);
 
-            // 5. Generate itinerary
-            console.log("📝 Generating itinerary...");
-            let dailyPlan;
-            
+            // 5. Generate day-by-day itinerary with OpenAI
+            console.log("📝 Generating itinerary with OpenAI...");
+            let dayByDayItinerary;
             if (hasOpenAIKey) {
-                try {
-                    const openai = new OpenAI({
-                        apiKey: process.env.OPENAI_API_KEY,
-                    });
+                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                const budgetDisplay = typeof trip.budget === "number" ? `€${trip.budget}` : trip.budget;
+                const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${trip.destination} from ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
+                
+Budget: ${budgetDisplay}
+Travelers: ${trip.travelers}
+Interests: ${trip.interests.join(", ")}
 
-                    const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${trip.destination}.
-                    Duration: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
-                    Travelers: ${trip.travelers} people.
-                    Budget: ${trip.budget}.
-                    Interests: ${trip.interests.join(", ")}.
-                    
-                    Available activities: ${activities.map((a: any) => a.title).join(", ")}.
-                    Available restaurants: ${restaurants.map((r: any) => r.name).join(", ")}.
-                    
-                    Return a JSON object with this structure:
-                    {
-                      "dailyPlan": [
-                        {
-                          "day": 1,
-                          "title": "Day title",
-                          "activities": [
-                            { "time": "9:00 AM", "title": "Activity name", "description": "What to do" }
-                          ]
-                        }
-                      ]
-                    }`;
+Include specific activities, restaurants, and attractions for each day. Format as JSON array with structure:
+[
+  {
+    "day": 1,
+    "date": "2024-01-15",
+    "activities": [
+      {
+        "time": "09:00",
+        "title": "Activity name",
+        "description": "Brief description",
+        "location": "Address"
+      }
+    ]
+  }
+]`;
+                const completion = await openai.chat.completions.create({
+                    messages: [
+                        { role: "system", content: "You are a travel itinerary planner. Return only valid JSON." },
+                        { role: "user", content: itineraryPrompt },
+                    ],
+                    model: "gpt-4o",
+                    response_format: { type: "json_object" },
+                });
 
-                    const completion = await openai.chat.completions.create({
-                        messages: [
-                            { role: "system", content: "You are a travel itinerary planner. Return only valid JSON." },
-                            { role: "user", content: itineraryPrompt },
-                        ],
-                        model: "gpt-4o",
-                        response_format: { type: "json_object" },
-                    });
-
-                    const itineraryContent = completion.choices[0].message.content;
-                    const itineraryData = itineraryContent ? JSON.parse(itineraryContent) : { dailyPlan: [] };
-                    dailyPlan = itineraryData.dailyPlan;
-                } catch (error) {
-                    console.error("❌ OpenAI itinerary failed:", error);
-                    dailyPlan = generateBasicItinerary(trip, activities, restaurants);
-                }
-            } else {
-                dailyPlan = generateBasicItinerary(trip, activities, restaurants);
+                const itineraryContent = completion.choices[0].message.content;
+                const itineraryData = itineraryContent ? JSON.parse(itineraryContent) : { dailyPlan: [] };
+                dayByDayItinerary = itineraryData.dailyPlan;
             }
 
             const result = {
@@ -168,8 +157,8 @@ export const generate = internalAction({
                 hotels,
                 activities,
                 restaurants,
-                dailyPlan,
-                estimatedDailyExpenses: calculateDailyExpenses(trip.budget),
+                dayByDayItinerary,
+                estimatedDailyExpenses: calculateDailyExpenses(Number(trip.budget)),
             };
 
             console.log("✅ Trip generation complete!");
@@ -235,14 +224,21 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
 }
 
 // Calculate daily expenses based on budget
-function calculateDailyExpenses(budget: string): number {
-    const budgetMap: Record<string, number> = {
-        "Low": 50,
-        "Medium": 100,
-        "High": 200,
-        "Luxury": 400,
-    };
-    return budgetMap[budget] || 100;
+function calculateDailyExpenses(budget: string | number): number {
+    // Handle old string format
+    if (typeof budget === "string") {
+        const budgetMap: Record<string, number> = {
+            "Low": 1000,
+            "Medium": 2000,
+            "High": 4000,
+            "Luxury": 8000,
+        };
+        budget = budgetMap[budget] || 2000;
+    }
+    
+    // Estimate daily expenses as roughly 30% of total budget divided by typical 7-day trip
+    const estimatedDailyExpense = (budget * 0.3) / 7;
+    return Math.max(50, Math.round(estimatedDailyExpense)); // Minimum $50/day
 }
 
 // Helper function to get Amadeus access token
