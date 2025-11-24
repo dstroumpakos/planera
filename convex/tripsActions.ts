@@ -18,86 +18,158 @@ export const generate = internalAction({
         console.log(`🚀 Starting trip generation for: ${trip.origin} → ${trip.destination}`);
 
         try {
-            // 1. Get Amadeus access token
-            console.log("🔑 Getting Amadeus access token...");
-            const amadeusToken = await getAmadeusToken();
-            console.log("✅ Amadeus token obtained");
+            let flights;
+            let hotels;
+            let activities;
+            let restaurants;
 
-            // 2. Fetch real flights
+            // Check if API keys are configured
+            const hasAmadeusKeys = process.env.AMADEUS_API_KEY && process.env.AMADEUS_API_SECRET;
+            const hasGoogleKey = process.env.GOOGLE_PLACES_API_KEY;
+            const hasOpenAIKey = process.env.OPENAI_API_KEY;
+
+            if (!hasAmadeusKeys) {
+                console.warn("⚠️ Amadeus API keys not configured. Using AI-generated data.");
+            }
+            if (!hasGoogleKey) {
+                console.warn("⚠️ Google Places API key not configured. Using fallback data.");
+            }
+            if (!hasOpenAIKey) {
+                console.warn("⚠️ OpenAI API key not configured. Using basic itinerary.");
+            }
+
+            // 1. Fetch flights (with fallback)
             console.log("✈️ Fetching flights...");
-            const flights = await searchFlights(
-                amadeusToken,
-                trip.origin,
-                trip.destination,
-                new Date(trip.startDate).toISOString().split('T')[0],
-                new Date(trip.endDate).toISOString().split('T')[0],
-                trip.travelers
-            );
-            console.log("✅ Flights fetched:", JSON.stringify(flights, null, 2));
-
-            // 3. Fetch real hotels
-            console.log("🏨 Fetching hotels...");
-            const hotels = await searchHotels(
-                amadeusToken,
-                trip.destination,
-                new Date(trip.startDate).toISOString().split('T')[0],
-                new Date(trip.endDate).toISOString().split('T')[0],
-                trip.travelers
-            );
-            console.log(`✅ Hotels fetched: ${hotels.length} options`);
-
-            // 4. Fetch real activities and restaurants
-            console.log("🎯 Fetching activities and restaurants...");
-            const activities = await searchActivities(trip.destination);
-            const restaurants = await searchRestaurants(trip.destination);
-            console.log(`✅ Activities: ${activities.length}, Restaurants: ${restaurants.length}`);
-
-            // 5. Use OpenAI to generate day-by-day itinerary based on real data
-            const openai = new OpenAI({
-                apiKey: process.env.OPENAI_API_KEY,
-            });
-
-            const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${trip.destination}.
-            Duration: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
-            Travelers: ${trip.travelers} people.
-            Budget: ${trip.budget}.
-            Interests: ${trip.interests.join(", ")}.
-            
-            Available activities: ${activities.map((a: any) => a.title).join(", ")}.
-            Available restaurants: ${restaurants.map((r: any) => r.name).join(", ")}.
-            
-            Return a JSON object with this structure:
-            {
-              "dailyPlan": [
-                {
-                  "day": 1,
-                  "title": "Day title",
-                  "activities": [
-                    { "time": "9:00 AM", "title": "Activity name", "description": "What to do" }
-                  ]
+            if (hasAmadeusKeys) {
+                try {
+                    const amadeusToken = await getAmadeusToken();
+                    flights = await searchFlights(
+                        amadeusToken,
+                        trip.origin,
+                        trip.destination,
+                        new Date(trip.startDate).toISOString().split('T')[0],
+                        new Date(trip.endDate).toISOString().split('T')[0],
+                        trip.travelers
+                    );
+                } catch (error) {
+                    console.error("❌ Amadeus flights failed:", error);
+                    flights = await generateRealisticFlights(
+                        trip.origin,
+                        extractIATACode(trip.origin),
+                        trip.destination,
+                        extractIATACode(trip.destination),
+                        new Date(trip.startDate).toISOString().split('T')[0],
+                        new Date(trip.endDate).toISOString().split('T')[0],
+                        trip.travelers
+                    );
                 }
-              ]
-            }`;
+            } else {
+                flights = await generateRealisticFlights(
+                    trip.origin,
+                    extractIATACode(trip.origin),
+                    trip.destination,
+                    extractIATACode(trip.destination),
+                    new Date(trip.startDate).toISOString().split('T')[0],
+                    new Date(trip.endDate).toISOString().split('T')[0],
+                    trip.travelers
+                );
+            }
+            console.log("✅ Flights ready:", flights.dataSource);
 
-            const completion = await openai.chat.completions.create({
-                messages: [
-                    { role: "system", content: "You are a travel itinerary planner. Return only valid JSON." },
-                    { role: "user", content: itineraryPrompt },
-                ],
-                model: "gpt-4o",
-                response_format: { type: "json_object" },
-            });
+            // 2. Fetch hotels (with fallback)
+            console.log("🏨 Fetching hotels...");
+            if (hasAmadeusKeys) {
+                try {
+                    const amadeusToken = await getAmadeusToken();
+                    hotels = await searchHotels(
+                        amadeusToken,
+                        extractIATACode(trip.destination),
+                        new Date(trip.startDate).toISOString().split('T')[0],
+                        new Date(trip.endDate).toISOString().split('T')[0],
+                        trip.travelers
+                    );
+                    if (hotels.length === 0) {
+                        console.warn("⚠️ No hotels from Amadeus, using fallback");
+                        hotels = getFallbackHotels(trip.destination);
+                    }
+                } catch (error) {
+                    console.error("❌ Amadeus hotels failed:", error);
+                    hotels = getFallbackHotels(trip.destination);
+                }
+            } else {
+                hotels = getFallbackHotels(trip.destination);
+            }
+            console.log(`✅ Hotels ready: ${hotels.length} options`);
 
-            const itineraryContent = completion.choices[0].message.content;
-            const itineraryData = itineraryContent ? JSON.parse(itineraryContent) : { dailyPlan: [] };
+            // 3. Fetch activities (with fallback)
+            console.log("🎯 Fetching activities...");
+            activities = await searchActivities(trip.destination);
+            console.log(`✅ Activities ready: ${activities.length} options`);
+
+            // 4. Fetch restaurants (with fallback)
+            console.log("🍽️ Fetching restaurants...");
+            restaurants = await searchRestaurants(trip.destination);
+            console.log(`✅ Restaurants ready: ${restaurants.length} options`);
+
+            // 5. Generate itinerary
+            console.log("📝 Generating itinerary...");
+            let dailyPlan;
+            
+            if (hasOpenAIKey) {
+                try {
+                    const openai = new OpenAI({
+                        apiKey: process.env.OPENAI_API_KEY,
+                    });
+
+                    const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${trip.destination}.
+                    Duration: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
+                    Travelers: ${trip.travelers} people.
+                    Budget: ${trip.budget}.
+                    Interests: ${trip.interests.join(", ")}.
+                    
+                    Available activities: ${activities.map((a: any) => a.title).join(", ")}.
+                    Available restaurants: ${restaurants.map((r: any) => r.name).join(", ")}.
+                    
+                    Return a JSON object with this structure:
+                    {
+                      "dailyPlan": [
+                        {
+                          "day": 1,
+                          "title": "Day title",
+                          "activities": [
+                            { "time": "9:00 AM", "title": "Activity name", "description": "What to do" }
+                          ]
+                        }
+                      ]
+                    }`;
+
+                    const completion = await openai.chat.completions.create({
+                        messages: [
+                            { role: "system", content: "You are a travel itinerary planner. Return only valid JSON." },
+                            { role: "user", content: itineraryPrompt },
+                        ],
+                        model: "gpt-4o",
+                        response_format: { type: "json_object" },
+                    });
+
+                    const itineraryContent = completion.choices[0].message.content;
+                    const itineraryData = itineraryContent ? JSON.parse(itineraryContent) : { dailyPlan: [] };
+                    dailyPlan = itineraryData.dailyPlan;
+                } catch (error) {
+                    console.error("❌ OpenAI itinerary failed:", error);
+                    dailyPlan = generateBasicItinerary(trip, activities, restaurants);
+                }
+            } else {
+                dailyPlan = generateBasicItinerary(trip, activities, restaurants);
+            }
 
             const result = {
                 flights,
                 hotels,
                 activities,
                 restaurants,
-                dailyPlan: itineraryData.dailyPlan,
-                estimatedDailyExpenses: 100, // Fallback
+                dailyPlan,
+                estimatedDailyExpenses: calculateDailyExpenses(trip.budget),
             };
 
             console.log("✅ Trip generation complete!");
@@ -112,7 +184,6 @@ export const generate = internalAction({
             console.error("Error details:", {
                 message: error.message,
                 stack: error.stack,
-                response: error.response?.data
             });
             
             await ctx.runMutation(internal.trips.updateItinerary, {
@@ -125,6 +196,54 @@ export const generate = internalAction({
         }
     },
 });
+
+// Generate a basic itinerary without OpenAI
+function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]) {
+    const days = Math.ceil((trip.endDate - trip.startDate) / (24 * 60 * 60 * 1000));
+    const dailyPlan = [];
+    
+    for (let i = 0; i < days; i++) {
+        dailyPlan.push({
+            day: i + 1,
+            title: `Day ${i + 1} in ${trip.destination}`,
+            activities: [
+                {
+                    time: "9:00 AM",
+                    title: activities[i % activities.length]?.title || "Morning Activity",
+                    description: "Explore and enjoy the local attractions"
+                },
+                {
+                    time: "1:00 PM",
+                    title: restaurants[i % restaurants.length]?.name || "Lunch",
+                    description: "Try local cuisine"
+                },
+                {
+                    time: "3:00 PM",
+                    title: activities[(i + 1) % activities.length]?.title || "Afternoon Activity",
+                    description: "Continue exploring"
+                },
+                {
+                    time: "7:00 PM",
+                    title: restaurants[(i + 1) % restaurants.length]?.name || "Dinner",
+                    description: "Evening dining experience"
+                }
+            ]
+        });
+    }
+    
+    return dailyPlan;
+}
+
+// Calculate daily expenses based on budget
+function calculateDailyExpenses(budget: string): number {
+    const budgetMap: Record<string, number> = {
+        "Low": 50,
+        "Medium": 100,
+        "High": 200,
+        "Luxury": 400,
+    };
+    return budgetMap[budget] || 100;
+}
 
 // Helper function to get Amadeus access token
 async function getAmadeusToken(): Promise<string> {
@@ -613,34 +732,31 @@ function getFallbackRestaurants(destination: string) {
 function getFallbackHotels(destination: string) {
     return [
         {
-            name: `Hotel in ${destination}`,
-            pricePerNight: 120,
-            stars: 4,
-            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-            description: "Comfortable accommodation with modern amenities",
-            amenities: ["WiFi", "Breakfast", "Pool"],
+            name: `Grand Hotel ${destination}`,
+            rating: "4",
+            price: "120",
+            currency: "EUR",
+            amenities: ["WiFi", "Breakfast", "Pool", "Gym"],
             address: `City Center, ${destination}`,
-            coordinates: { latitude: 0, longitude: 0 },
+            description: "Comfortable accommodation with modern amenities in the heart of the city",
         },
         {
-            name: `Budget Hotel ${destination}`,
-            pricePerNight: 80,
-            stars: 3,
-            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-            description: "Affordable and clean accommodation",
+            name: `Budget Inn ${destination}`,
+            rating: "3",
+            price: "80",
+            currency: "EUR",
             amenities: ["WiFi", "Breakfast"],
             address: `Downtown, ${destination}`,
-            coordinates: { latitude: 0, longitude: 0 },
+            description: "Affordable and clean accommodation perfect for budget travelers",
         },
         {
-            name: `Luxury ${destination} Hotel`,
-            pricePerNight: 250,
-            stars: 5,
-            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-            description: "Premium accommodation with exceptional service",
-            amenities: ["WiFi", "Breakfast", "Pool", "Spa", "Gym"],
+            name: `Luxury ${destination} Resort`,
+            rating: "5",
+            price: "250",
+            currency: "EUR",
+            amenities: ["WiFi", "Breakfast", "Pool", "Spa", "Gym", "Restaurant"],
             address: `Premium District, ${destination}`,
-            coordinates: { latitude: 0, longitude: 0 },
+            description: "Premium accommodation with exceptional service and world-class facilities",
         },
     ];
 }
