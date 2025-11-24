@@ -10,33 +10,65 @@ export const generate = internalAction({
     handler: async (ctx, args) => {
         const { tripId } = args;
 
+        console.log("=".repeat(80));
+        console.log("🚀 TRIP GENERATION STARTED");
+        console.log("=".repeat(80));
+        console.log("Trip ID:", tripId);
+        console.log("Prompt:", args.prompt);
+
         // Get trip details
         const trip = await ctx.runQuery(internal.trips.getTripDetails, { tripId });
-        if (!trip) throw new Error("Trip not found");
-        if (!trip.origin) throw new Error("Trip origin is required");
+        if (!trip) {
+            console.error("❌ Trip not found!");
+            throw new Error("Trip not found");
+        }
+        
+        console.log("✅ Trip details loaded:");
+        console.log("  - Destination:", trip.destination);
+        console.log("  - Origin:", trip.origin);
+        console.log("  - Start Date:", new Date(trip.startDate).toISOString());
+        console.log("  - End Date:", new Date(trip.endDate).toISOString());
+        console.log("  - Travelers:", trip.travelers);
+        console.log("  - Budget:", trip.budget);
+        console.log("  - Interests:", trip.interests);
+        
+        if (!trip.origin) {
+            console.error("❌ Trip origin is missing!");
+            throw new Error("Trip origin is required");
+        }
 
-        console.log(`🚀 Starting trip generation for: ${trip.origin} → ${trip.destination}`);
+        console.log("\n" + "=".repeat(80));
+        console.log("🔑 CHECKING API KEYS");
+        console.log("=".repeat(80));
+
+        // Check if API keys are configured
+        const hasAmadeusKeys = !!(process.env.AMADEUS_API_KEY && process.env.AMADEUS_API_SECRET);
+        const hasGoogleKey = !!process.env.GOOGLE_PLACES_API_KEY;
+        const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+
+        console.log("  - Amadeus API:", hasAmadeusKeys ? "✅ Configured" : "❌ Missing");
+        console.log("  - Google Places API:", hasGoogleKey ? "✅ Configured" : "❌ Missing");
+        console.log("  - OpenAI API:", hasOpenAIKey ? "✅ Configured" : "❌ Missing");
+
+        if (!hasAmadeusKeys) {
+            console.warn("⚠️ Amadeus API keys not configured. Using AI-generated data.");
+        }
+        if (!hasGoogleKey) {
+            console.warn("⚠️ Google Places API key not configured. Using fallback data.");
+        }
+        if (!hasOpenAIKey) {
+            console.warn("⚠️ OpenAI API key not configured. Using basic itinerary.");
+        }
+
+        console.log("\n" + "=".repeat(80));
+        console.log("🎬 STARTING DATA COLLECTION");
+        console.log("=".repeat(80));
 
         try {
             let flights;
             let hotels;
             let activities;
             let restaurants;
-
-            // Check if API keys are configured
-            const hasAmadeusKeys = process.env.AMADEUS_API_KEY && process.env.AMADEUS_API_SECRET;
-            const hasGoogleKey = process.env.GOOGLE_PLACES_API_KEY;
-            const hasOpenAIKey = process.env.OPENAI_API_KEY;
-
-            if (!hasAmadeusKeys) {
-                console.warn("⚠️ Amadeus API keys not configured. Using AI-generated data.");
-            }
-            if (!hasGoogleKey) {
-                console.warn("⚠️ Google Places API key not configured. Using fallback data.");
-            }
-            if (!hasOpenAIKey) {
-                console.warn("⚠️ OpenAI API key not configured. Using basic itinerary.");
-            }
 
             // 1. Fetch flights (with fallback)
             console.log("✈️ Fetching flights...");
