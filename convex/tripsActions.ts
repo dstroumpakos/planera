@@ -34,6 +34,11 @@ export const generate = internalAction({
         
         if (!trip.origin) {
             console.error("❌ Trip origin is missing!");
+            await ctx.runMutation(internal.trips.updateItinerary, {
+                tripId,
+                itinerary: null,
+                status: "failed",
+            });
             throw new Error("Trip origin is required");
         }
 
@@ -147,41 +152,58 @@ export const generate = internalAction({
             console.log("📝 Generating itinerary with OpenAI...");
             let dayByDayItinerary;
             if (hasOpenAIKey) {
-                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-                const budgetDisplay = typeof trip.budget === "number" ? `€${trip.budget}` : trip.budget;
-                const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${trip.destination} from ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
+                try {
+                    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                    const budgetDisplay = typeof trip.budget === "number" ? `€${trip.budget}` : trip.budget;
+                    const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${trip.destination} from ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
                 
 Budget: ${budgetDisplay}
 Travelers: ${trip.travelers}
 Interests: ${trip.interests.join(", ")}
 
-Include specific activities, restaurants, and attractions for each day. Format as JSON array with structure:
-[
-  {
-    "day": 1,
-    "date": "2024-01-15",
-    "activities": [
-      {
-        "time": "09:00",
-        "title": "Activity name",
-        "description": "Brief description",
-        "location": "Address"
-      }
-    ]
-  }
-]`;
-                const completion = await openai.chat.completions.create({
-                    messages: [
-                        { role: "system", content: "You are a travel itinerary planner. Return only valid JSON." },
-                        { role: "user", content: itineraryPrompt },
-                    ],
-                    model: "gpt-4o",
-                    response_format: { type: "json_object" },
-                });
+Include specific activities, restaurants, and attractions for each day. Format as JSON with structure:
+{
+  "dailyPlan": [
+    {
+      "day": 1,
+      "date": "2024-01-15",
+      "title": "Day 1 in ${trip.destination}",
+      "activities": [
+        {
+          "time": "09:00 AM",
+          "title": "Activity name",
+          "description": "Brief description"
+        }
+      ]
+    }
+  ]
+}`;
+                    const completion = await openai.chat.completions.create({
+                        messages: [
+                            { role: "system", content: "You are a travel itinerary planner. Return only valid JSON." },
+                            { role: "user", content: itineraryPrompt },
+                        ],
+                        model: "gpt-4o",
+                        response_format: { type: "json_object" },
+                    });
 
-                const itineraryContent = completion.choices[0].message.content;
-                const itineraryData = itineraryContent ? JSON.parse(itineraryContent) : { dailyPlan: [] };
-                dayByDayItinerary = itineraryData.dailyPlan;
+                    const itineraryContent = completion.choices[0].message.content;
+                    if (itineraryContent) {
+                        const itineraryData = JSON.parse(itineraryContent);
+                        dayByDayItinerary = itineraryData.dailyPlan || [];
+                        console.log(`✅ OpenAI generated ${dayByDayItinerary.length} days of itinerary`);
+                    } else {
+                        console.warn("⚠️ OpenAI returned empty content, using fallback");
+                        dayByDayItinerary = generateBasicItinerary(trip, activities, restaurants);
+                    }
+                } catch (error: any) {
+                    console.error("❌ OpenAI itinerary generation failed:", error.message);
+                    console.warn("⚠️ Using fallback itinerary");
+                    dayByDayItinerary = generateBasicItinerary(trip, activities, restaurants);
+                }
+            } else {
+                console.warn("⚠️ OpenAI not configured, using basic itinerary");
+                dayByDayItinerary = generateBasicItinerary(trip, activities, restaurants);
             }
 
             const result = {
