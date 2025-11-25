@@ -418,7 +418,7 @@ export default function TripDetails() {
                 </Section>
 
                 <Section title="Daily Itinerary">
-                    {trip.itinerary?.dailyPlan?.map((day: any, index: number) => (
+                    {trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
                         <View key={index} style={styles.dayCard}>
                             <View style={styles.dayHeader}>
                                 <View style={styles.dayBadge}>
