@@ -48,18 +48,13 @@ export const generate = internalAction({
 
         // Check if API keys are configured
         const hasAmadeusKeys = !!(process.env.AMADEUS_API_KEY && process.env.AMADEUS_API_SECRET);
-        const hasGoogleKey = !!process.env.GOOGLE_PLACES_API_KEY;
         const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
 
         console.log("  - Amadeus API:", hasAmadeusKeys ? "✅ Configured" : "❌ Missing");
-        console.log("  - Google Places API:", hasGoogleKey ? "✅ Configured" : "❌ Missing");
         console.log("  - OpenAI API:", hasOpenAIKey ? "✅ Configured" : "❌ Missing");
 
         if (!hasAmadeusKeys) {
             console.warn("⚠️ Amadeus API keys not configured. Using AI-generated data.");
-        }
-        if (!hasGoogleKey) {
-            console.warn("⚠️ Google Places API key not configured. Using fallback data.");
         }
         if (!hasOpenAIKey) {
             console.warn("⚠️ OpenAI API key not configured. Using basic itinerary.");
