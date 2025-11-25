@@ -676,88 +676,168 @@ async function searchHotels(
 
 // Helper function to search activities
 async function searchActivities(destination: string) {
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    const apiKey = process.env.FOURSQUARE_API_KEY;
     
     if (!apiKey) {
-        console.warn("⚠️ Google Places API key not configured. Using fallback activities.");
+        console.warn("⚠️ Foursquare API key not configured. Using destination-specific fallback activities.");
         return getFallbackActivities(destination);
     }
 
-    console.log(`🎯 Searching activities in ${destination}`);
+    console.log(`🎯 Searching activities in ${destination} via Foursquare`);
 
     try {
+        // Foursquare Places API v3
         const response = await fetch(
-            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=things+to+do+in+${encodeURIComponent(destination)}&key=${apiKey}`
+            `https://api.foursquare.com/v3/places/search?query=tourist attractions&near=${encodeURIComponent(destination)}&limit=10`,
+            {
+                headers: {
+                    'Authorization': apiKey,
+                    'Accept': 'application/json'
+                }
+            }
         );
 
-        const data = await response.json();
-        
-        if (data.status !== "OK" || !data.results || data.results.length === 0) {
-            console.warn(`⚠️ No activities found via Google Places. Using fallback. Status: ${data.status}`);
+        if (!response.ok) {
+            console.warn(`⚠️ Foursquare API error: ${response.status}. Using fallback.`);
             return getFallbackActivities(destination);
         }
 
-        console.log(`✅ Found ${data.results.length} activities`);
+        const data = await response.json();
+        
+        if (!data.results || data.results.length === 0) {
+            console.warn(`⚠️ No activities found via Foursquare. Using fallback.`);
+            return getFallbackActivities(destination);
+        }
+
+        console.log(`✅ Found ${data.results.length} activities via Foursquare`);
 
         return data.results.slice(0, 5).map((place: any) => ({
             title: place.name,
-            price: "€20",
+            price: place.price ? `€${place.price * 10}` : "€20",
             duration: "2-3h",
-            description: place.formatted_address,
-            coordinates: {
-                latitude: place.geometry.location.lat,
-                longitude: place.geometry.location.lng,
-            },
+            description: place.location?.formatted_address || place.categories?.[0]?.name || "Popular attraction",
+            coordinates: place.geocodes?.main ? {
+                latitude: place.geocodes.main.latitude,
+                longitude: place.geocodes.main.longitude,
+            } : undefined,
         }));
     } catch (error) {
-        console.error("❌ Error fetching activities:", error);
+        console.error("❌ Error fetching activities from Foursquare:", error);
         return getFallbackActivities(destination);
     }
 }
 
 // Helper function to search restaurants
 async function searchRestaurants(destination: string) {
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    const apiKey = process.env.FOURSQUARE_API_KEY;
     
     if (!apiKey) {
-        console.warn("⚠️ Google Places API key not configured. Using fallback restaurants.");
+        console.warn("⚠️ Foursquare API key not configured. Using destination-specific fallback restaurants.");
         return getFallbackRestaurants(destination);
     }
 
-    console.log(`🍽️ Searching restaurants in ${destination}`);
+    console.log(`🍽️ Searching restaurants in ${destination} via Foursquare`);
 
     try {
+        // Foursquare Places API v3
         const response = await fetch(
-            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=restaurants+in+${encodeURIComponent(destination)}&key=${apiKey}`
+            `https://api.foursquare.com/v3/places/search?categories=13000&near=${encodeURIComponent(destination)}&limit=10&sort=RATING`,
+            {
+                headers: {
+                    'Authorization': apiKey,
+                    'Accept': 'application/json'
+                }
+            }
         );
 
-        const data = await response.json();
-        
-        if (data.status !== "OK" || !data.results || data.results.length === 0) {
-            console.warn(`⚠️ No restaurants found via Google Places. Using fallback. Status: ${data.status}`);
+        if (!response.ok) {
+            console.warn(`⚠️ Foursquare API error: ${response.status}. Using fallback.`);
             return getFallbackRestaurants(destination);
         }
 
-        console.log(`✅ Found ${data.results.length} restaurants`);
+        const data = await response.json();
+        
+        if (!data.results || data.results.length === 0) {
+            console.warn(`⚠️ No restaurants found via Foursquare. Using fallback.`);
+            return getFallbackRestaurants(destination);
+        }
+
+        console.log(`✅ Found ${data.results.length} restaurants via Foursquare`);
 
         return data.results.slice(0, 5).map((place: any) => ({
             name: place.name,
-            priceRange: "€€",
-            cuisine: place.types?.[0] || "International",
-            rating: place.rating || 4.0,
-            coordinates: {
-                latitude: place.geometry.location.lat,
-                longitude: place.geometry.location.lng,
-            },
+            priceRange: place.price ? "€".repeat(place.price) : "€€",
+            cuisine: place.categories?.[0]?.name || "International",
+            rating: place.rating ? (place.rating / 2) : 4.0, // Foursquare uses 0-10 scale
+            coordinates: place.geocodes?.main ? {
+                latitude: place.geocodes.main.latitude,
+                longitude: place.geocodes.main.longitude,
+            } : undefined,
         }));
     } catch (error) {
-        console.error("❌ Error fetching restaurants:", error);
+        console.error("❌ Error fetching restaurants from Foursquare:", error);
         return getFallbackRestaurants(destination);
     }
 }
 
-// Fallback activities
+// Fallback activities - now destination-specific
 function getFallbackActivities(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    // Destination-specific activities
+    const destinationActivities: Record<string, Array<{title: string, price: string, duration: string, description: string}>> = {
+        "paris": [
+            { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
+            { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
+            { title: "Seine River Cruise", price: "€15", duration: "1h", description: "Scenic boat tour along the Seine" },
+            { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
+            { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
+        ],
+        "rome": [
+            { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
+            { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
+            { title: "Roman Forum", price: "€16", duration: "2h", description: "Ancient Roman ruins" },
+            { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
+            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
+        ],
+        "london": [
+            { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
+            { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
+            { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
+            { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
+            { title: "Thames River Cruise", price: "€15", duration: "1h", description: "Sightseeing boat tour" },
+        ],
+        "barcelona": [
+            { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
+            { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
+            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
+            { title: "La Rambla", price: "Free", duration: "1h", description: "Famous tree-lined street" },
+            { title: "Casa Batlló", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
+        ],
+        "athens": [
+            { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
+            { title: "Acropolis Museum", price: "€10", duration: "2h", description: "Archaeological museum" },
+            { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
+            { title: "Plaka Walking Tour", price: "Free", duration: "2h", description: "Historic neighborhood" },
+            { title: "Temple of Olympian Zeus", price: "€8", duration: "1h", description: "Ancient Greek temple ruins" },
+        ],
+        "amsterdam": [
+            { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
+            { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
+            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
+            { title: "Rijksmuseum", price: "€22", duration: "3h", description: "Dutch art and history" },
+            { title: "Vondelpark", price: "Free", duration: "1-2h", description: "Large public park" },
+        ],
+    };
+    
+    // Check if we have specific activities for this destination
+    for (const [city, activities] of Object.entries(destinationActivities)) {
+        if (destLower.includes(city)) {
+            return activities;
+        }
+    }
+    
+    // Generic fallback
     return [
         { title: `City Tour of ${destination}`, price: "€25", duration: "3h", description: "Explore the main attractions" },
         { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
@@ -767,8 +847,64 @@ function getFallbackActivities(destination: string) {
     ];
 }
 
-// Fallback restaurants
+// Fallback restaurants - now destination-specific
 function getFallbackRestaurants(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    // Destination-specific restaurants
+    const destinationRestaurants: Record<string, Array<{name: string, priceRange: string, cuisine: string, rating: number}>> = {
+        "paris": [
+            { name: "Le Comptoir du Relais", priceRange: "€€€", cuisine: "French Bistro", rating: 4.5 },
+            { name: "L'As du Fallafel", priceRange: "€", cuisine: "Middle Eastern", rating: 4.6 },
+            { name: "Breizh Café", priceRange: "€€", cuisine: "Crêperie", rating: 4.4 },
+            { name: "Le Jules Verne", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.7 },
+            { name: "Marché des Enfants Rouges", priceRange: "€", cuisine: "Market Food", rating: 4.3 },
+        ],
+        "rome": [
+            { name: "Trattoria Da Enzo", priceRange: "€€", cuisine: "Traditional Roman", rating: 4.6 },
+            { name: "Pizzarium", priceRange: "€", cuisine: "Pizza al Taglio", rating: 4.5 },
+            { name: "La Pergola", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
+            { name: "Roscioli", priceRange: "€€€", cuisine: "Italian Deli", rating: 4.7 },
+            { name: "Supplizio", priceRange: "€", cuisine: "Street Food", rating: 4.4 },
+        ],
+        "london": [
+            { name: "Dishoom", priceRange: "€€", cuisine: "Indian", rating: 4.5 },
+            { name: "Borough Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
+            { name: "The Ledbury", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
+            { name: "Flat Iron", priceRange: "€€", cuisine: "Steakhouse", rating: 4.4 },
+            { name: "Padella", priceRange: "€€", cuisine: "Italian Pasta", rating: 4.7 },
+        ],
+        "barcelona": [
+            { name: "Cervecería Catalana", priceRange: "€€", cuisine: "Tapas", rating: 4.5 },
+            { name: "La Boqueria Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
+            { name: "Tickets Bar", priceRange: "€€€", cuisine: "Modern Tapas", rating: 4.7 },
+            { name: "Can Culleretes", priceRange: "€€", cuisine: "Traditional Catalan", rating: 4.4 },
+            { name: "El Xampanyet", priceRange: "€", cuisine: "Tapas Bar", rating: 4.5 },
+        ],
+        "athens": [
+            { name: "Taverna Tou Psyrri", priceRange: "€€", cuisine: "Traditional Greek", rating: 4.5 },
+            { name: "Kostas Souvlaki", priceRange: "€", cuisine: "Souvlaki", rating: 4.6 },
+            { name: "Spondi", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
+            { name: "Karamanlidika", priceRange: "€€", cuisine: "Greek Meze", rating: 4.7 },
+            { name: "Varvakios Agora", priceRange: "€", cuisine: "Market Food", rating: 4.4 },
+        ],
+        "amsterdam": [
+            { name: "De Kas", priceRange: "€€€", cuisine: "Farm-to-Table", rating: 4.6 },
+            { name: "Foodhallen", priceRange: "€€", cuisine: "Food Hall", rating: 4.4 },
+            { name: "The Pantry", priceRange: "€€", cuisine: "Dutch Traditional", rating: 4.5 },
+            { name: "Café de Klos", priceRange: "€€", cuisine: "Grill House", rating: 4.6 },
+            { name: "Albert Cuyp Market", priceRange: "€", cuisine: "Street Food", rating: 4.3 },
+        ],
+    };
+    
+    // Check if we have specific restaurants for this destination
+    for (const [city, restaurants] of Object.entries(destinationRestaurants)) {
+        if (destLower.includes(city)) {
+            return restaurants;
+        }
+    }
+    
+    // Generic fallback
     return [
         { name: `Traditional ${destination} Restaurant`, priceRange: "€€", cuisine: "Local", rating: 4.5 },
         { name: "Mediterranean Bistro", priceRange: "€€€", cuisine: "Mediterranean", rating: 4.3 },
