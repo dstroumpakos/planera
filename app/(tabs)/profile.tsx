@@ -1,18 +1,16 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ScrollView, Switch } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
 
 export default function Profile() {
     const router = useRouter();
     const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list);
     const userPlan = useQuery(api.users.getPlan);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
     const handleSignOut = async () => {
         try {
@@ -38,7 +36,7 @@ export default function Profile() {
         {
             title: "Personal Info",
             icon: "person-outline",
-            action: () => Alert.alert("Personal Info", "Edit profile feature coming soon!")
+            action: () => router.push("/settings/personal-info")
         },
         {
             title: "Payment (Subscriptions)",
@@ -48,12 +46,12 @@ export default function Profile() {
         {
             title: "Travel Preferences",
             icon: "airplane-outline",
-            action: () => Alert.alert("Travel Preferences", "Preferences feature coming soon!")
+            action: () => router.push("/settings/travel-preferences")
         },
         {
             title: "App Language",
             icon: "language-outline",
-            action: () => Alert.alert("Language", "Language selection coming soon!")
+            action: () => router.push("/settings/language")
         }
     ];
 
@@ -109,12 +107,9 @@ export default function Profile() {
                             <Ionicons name="notifications-outline" size={22} color="#1B3F92" />
                         </View>
                         <Text style={styles.menuText}>Notifications</Text>
-                        <Switch
-                            value={notificationsEnabled}
-                            onValueChange={setNotificationsEnabled}
-                            trackColor={{ false: "#CFD8DC", true: "#1B3F92" }}
-                            thumbColor={"#FFFFFF"}
-                        />
+                        <TouchableOpacity onPress={() => router.push("/settings/notifications")}>
+                            <Ionicons name="chevron-forward" size={20} color="#CFD8DC" />
+                        </TouchableOpacity>
                     </View>
                 </View>
 
