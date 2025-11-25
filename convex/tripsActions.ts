@@ -676,140 +676,48 @@ async function searchHotels(
 
 // Helper function to search activities
 async function searchActivities(destination: string) {
-    // Try TripAdvisor first
     const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
     
-    if (tripAdvisorKey) {
-        console.log(`🎯 Searching activities in ${destination} via TripAdvisor`);
-        try {
-            const activities = await searchTripAdvisorActivities(destination, tripAdvisorKey);
-            if (activities.length > 0) {
-                console.log(`✅ Found ${activities.length} activities via TripAdvisor`);
-                return activities;
-            }
-        } catch (error) {
-            console.warn("⚠️ TripAdvisor activities failed, trying Foursquare...");
-        }
-    }
-    
-    // Fall back to Foursquare
-    const apiKey = process.env.FOURSQUARE_API_KEY;
-    
-    if (!apiKey) {
-        console.warn("⚠️ Foursquare API key not configured. Using destination-specific fallback activities.");
+    if (!tripAdvisorKey) {
+        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback activities.");
         return getFallbackActivities(destination);
     }
 
-    console.log(`🎯 Searching activities in ${destination} via Foursquare`);
-
+    console.log(`🎯 Searching activities in ${destination} via TripAdvisor`);
     try {
-        // Foursquare Places API v3
-        const response = await fetch(
-            `https://api.foursquare.com/v3/places/search?query=tourist attractions&near=${encodeURIComponent(destination)}&limit=10`,
-            {
-                headers: {
-                    'Authorization': apiKey,
-                    'Accept': 'application/json'
-                }
-            }
-        );
-
-        if (!response.ok) {
-            console.warn(`⚠️ Foursquare API error: ${response.status}. Using fallback.`);
-            return getFallbackActivities(destination);
+        const activities = await searchTripAdvisorActivities(destination, tripAdvisorKey);
+        if (activities.length > 0) {
+            console.log(`✅ Found ${activities.length} activities via TripAdvisor`);
+            return activities;
         }
-
-        const data = await response.json();
-        
-        if (!data.results || data.results.length === 0) {
-            console.warn(`⚠️ No activities found via Foursquare. Using fallback.`);
-            return getFallbackActivities(destination);
-        }
-
-        console.log(`✅ Found ${data.results.length} activities via Foursquare`);
-
-        return data.results.slice(0, 5).map((place: any) => ({
-            title: place.name,
-            price: place.price ? `€${place.price * 10}` : "€20",
-            duration: "2-3h",
-            description: place.location?.formatted_address || place.categories?.[0]?.name || "Popular attraction",
-            coordinates: place.geocodes?.main ? {
-                latitude: place.geocodes.main.latitude,
-                longitude: place.geocodes.main.longitude,
-            } : undefined,
-        }));
+        console.warn("⚠️ No activities found via TripAdvisor. Using fallback.");
+        return getFallbackActivities(destination);
     } catch (error) {
-        console.error("❌ Error fetching activities from Foursquare:", error);
+        console.error("❌ TripAdvisor activities failed:", error);
         return getFallbackActivities(destination);
     }
 }
 
 // Helper function to search restaurants
 async function searchRestaurants(destination: string) {
-    // Try TripAdvisor first
     const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
     
-    if (tripAdvisorKey) {
-        console.log(`🍽️ Searching restaurants in ${destination} via TripAdvisor`);
-        try {
-            const restaurants = await searchTripAdvisorRestaurants(destination, tripAdvisorKey);
-            if (restaurants.length > 0) {
-                console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
-                return restaurants;
-            }
-        } catch (error) {
-            console.warn("⚠️ TripAdvisor restaurants failed, trying Foursquare...");
-        }
-    }
-    
-    // Fall back to Foursquare
-    const apiKey = process.env.FOURSQUARE_API_KEY;
-    
-    if (!apiKey) {
-        console.warn("⚠️ Foursquare API key not configured. Using destination-specific fallback restaurants.");
+    if (!tripAdvisorKey) {
+        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback restaurants.");
         return getFallbackRestaurants(destination);
     }
 
-    console.log(`🍽️ Searching restaurants in ${destination} via Foursquare`);
-
+    console.log(`🍽️ Searching restaurants in ${destination} via TripAdvisor`);
     try {
-        // Foursquare Places API v3
-        const response = await fetch(
-            `https://api.foursquare.com/v3/places/search?categories=13000&near=${encodeURIComponent(destination)}&limit=10&sort=RATING`,
-            {
-                headers: {
-                    'Authorization': apiKey,
-                    'Accept': 'application/json'
-                }
-            }
-        );
-
-        if (!response.ok) {
-            console.warn(`⚠️ Foursquare API error: ${response.status}. Using fallback.`);
-            return getFallbackRestaurants(destination);
+        const restaurants = await searchTripAdvisorRestaurants(destination, tripAdvisorKey);
+        if (restaurants.length > 0) {
+            console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
+            return restaurants;
         }
-
-        const data = await response.json();
-        
-        if (!data.results || data.results.length === 0) {
-            console.warn(`⚠️ No restaurants found via Foursquare. Using fallback.`);
-            return getFallbackRestaurants(destination);
-        }
-
-        console.log(`✅ Found ${data.results.length} restaurants via Foursquare`);
-
-        return data.results.slice(0, 5).map((place: any) => ({
-            name: place.name,
-            priceRange: place.price ? "€".repeat(place.price) : "€€",
-            cuisine: place.categories?.[0]?.name || "International",
-            rating: place.rating ? (place.rating / 2) : 4.0, // Foursquare uses 0-10 scale
-            coordinates: place.geocodes?.main ? {
-                latitude: place.geocodes.main.latitude,
-                longitude: place.geocodes.main.longitude,
-            } : undefined,
-        }));
+        console.warn("⚠️ No restaurants found via TripAdvisor. Using fallback.");
+        return getFallbackRestaurants(destination);
     } catch (error) {
-        console.error("❌ Error fetching restaurants from Foursquare:", error);
+        console.error("❌ TripAdvisor restaurants failed:", error);
         return getFallbackRestaurants(destination);
     }
 }
