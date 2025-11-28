@@ -1529,33 +1529,148 @@ function getFallbackRestaurants(destination: string) {
 
 // Fallback hotels
 function getFallbackHotels(destination: string) {
-    return [
+    const hotels = [
         {
+            type: "hotel",
             name: `Grand Hotel ${destination}`,
             rating: "4",
+            stars: 4,
             price: "120",
+            pricePerNight: 120,
             currency: "EUR",
             amenities: ["WiFi", "Breakfast", "Pool", "Gym"],
             address: `City Center, ${destination}`,
             description: "Comfortable accommodation with modern amenities in the heart of the city",
+            bookingUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
         },
         {
+            type: "hotel",
             name: `Budget Inn ${destination}`,
             rating: "3",
+            stars: 3,
             price: "80",
+            pricePerNight: 80,
             currency: "EUR",
             amenities: ["WiFi", "Breakfast"],
             address: `Downtown, ${destination}`,
             description: "Affordable and clean accommodation perfect for budget travelers",
+            bookingUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
         },
         {
+            type: "hotel",
             name: `Luxury ${destination} Resort`,
             rating: "5",
+            stars: 5,
             price: "250",
+            pricePerNight: 250,
             currency: "EUR",
             amenities: ["WiFi", "Breakfast", "Pool", "Spa", "Gym", "Restaurant"],
             address: `Premium District, ${destination}`,
             description: "Premium accommodation with exceptional service and world-class facilities",
+            bookingUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
+        },
+    ];
+    
+    // Add Airbnb options
+    const airbnbs = getAirbnbOptions(destination);
+    
+    return [...hotels, ...airbnbs];
+}
+
+// Generate Airbnb options based on destination
+function getAirbnbOptions(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    // Destination-specific Airbnb pricing (average per night)
+    const airbnbPricing: Record<string, { studio: number; apartment: number; villa: number }> = {
+        "paris": { studio: 85, apartment: 150, villa: 350 },
+        "london": { studio: 95, apartment: 180, villa: 450 },
+        "rome": { studio: 70, apartment: 120, villa: 280 },
+        "barcelona": { studio: 65, apartment: 110, villa: 250 },
+        "amsterdam": { studio: 90, apartment: 160, villa: 380 },
+        "athens": { studio: 50, apartment: 85, villa: 200 },
+        "berlin": { studio: 60, apartment: 100, villa: 220 },
+        "madrid": { studio: 55, apartment: 95, villa: 210 },
+        "lisbon": { studio: 55, apartment: 90, villa: 200 },
+        "prague": { studio: 45, apartment: 75, villa: 180 },
+        "vienna": { studio: 70, apartment: 120, villa: 280 },
+        "dubai": { studio: 80, apartment: 150, villa: 400 },
+        "new york": { studio: 120, apartment: 220, villa: 550 },
+        "tokyo": { studio: 70, apartment: 130, villa: 300 },
+        "singapore": { studio: 90, apartment: 170, villa: 400 },
+        "bali": { studio: 35, apartment: 60, villa: 150 },
+        "santorini": { studio: 100, apartment: 180, villa: 400 },
+    };
+    
+    // Find matching destination pricing or use default
+    let pricing = { studio: 65, apartment: 110, villa: 250 }; // Default
+    for (const [city, cityPricing] of Object.entries(airbnbPricing)) {
+        if (destLower.includes(city)) {
+            pricing = cityPricing;
+            break;
+        }
+    }
+    
+    return [
+        {
+            type: "airbnb",
+            name: `Cozy Studio in ${destination}`,
+            rating: "4.7",
+            stars: 0, // Airbnb doesn't use stars
+            price: pricing.studio.toString(),
+            pricePerNight: pricing.studio,
+            currency: "EUR",
+            amenities: ["WiFi", "Kitchen", "Washer", "Air Conditioning"],
+            address: `Central ${destination}`,
+            description: "Charming studio apartment perfect for solo travelers or couples. Fully equipped kitchen and great location.",
+            propertyType: "Studio",
+            bedrooms: 0,
+            beds: 1,
+            bathrooms: 1,
+            maxGuests: 2,
+            superhost: true,
+            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
+            image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
+        },
+        {
+            type: "airbnb",
+            name: `Modern Apartment with View`,
+            rating: "4.9",
+            stars: 0,
+            price: pricing.apartment.toString(),
+            pricePerNight: pricing.apartment,
+            currency: "EUR",
+            amenities: ["WiFi", "Kitchen", "Washer", "Balcony", "City View", "Parking"],
+            address: `${destination} City Center`,
+            description: "Spacious 2-bedroom apartment with stunning city views. Perfect for families or groups of friends.",
+            propertyType: "Apartment",
+            bedrooms: 2,
+            beds: 3,
+            bathrooms: 1,
+            maxGuests: 4,
+            superhost: true,
+            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
+            image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400",
+        },
+        {
+            type: "airbnb",
+            name: `Luxury Villa with Pool`,
+            rating: "4.95",
+            stars: 0,
+            price: pricing.villa.toString(),
+            pricePerNight: pricing.villa,
+            currency: "EUR",
+            amenities: ["WiFi", "Kitchen", "Pool", "Garden", "BBQ", "Parking", "Hot Tub"],
+            address: `Exclusive Area, ${destination}`,
+            description: "Stunning private villa with pool and garden. Ideal for luxury getaways and special occasions.",
+            propertyType: "Villa",
+            bedrooms: 4,
+            beds: 5,
+            bathrooms: 3,
+            maxGuests: 8,
+            superhost: true,
+            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
+            image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400",
         },
     ];
 }
