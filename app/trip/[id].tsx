@@ -613,13 +613,119 @@ export default function TripDetails() {
                                 <View style={styles.dayBadge}>
                                     <Text style={styles.dayBadgeText}>Day {day.day}</Text>
                                 </View>
+                                {day.title && <Text style={styles.dayTitle}>{day.title}</Text>}
                             </View>
                             {day.activities.map((activity: any, actIndex: number) => (
                                 <View key={actIndex} style={styles.activityItem}>
                                     <Text style={styles.activityTime}>{activity.time}</Text>
                                     <View style={styles.activityContent}>
-                                        <Text style={styles.activityTitle}>{activity.title}</Text>
+                                        <View style={styles.activityHeader}>
+                                            <Text style={styles.activityTitle}>{activity.title}</Text>
+                                            {activity.type && activity.type !== "free" && (
+                                                <View style={[
+                                                    styles.activityTypeBadge,
+                                                    activity.type === "museum" && styles.museumBadge,
+                                                    activity.type === "attraction" && styles.attractionBadge,
+                                                    activity.type === "tour" && styles.tourBadge,
+                                                    activity.type === "restaurant" && styles.restaurantBadge,
+                                                ]}>
+                                                    <Text style={styles.activityTypeText}>
+                                                        {activity.type === "museum" ? "🏛️" : 
+                                                         activity.type === "attraction" ? "🎯" : 
+                                                         activity.type === "tour" ? "🚶" : 
+                                                         activity.type === "restaurant" ? "🍽️" : "📍"}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
                                         <Text style={styles.activityDesc}>{activity.description}</Text>
+                                        
+                                        {/* Duration */}
+                                        {activity.duration && (
+                                            <View style={styles.activityMeta}>
+                                                <Ionicons name="time-outline" size={14} color="#78909C" />
+                                                <Text style={styles.activityMetaText}>{activity.duration}</Text>
+                                            </View>
+                                        )}
+                                        
+                                        {/* Pricing Section */}
+                                        {(activity.price !== undefined && activity.price !== null) && (
+                                            <View style={styles.pricingSection}>
+                                                {activity.price === 0 ? (
+                                                    <View style={styles.freeBadge}>
+                                                        <Text style={styles.freeText}>FREE</Text>
+                                                    </View>
+                                                ) : (
+                                                    <>
+                                                        <View style={styles.activityPriceRow}>
+                                                            <Text style={styles.activityPriceLabel}>Entry:</Text>
+                                                            <Text style={styles.activityPrice}>€{activity.price}</Text>
+                                                        </View>
+                                                        
+                                                        {/* Skip the Line Option */}
+                                                        {activity.skipTheLine && activity.skipTheLinePrice && (
+                                                            <View style={styles.skipLineContainer}>
+                                                                <View style={styles.skipLineBadge}>
+                                                                    <Ionicons name="flash" size={12} color="#FF9500" />
+                                                                    <Text style={styles.skipLineLabel}>Skip the Line:</Text>
+                                                                    <Text style={styles.skipLinePrice}>€{activity.skipTheLinePrice}</Text>
+                                                                </View>
+                                                                <Text style={styles.skipLineSave}>
+                                                                    Save {Math.round(((activity.skipTheLinePrice - activity.price) / activity.skipTheLinePrice) * -100)}% time
+                                                                </Text>
+                                                            </View>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </View>
+                                        )}
+                                        
+                                        {/* Tips */}
+                                        {activity.tips && (
+                                            <View style={styles.tipContainer}>
+                                                <Ionicons name="bulb-outline" size={14} color="#FF9500" />
+                                                <Text style={styles.tipText}>{activity.tips}</Text>
+                                            </View>
+                                        )}
+                                        
+                                        {/* Book Now Button */}
+                                        {activity.bookingUrl && activity.price > 0 && (
+                                            <View style={styles.bookingButtons}>
+                                                <TouchableOpacity 
+                                                    style={styles.bookActivityButton}
+                                                    onPress={() => {
+                                                        trackClick({
+                                                            tripId: id as Id<"trips">,
+                                                            type: "activity",
+                                                            item: activity.title,
+                                                            url: activity.bookingUrl
+                                                        }).catch(console.error);
+                                                        Linking.openURL(activity.bookingUrl);
+                                                    }}
+                                                >
+                                                    <Ionicons name="ticket-outline" size={16} color="white" />
+                                                    <Text style={styles.bookActivityButtonText}>Book Now</Text>
+                                                </TouchableOpacity>
+                                                
+                                                {activity.skipTheLine && activity.skipTheLinePrice && (
+                                                    <TouchableOpacity 
+                                                        style={styles.skipLineButton}
+                                                        onPress={() => {
+                                                            trackClick({
+                                                                tripId: id as Id<"trips">,
+                                                                type: "activity_skip_line",
+                                                                item: `${activity.title} (Skip the Line)`,
+                                                                url: activity.bookingUrl
+                                                            }).catch(console.error);
+                                                            Linking.openURL(activity.bookingUrl);
+                                                        }}
+                                                    >
+                                                        <Ionicons name="flash" size={16} color="#FF9500" />
+                                                        <Text style={styles.skipLineButtonText}>Skip Line €{activity.skipTheLinePrice}</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        )}
                                     </View>
                                 </View>
                             ))}
@@ -1583,5 +1689,157 @@ const styles = StyleSheet.create({
         color: "#546E7A",
         marginTop: 8,
         textAlign: "center",
+    },
+    
+    activityHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 4,
+    },
+    activityTypeBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        backgroundColor: "#E3F2FD",
+    },
+    museumBadge: {
+        backgroundColor: "#E8F5E9",
+    },
+    attractionBadge: {
+        backgroundColor: "#FFF3E0",
+    },
+    tourBadge: {
+        backgroundColor: "#E3F2FD",
+    },
+    restaurantBadge: {
+        backgroundColor: "#FCE4EC",
+    },
+    activityTypeText: {
+        fontSize: 12,
+    },
+    activityMeta: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginTop: 8,
+    },
+    activityMetaText: {
+        fontSize: 12,
+        color: "#78909C",
+    },
+    pricingSection: {
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: "#ECEFF1",
+    },
+    activityPriceRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    activityPriceLabel: {
+        fontSize: 14,
+        color: "#546E7A",
+    },
+    activityPrice: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#1B3F92",
+    },
+    freeBadge: {
+        backgroundColor: "#E8F5E9",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 4,
+        alignSelf: "flex-start",
+    },
+    freeText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#4CAF50",
+    },
+    skipLineContainer: {
+        marginTop: 8,
+    },
+    skipLineBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFF8E1",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 4,
+        gap: 6,
+        alignSelf: "flex-start",
+    },
+    skipLineLabel: {
+        fontSize: 13,
+        color: "#F57C00",
+        fontWeight: "500",
+    },
+    skipLinePrice: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#E65100",
+    },
+    skipLineSave: {
+        fontSize: 11,
+        color: "#78909C",
+        marginTop: 4,
+        marginLeft: 2,
+    },
+    tipContainer: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 6,
+        marginTop: 10,
+        backgroundColor: "#FFFDE7",
+        padding: 10,
+        borderRadius: 6,
+    },
+    tipText: {
+        fontSize: 12,
+        color: "#F57C00",
+        flex: 1,
+        lineHeight: 18,
+    },
+    bookingButtons: {
+        flexDirection: "row",
+        gap: 10,
+        marginTop: 12,
+    },
+    bookActivityButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#1B3F92",
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 6,
+        gap: 6,
+        flex: 1,
+    },
+    bookActivityButtonText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    skipLineButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FFF8E1",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 6,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: "#FFB300",
+    },
+    skipLineButtonText: {
+        color: "#E65100",
+        fontSize: 13,
+        fontWeight: "600",
     },
 });

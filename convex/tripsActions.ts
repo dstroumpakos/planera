@@ -161,6 +161,12 @@ Budget: ${budgetDisplay}
 Travelers: ${trip.travelers}
 Interests: ${trip.interests.join(", ")}
 
+IMPORTANT: For each activity, include:
+- Realistic entry prices in EUR
+- Whether "Skip the Line" tickets are available (for museums, attractions)
+- Skip the Line price (usually 5-15€ more than regular)
+- A booking URL (use real booking platforms like GetYourGuide, Viator, or official sites)
+
 Include specific activities, restaurants, and attractions for each day. Format as JSON with structure:
 {
   "dailyPlan": [
@@ -172,15 +178,25 @@ Include specific activities, restaurants, and attractions for each day. Format a
         {
           "time": "09:00 AM",
           "title": "Activity name",
-          "description": "Brief description"
+          "description": "Brief description",
+          "type": "attraction|museum|restaurant|tour|free",
+          "price": 25,
+          "currency": "EUR",
+          "skipTheLine": true,
+          "skipTheLinePrice": 35,
+          "duration": "2-3 hours",
+          "bookingUrl": "https://www.getyourguide.com/...",
+          "tips": "Best to visit early morning"
         }
       ]
     }
   ]
-}`;
+}
+
+Make sure prices are realistic for ${trip.destination}. Museums typically cost €10-25, skip-the-line adds €5-15. Tours cost €20-80. Restaurants show average meal cost per person.`;
                     const completion = await openai.chat.completions.create({
                         messages: [
-                            { role: "system", content: "You are a travel itinerary planner. Return only valid JSON." },
+                            { role: "system", content: "You are a travel itinerary planner. Return only valid JSON. Always include realistic prices and booking information for activities." },
                             { role: "user", content: itineraryPrompt },
                         ],
                         model: "gpt-4o",
@@ -246,36 +262,160 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
     const days = Math.ceil((trip.endDate - trip.startDate) / (24 * 60 * 60 * 1000));
     const dailyPlan = [];
     
+    // Get destination-specific activities with prices
+    const destActivities = getActivitiesWithPrices(trip.destination);
+    
     for (let i = 0; i < days; i++) {
+        const dayActivities = [];
+        
+        // Morning activity
+        const morningActivity = destActivities[i % destActivities.length];
+        dayActivities.push({
+            time: "9:00 AM",
+            title: morningActivity?.title || activities[i % activities.length]?.title || "Morning Activity",
+            description: morningActivity?.description || "Explore and enjoy the local attractions",
+            type: morningActivity?.type || "attraction",
+            price: morningActivity?.price || 15,
+            currency: "EUR",
+            skipTheLine: morningActivity?.skipTheLine || false,
+            skipTheLinePrice: morningActivity?.skipTheLinePrice || null,
+            duration: morningActivity?.duration || "2-3 hours",
+            bookingUrl: morningActivity?.bookingUrl || `https://www.getyourguide.com/s/?q=${encodeURIComponent(trip.destination)}`,
+            tips: morningActivity?.tips || null,
+        });
+        
+        // Lunch
+        const lunchRestaurant = restaurants[i % restaurants.length];
+        dayActivities.push({
+            time: "1:00 PM",
+            title: lunchRestaurant?.name || "Lunch",
+            description: `${lunchRestaurant?.cuisine || "Local"} cuisine - ${lunchRestaurant?.priceRange || "€€"}`,
+            type: "restaurant",
+            price: lunchRestaurant?.priceRange === "€" ? 15 : lunchRestaurant?.priceRange === "€€€" ? 45 : lunchRestaurant?.priceRange === "€€€€" ? 80 : 25,
+            currency: "EUR",
+            skipTheLine: false,
+            skipTheLinePrice: null,
+            duration: "1-1.5 hours",
+            bookingUrl: null,
+            tips: "Reservations recommended",
+        });
+        
+        // Afternoon activity
+        const afternoonActivity = destActivities[(i + 1) % destActivities.length];
+        dayActivities.push({
+            time: "3:00 PM",
+            title: afternoonActivity?.title || activities[(i + 1) % activities.length]?.title || "Afternoon Activity",
+            description: afternoonActivity?.description || "Continue exploring",
+            type: afternoonActivity?.type || "attraction",
+            price: afternoonActivity?.price || 12,
+            currency: "EUR",
+            skipTheLine: afternoonActivity?.skipTheLine || false,
+            skipTheLinePrice: afternoonActivity?.skipTheLinePrice || null,
+            duration: afternoonActivity?.duration || "2 hours",
+            bookingUrl: afternoonActivity?.bookingUrl || `https://www.viator.com/searchResults/all?text=${encodeURIComponent(trip.destination)}`,
+            tips: afternoonActivity?.tips || null,
+        });
+        
+        // Dinner
+        const dinnerRestaurant = restaurants[(i + 1) % restaurants.length];
+        dayActivities.push({
+            time: "7:00 PM",
+            title: dinnerRestaurant?.name || "Dinner",
+            description: `${dinnerRestaurant?.cuisine || "Local"} cuisine - ${dinnerRestaurant?.priceRange || "€€"}`,
+            type: "restaurant",
+            price: dinnerRestaurant?.priceRange === "€" ? 20 : dinnerRestaurant?.priceRange === "€€€" ? 55 : dinnerRestaurant?.priceRange === "€€€€" ? 100 : 35,
+            currency: "EUR",
+            skipTheLine: false,
+            skipTheLinePrice: null,
+            duration: "2 hours",
+            bookingUrl: null,
+            tips: "Try local specialties",
+        });
+        
         dailyPlan.push({
             day: i + 1,
             title: `Day ${i + 1} in ${trip.destination}`,
-            activities: [
-                {
-                    time: "9:00 AM",
-                    title: activities[i % activities.length]?.title || "Morning Activity",
-                    description: "Explore and enjoy the local attractions"
-                },
-                {
-                    time: "1:00 PM",
-                    title: restaurants[i % restaurants.length]?.name || "Lunch",
-                    description: "Try local cuisine"
-                },
-                {
-                    time: "3:00 PM",
-                    title: activities[(i + 1) % activities.length]?.title || "Afternoon Activity",
-                    description: "Continue exploring"
-                },
-                {
-                    time: "7:00 PM",
-                    title: restaurants[(i + 1) % restaurants.length]?.name || "Dinner",
-                    description: "Evening dining experience"
-                }
-            ]
+            activities: dayActivities,
         });
     }
     
     return dailyPlan;
+}
+
+// Get activities with prices for specific destinations
+function getActivitiesWithPrices(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    const destinationActivities: Record<string, Array<{
+        title: string;
+        description: string;
+        type: string;
+        price: number;
+        skipTheLine: boolean;
+        skipTheLinePrice: number | null;
+        duration: string;
+        bookingUrl: string | null;
+        tips: string | null;
+    }>> = {
+        "paris": [
+            { title: "Eiffel Tower Summit", description: "Visit all 3 levels including the summit", type: "attraction", price: 26, skipTheLine: true, skipTheLinePrice: 42, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/eiffel-tower-summit-access-t395601/", tips: "Book at least 2 weeks in advance" },
+            { title: "Louvre Museum", description: "World's largest art museum with Mona Lisa", type: "museum", price: 17, skipTheLine: true, skipTheLinePrice: 32, duration: "3-4 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/louvre-museum-timed-entrance-ticket-t395439/", tips: "Enter via Carrousel entrance to avoid crowds" },
+            { title: "Musée d'Orsay", description: "Impressionist masterpieces in a former train station", type: "museum", price: 16, skipTheLine: true, skipTheLinePrice: 29, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/musee-d-orsay-skip-the-line-ticket-t68592/", tips: "Visit on Thursday evening for late opening" },
+            { title: "Versailles Palace", description: "Royal château with stunning gardens", type: "attraction", price: 20, skipTheLine: true, skipTheLinePrice: 45, duration: "4-5 hours", bookingUrl: "https://www.getyourguide.com/versailles-l217/versailles-palace-skip-the-line-ticket-t395440/", tips: "Arrive early to see the gardens" },
+            { title: "Seine River Cruise", description: "Scenic boat tour along the Seine", type: "tour", price: 15, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: "https://www.getyourguide.com/paris-l16/seine-river-cruise-t395602/", tips: "Sunset cruises are most romantic" },
+        ],
+        "rome": [
+            { title: "Colosseum & Roman Forum", description: "Ancient amphitheater and ruins", type: "attraction", price: 18, skipTheLine: true, skipTheLinePrice: 35, duration: "3 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/colosseum-roman-forum-palatine-hill-skip-the-line-t395441/", tips: "Book arena floor access for best experience" },
+            { title: "Vatican Museums & Sistine Chapel", description: "World-famous art collection and Michelangelo's ceiling", type: "museum", price: 17, skipTheLine: true, skipTheLinePrice: 40, duration: "3-4 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/vatican-museums-sistine-chapel-skip-the-line-t395442/", tips: "Visit on Wednesday morning when Pope is at St. Peter's" },
+            { title: "St. Peter's Basilica Dome", description: "Climb to the top for panoramic views", type: "attraction", price: 10, skipTheLine: true, skipTheLinePrice: 25, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/st-peters-basilica-dome-climb-t395443/", tips: "Take the elevator option to save energy" },
+            { title: "Borghese Gallery", description: "Stunning art collection in beautiful villa", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 28, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/borghese-gallery-skip-the-line-t395444/", tips: "Reservations mandatory - book weeks ahead" },
+            { title: "Trevi Fountain & Pantheon Walk", description: "Iconic landmarks in historic center", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: null, tips: "Visit Trevi at night for fewer crowds" },
+        ],
+        "barcelona": [
+            { title: "Sagrada Familia", description: "Gaudí's unfinished masterpiece basilica", type: "attraction", price: 26, skipTheLine: true, skipTheLinePrice: 40, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/sagrada-familia-skip-the-line-t395445/", tips: "Book tower access for amazing views" },
+            { title: "Park Güell", description: "Colorful mosaic park by Gaudí", type: "attraction", price: 10, skipTheLine: true, skipTheLinePrice: 22, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/park-guell-skip-the-line-t395446/", tips: "Morning light is best for photos" },
+            { title: "Casa Batlló", description: "Gaudí's stunning modernist building", type: "museum", price: 35, skipTheLine: true, skipTheLinePrice: 45, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/casa-batllo-skip-the-line-t395447/", tips: "Night experience includes rooftop concert" },
+            { title: "La Pedrera (Casa Milà)", description: "Another Gaudí masterpiece with rooftop warriors", type: "museum", price: 25, skipTheLine: true, skipTheLinePrice: 35, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/la-pedrera-skip-the-line-t395448/", tips: "Evening visits include light show" },
+            { title: "Gothic Quarter Walking Tour", description: "Medieval streets and hidden squares", type: "tour", price: 15, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/gothic-quarter-tour-t395449/", tips: "Free tours available with tips" },
+        ],
+        "athens": [
+            { title: "Acropolis & Parthenon", description: "Ancient citadel and iconic temple", type: "attraction", price: 20, skipTheLine: true, skipTheLinePrice: 38, duration: "3 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/acropolis-skip-the-line-t395450/", tips: "Visit at sunrise or sunset to avoid heat" },
+            { title: "Acropolis Museum", description: "Modern museum with ancient treasures", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/acropolis-museum-skip-the-line-t395451/", tips: "Friday evenings have extended hours" },
+            { title: "Ancient Agora", description: "Ancient marketplace and Temple of Hephaestus", type: "attraction", price: 10, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/ancient-agora-t395452/", tips: "Included in combined ticket" },
+            { title: "National Archaeological Museum", description: "Greece's largest archaeological museum", type: "museum", price: 12, skipTheLine: true, skipTheLinePrice: 20, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/national-archaeological-museum-t395453/", tips: "Don't miss the Antikythera mechanism" },
+            { title: "Plaka & Monastiraki Walk", description: "Historic neighborhoods with shops and tavernas", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "2-3 hours", bookingUrl: null, tips: "Best for evening strolls and dinner" },
+        ],
+        "london": [
+            { title: "Tower of London", description: "Historic castle with Crown Jewels", type: "attraction", price: 33, skipTheLine: true, skipTheLinePrice: 45, duration: "3 hours", bookingUrl: "https://www.getyourguide.com/london-l57/tower-of-london-skip-the-line-t395454/", tips: "Join a Yeoman Warder tour" },
+            { title: "Westminster Abbey", description: "Gothic abbey with royal history", type: "attraction", price: 27, skipTheLine: true, skipTheLinePrice: 38, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/london-l57/westminster-abbey-skip-the-line-t395455/", tips: "Audio guide included" },
+            { title: "British Museum", description: "World history and culture - free entry", type: "museum", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "3-4 hours", bookingUrl: "https://www.britishmuseum.org", tips: "Donation suggested, special exhibits extra" },
+            { title: "London Eye", description: "Giant observation wheel with city views", type: "attraction", price: 32, skipTheLine: true, skipTheLinePrice: 45, duration: "1 hour", bookingUrl: "https://www.getyourguide.com/london-l57/london-eye-skip-the-line-t395456/", tips: "Book sunset slot for best photos" },
+            { title: "Buckingham Palace", description: "Royal residence (summer opening)", type: "attraction", price: 30, skipTheLine: true, skipTheLinePrice: 42, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/london-l57/buckingham-palace-t395457/", tips: "Only open July-September" },
+        ],
+        "amsterdam": [
+            { title: "Anne Frank House", description: "Historic house museum", type: "museum", price: 16, skipTheLine: true, skipTheLinePrice: 28, duration: "1.5 hours", bookingUrl: "https://www.annefrank.org", tips: "Book exactly 2 months in advance at 10am" },
+            { title: "Van Gogh Museum", description: "World's largest Van Gogh collection", type: "museum", price: 22, skipTheLine: true, skipTheLinePrice: 32, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/amsterdam-l36/van-gogh-museum-skip-the-line-t395458/", tips: "Book timed entry in advance" },
+            { title: "Rijksmuseum", description: "Dutch Golden Age masterpieces", type: "museum", price: 22, skipTheLine: true, skipTheLinePrice: 35, duration: "3-4 hours", bookingUrl: "https://www.getyourguide.com/amsterdam-l36/rijksmuseum-skip-the-line-t395459/", tips: "Don't miss The Night Watch" },
+            { title: "Canal Cruise", description: "Explore Amsterdam's UNESCO waterways", type: "tour", price: 18, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: "https://www.getyourguide.com/amsterdam-l36/canal-cruise-t395460/", tips: "Evening cruises are magical" },
+            { title: "Heineken Experience", description: "Interactive brewery tour", type: "attraction", price: 23, skipTheLine: true, skipTheLinePrice: 30, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/amsterdam-l36/heineken-experience-t395461/", tips: "Includes 2 beers" },
+        ],
+    };
+    
+    // Check if we have specific activities for this destination
+    for (const [city, activities] of Object.entries(destinationActivities)) {
+        if (destLower.includes(city)) {
+            return activities;
+        }
+    }
+    
+    // Generic fallback with prices
+    return [
+        { title: `City Highlights Tour`, description: "Guided tour of main attractions", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
+        { title: "Main Museum", description: "Discover local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
+        { title: "Historic Walking Tour", description: "Explore the old town", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
+        { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1-2 hours", bookingUrl: null, tips: "Best in the morning" },
+        { title: "Sunset Viewpoint", description: "Best views of the city", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: null, tips: "Arrive 30 min before sunset" },
+    ];
 }
 
 // Calculate daily expenses based on budget
