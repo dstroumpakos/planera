@@ -417,174 +417,194 @@ export default function TripDetails() {
                     </ScrollView>
                 </Section>
 
-                {/* Transportation Section */}
-                {trip.itinerary?.transportation && trip.itinerary.transportation.length > 0 && (
-                    <Section title="Transportation Options">
-                        {/* Car Rentals */}
-                        <Text style={styles.transportSubtitle}>🚗 Car Rental</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
+                {/* Transportation Section - Always show */}
+                <Section title="Transportation Options">
+                    {trip.itinerary?.transportation && trip.itinerary.transportation.length > 0 ? (
+                        <>
+                            {/* Car Rentals */}
+                            {trip.itinerary.transportation.filter((t: any) => t.type === "car_rental").length > 0 && (
+                                <>
+                                    <Text style={styles.transportSubtitle}>🚗 Car Rental</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
+                                        {trip.itinerary.transportation
+                                            .filter((t: any) => t.type === "car_rental")
+                                            .map((car: any, index: number) => (
+                                                <View key={index} style={styles.transportCard}>
+                                                    <View style={styles.transportHeader}>
+                                                        <Text style={styles.transportProvider}>{car.provider}</Text>
+                                                        <View style={styles.transportCategoryBadge}>
+                                                            <Text style={styles.transportCategoryText}>{car.category}</Text>
+                                                        </View>
+                                                    </View>
+                                                    <Text style={styles.transportVehicle}>{car.vehicle}</Text>
+                                                    <View style={styles.transportFeatures}>
+                                                        {car.features?.slice(0, 3).map((feature: string, i: number) => (
+                                                            <View key={i} style={styles.featureBadge}>
+                                                                <Text style={styles.featureText}>{feature}</Text>
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View style={styles.transportPriceRow}>
+                                                        <Text style={styles.transportPrice}>€{car.pricePerDay}</Text>
+                                                        <Text style={styles.transportPriceUnit}>/day</Text>
+                                                    </View>
+                                                    <Text style={styles.transportNote}>
+                                                        {car.insuranceIncluded ? "✓ Insurance included" : "Insurance extra"}
+                                                    </Text>
+                                                    <TouchableOpacity 
+                                                        style={styles.transportBookButton}
+                                                        onPress={() => {
+                                                            if (car.bookingUrl) {
+                                                                Linking.openURL(car.bookingUrl);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Text style={styles.transportBookButtonText}>Book Now</Text>
+                                                        <Ionicons name="open-outline" size={14} color="white" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ))}
+                                    </ScrollView>
+                                </>
+                            )}
+
+                            {/* Taxi & Transfers */}
+                            {trip.itinerary.transportation.filter((t: any) => t.type === "taxi").length > 0 && (
+                                <>
+                                    <Text style={styles.transportSubtitle}>🚕 Taxi & Transfers</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
+                                        {trip.itinerary.transportation
+                                            .filter((t: any) => t.type === "taxi")
+                                            .map((taxi: any, index: number) => (
+                                                <View key={index} style={styles.transportCard}>
+                                                    <View style={styles.transportHeader}>
+                                                        <Text style={styles.transportProvider}>{taxi.provider}</Text>
+                                                    </View>
+                                                    <Text style={styles.transportService}>{taxi.service}</Text>
+                                                    <Text style={styles.transportDesc}>{taxi.description}</Text>
+                                                    <View style={styles.transportFeatures}>
+                                                        {taxi.features?.slice(0, 2).map((feature: string, i: number) => (
+                                                            <View key={i} style={styles.featureBadge}>
+                                                                <Text style={styles.featureText}>{feature}</Text>
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View style={styles.transportPriceRow}>
+                                                        <Text style={styles.transportPrice}>~€{taxi.estimatedPrice}</Text>
+                                                    </View>
+                                                    <Text style={styles.transportNote}>
+                                                        Max {taxi.maxPassengers} passengers • {taxi.waitingTime}
+                                                    </Text>
+                                                    {taxi.bookingUrl && (
+                                                        <TouchableOpacity 
+                                                            style={styles.transportBookButton}
+                                                            onPress={() => Linking.openURL(taxi.bookingUrl)}
+                                                        >
+                                                            <Text style={styles.transportBookButtonText}>Book Transfer</Text>
+                                                            <Ionicons name="open-outline" size={14} color="white" />
+                                                        </TouchableOpacity>
+                                                    )}
+                                                </View>
+                                            ))}
+                                    </ScrollView>
+                                </>
+                            )}
+
+                            {/* Ride-sharing */}
+                            {trip.itinerary.transportation.filter((t: any) => t.type === "rideshare").length > 0 && (
+                                <>
+                                    <Text style={styles.transportSubtitle}>📱 Ride-sharing</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
+                                        {trip.itinerary.transportation
+                                            .filter((t: any) => t.type === "rideshare")
+                                            .map((ride: any, index: number) => (
+                                                <View key={index} style={styles.transportCard}>
+                                                    <View style={styles.transportHeader}>
+                                                        <Text style={styles.transportProvider}>{ride.provider}</Text>
+                                                        <View style={[styles.transportCategoryBadge, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}>
+                                                            <Text style={[styles.transportCategoryText, { color: "white" }]}>{ride.service}</Text>
+                                                        </View>
+                                                    </View>
+                                                    <Text style={styles.transportDesc}>{ride.description}</Text>
+                                                    <View style={styles.transportFeatures}>
+                                                        {ride.features?.slice(0, 2).map((feature: string, i: number) => (
+                                                            <View key={i} style={styles.featureBadge}>
+                                                                <Text style={styles.featureText}>{feature}</Text>
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View style={styles.transportPriceRow}>
+                                                        <Text style={styles.transportPrice}>€{ride.estimatedPrice}</Text>
+                                                    </View>
+                                                    <Text style={styles.transportNote}>
+                                                        Wait time: {ride.waitingTime} • Max {ride.maxPassengers} passengers
+                                                    </Text>
+                                                    <TouchableOpacity 
+                                                        style={[styles.transportBookButton, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}
+                                                        onPress={() => {
+                                                            if (ride.bookingUrl) {
+                                                                Linking.openURL(ride.bookingUrl);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Text style={styles.transportBookButtonText}>Open {ride.provider}</Text>
+                                                        <Ionicons name="open-outline" size={14} color="white" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ))}
+                                    </ScrollView>
+                                </>
+                            )}
+
+                            {/* Public Transport */}
                             {trip.itinerary.transportation
-                                .filter((t: any) => t.type === "car_rental")
-                                .map((car: any, index: number) => (
-                                    <View key={index} style={styles.transportCard}>
-                                        <View style={styles.transportHeader}>
-                                            <Text style={styles.transportProvider}>{car.provider}</Text>
-                                            <View style={styles.transportCategoryBadge}>
-                                                <Text style={styles.transportCategoryText}>{car.category}</Text>
-                                            </View>
-                                        </View>
-                                        <Text style={styles.transportVehicle}>{car.vehicle}</Text>
-                                        <View style={styles.transportFeatures}>
-                                            {car.features?.slice(0, 3).map((feature: string, i: number) => (
-                                                <View key={i} style={styles.featureBadge}>
-                                                    <Text style={styles.featureText}>{feature}</Text>
+                                .filter((t: any) => t.type === "public_transport")
+                                .map((pt: any, index: number) => (
+                                    <View key={index}>
+                                        <Text style={styles.transportSubtitle}>🚇 Public Transport</Text>
+                                        <View style={styles.publicTransportCard}>
+                                            {pt.options?.map((option: any, i: number) => (
+                                                <View key={i} style={styles.publicTransportOption}>
+                                                    <View style={styles.publicTransportHeader}>
+                                                        <Ionicons 
+                                                            name={option.mode === "Metro/Subway" ? "subway" : option.mode === "Bus" ? "bus" : "train"} 
+                                                            size={20} 
+                                                            color="#1B3F92" 
+                                                        />
+                                                        <Text style={styles.publicTransportMode}>{option.mode}</Text>
+                                                    </View>
+                                                    <Text style={styles.publicTransportDesc}>{option.description}</Text>
+                                                    <View style={styles.publicTransportPrices}>
+                                                        {option.singleTicketPrice && (
+                                                            <Text style={styles.publicTransportPrice}>
+                                                                Single: €{option.singleTicketPrice}
+                                                            </Text>
+                                                        )}
+                                                        {option.dayPassPrice && (
+                                                            <Text style={styles.publicTransportPrice}>
+                                                                Day Pass: €{option.dayPassPrice}
+                                                            </Text>
+                                                        )}
+                                                        {option.price && (
+                                                            <Text style={styles.publicTransportPrice}>
+                                                                €{option.price} ({option.duration})
+                                                            </Text>
+                                                        )}
+                                                    </View>
                                                 </View>
                                             ))}
                                         </View>
-                                        <View style={styles.transportPriceRow}>
-                                            <Text style={styles.transportPrice}>€{car.pricePerDay}</Text>
-                                            <Text style={styles.transportPriceUnit}>/day</Text>
-                                        </View>
-                                        <Text style={styles.transportNote}>
-                                            {car.insuranceIncluded ? "✓ Insurance included" : "Insurance extra"}
-                                        </Text>
-                                        <TouchableOpacity 
-                                            style={styles.transportBookButton}
-                                            onPress={() => {
-                                                if (car.bookingUrl) {
-                                                    Linking.openURL(car.bookingUrl);
-                                                }
-                                            }}
-                                        >
-                                            <Text style={styles.transportBookButtonText}>Book Now</Text>
-                                            <Ionicons name="open-outline" size={14} color="white" />
-                                        </TouchableOpacity>
                                     </View>
                                 ))}
-                        </ScrollView>
-
-                        {/* Taxi & Transfers */}
-                        <Text style={styles.transportSubtitle}>🚕 Taxi & Transfers</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
-                            {trip.itinerary.transportation
-                                .filter((t: any) => t.type === "taxi")
-                                .map((taxi: any, index: number) => (
-                                    <View key={index} style={styles.transportCard}>
-                                        <View style={styles.transportHeader}>
-                                            <Text style={styles.transportProvider}>{taxi.provider}</Text>
-                                        </View>
-                                        <Text style={styles.transportService}>{taxi.service}</Text>
-                                        <Text style={styles.transportDesc}>{taxi.description}</Text>
-                                        <View style={styles.transportFeatures}>
-                                            {taxi.features?.slice(0, 2).map((feature: string, i: number) => (
-                                                <View key={i} style={styles.featureBadge}>
-                                                    <Text style={styles.featureText}>{feature}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                        <View style={styles.transportPriceRow}>
-                                            <Text style={styles.transportPrice}>~€{taxi.estimatedPrice}</Text>
-                                        </View>
-                                        <Text style={styles.transportNote}>
-                                            Max {taxi.maxPassengers} passengers • {taxi.waitingTime}
-                                        </Text>
-                                        {taxi.bookingUrl && (
-                                            <TouchableOpacity 
-                                                style={styles.transportBookButton}
-                                                onPress={() => Linking.openURL(taxi.bookingUrl)}
-                                            >
-                                                <Text style={styles.transportBookButtonText}>Book Transfer</Text>
-                                                <Ionicons name="open-outline" size={14} color="white" />
-                                            </TouchableOpacity>
-                                        )}
-                                    </View>
-                                ))}
-                        </ScrollView>
-
-                        {/* Ride-sharing */}
-                        <Text style={styles.transportSubtitle}>📱 Ride-sharing</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
-                            {trip.itinerary.transportation
-                                .filter((t: any) => t.type === "rideshare")
-                                .map((ride: any, index: number) => (
-                                    <View key={index} style={styles.transportCard}>
-                                        <View style={styles.transportHeader}>
-                                            <Text style={styles.transportProvider}>{ride.provider}</Text>
-                                            <View style={[styles.transportCategoryBadge, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}>
-                                                <Text style={[styles.transportCategoryText, { color: "white" }]}>{ride.service}</Text>
-                                            </View>
-                                        </View>
-                                        <Text style={styles.transportDesc}>{ride.description}</Text>
-                                        <View style={styles.transportFeatures}>
-                                            {ride.features?.slice(0, 2).map((feature: string, i: number) => (
-                                                <View key={i} style={styles.featureBadge}>
-                                                    <Text style={styles.featureText}>{feature}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                        <View style={styles.transportPriceRow}>
-                                            <Text style={styles.transportPrice}>€{ride.estimatedPrice}</Text>
-                                        </View>
-                                        <Text style={styles.transportNote}>
-                                            Wait time: {ride.waitingTime} • Max {ride.maxPassengers} passengers
-                                        </Text>
-                                        <TouchableOpacity 
-                                            style={[styles.transportBookButton, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}
-                                            onPress={() => {
-                                                if (ride.bookingUrl) {
-                                                    Linking.openURL(ride.bookingUrl);
-                                                }
-                                            }}
-                                        >
-                                            <Text style={styles.transportBookButtonText}>Open {ride.provider}</Text>
-                                            <Ionicons name="open-outline" size={14} color="white" />
-                                        </TouchableOpacity>
-                                    </View>
-                                ))}
-                        </ScrollView>
-
-                        {/* Public Transport */}
-                        {trip.itinerary.transportation
-                            .filter((t: any) => t.type === "public_transport")
-                            .map((pt: any, index: number) => (
-                                <View key={index}>
-                                    <Text style={styles.transportSubtitle}>🚇 Public Transport</Text>
-                                    <View style={styles.publicTransportCard}>
-                                        {pt.options?.map((option: any, i: number) => (
-                                            <View key={i} style={styles.publicTransportOption}>
-                                                <View style={styles.publicTransportHeader}>
-                                                    <Ionicons 
-                                                        name={option.mode === "Metro/Subway" ? "subway" : option.mode === "Bus" ? "bus" : "train"} 
-                                                        size={20} 
-                                                        color="#1B3F92" 
-                                                    />
-                                                    <Text style={styles.publicTransportMode}>{option.mode}</Text>
-                                                </View>
-                                                <Text style={styles.publicTransportDesc}>{option.description}</Text>
-                                                <View style={styles.publicTransportPrices}>
-                                                    {option.singleTicketPrice && (
-                                                        <Text style={styles.publicTransportPrice}>
-                                                            Single: €{option.singleTicketPrice}
-                                                        </Text>
-                                                    )}
-                                                    {option.dayPassPrice && (
-                                                        <Text style={styles.publicTransportPrice}>
-                                                            Day Pass: €{option.dayPassPrice}
-                                                        </Text>
-                                                    )}
-                                                    {option.price && (
-                                                        <Text style={styles.publicTransportPrice}>
-                                                            €{option.price} ({option.duration})
-                                                        </Text>
-                                                    )}
-                                                </View>
-                                            </View>
-                                        ))}
-                                    </View>
-                                </View>
-                            ))}
-                    </Section>
-                )}
+                        </>
+                    ) : (
+                        <View style={styles.emptyTransportCard}>
+                            <Ionicons name="car-outline" size={48} color="#CFD8DC" />
+                            <Text style={styles.emptyTransportText}>Transportation options will appear here</Text>
+                            <Text style={styles.emptyTransportSubtext}>Generate a new trip to see car rentals, taxis, and more</Text>
+                        </View>
+                    )}
+                </Section>
 
                 <Section title="Daily Itinerary">
                     {trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
@@ -1545,5 +1565,23 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#546E7A",
         fontWeight: "500",
+    },
+    emptyTransportCard: {
+        backgroundColor: "white",
+        borderRadius: 4,
+        padding: 20,
+        alignItems: "center",
+        gap: 8,
+    },
+    emptyTransportText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1B3F92",
+    },
+    emptyTransportSubtext: {
+        fontSize: 14,
+        color: "#546E7A",
+        marginTop: 8,
+        textAlign: "center",
     },
 });
