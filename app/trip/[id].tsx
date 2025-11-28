@@ -417,6 +417,175 @@ export default function TripDetails() {
                     </ScrollView>
                 </Section>
 
+                {/* Transportation Section */}
+                {trip.itinerary?.transportation && trip.itinerary.transportation.length > 0 && (
+                    <Section title="Transportation Options">
+                        {/* Car Rentals */}
+                        <Text style={styles.transportSubtitle}>🚗 Car Rental</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
+                            {trip.itinerary.transportation
+                                .filter((t: any) => t.type === "car_rental")
+                                .map((car: any, index: number) => (
+                                    <View key={index} style={styles.transportCard}>
+                                        <View style={styles.transportHeader}>
+                                            <Text style={styles.transportProvider}>{car.provider}</Text>
+                                            <View style={styles.transportCategoryBadge}>
+                                                <Text style={styles.transportCategoryText}>{car.category}</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.transportVehicle}>{car.vehicle}</Text>
+                                        <View style={styles.transportFeatures}>
+                                            {car.features?.slice(0, 3).map((feature: string, i: number) => (
+                                                <View key={i} style={styles.featureBadge}>
+                                                    <Text style={styles.featureText}>{feature}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                        <View style={styles.transportPriceRow}>
+                                            <Text style={styles.transportPrice}>€{car.pricePerDay}</Text>
+                                            <Text style={styles.transportPriceUnit}>/day</Text>
+                                        </View>
+                                        <Text style={styles.transportNote}>
+                                            {car.insuranceIncluded ? "✓ Insurance included" : "Insurance extra"}
+                                        </Text>
+                                        <TouchableOpacity 
+                                            style={styles.transportBookButton}
+                                            onPress={() => {
+                                                if (car.bookingUrl) {
+                                                    Linking.openURL(car.bookingUrl);
+                                                }
+                                            }}
+                                        >
+                                            <Text style={styles.transportBookButtonText}>Book Now</Text>
+                                            <Ionicons name="open-outline" size={14} color="white" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                        </ScrollView>
+
+                        {/* Taxi & Transfers */}
+                        <Text style={styles.transportSubtitle}>🚕 Taxi & Transfers</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
+                            {trip.itinerary.transportation
+                                .filter((t: any) => t.type === "taxi")
+                                .map((taxi: any, index: number) => (
+                                    <View key={index} style={styles.transportCard}>
+                                        <View style={styles.transportHeader}>
+                                            <Text style={styles.transportProvider}>{taxi.provider}</Text>
+                                        </View>
+                                        <Text style={styles.transportService}>{taxi.service}</Text>
+                                        <Text style={styles.transportDesc}>{taxi.description}</Text>
+                                        <View style={styles.transportFeatures}>
+                                            {taxi.features?.slice(0, 2).map((feature: string, i: number) => (
+                                                <View key={i} style={styles.featureBadge}>
+                                                    <Text style={styles.featureText}>{feature}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                        <View style={styles.transportPriceRow}>
+                                            <Text style={styles.transportPrice}>~€{taxi.estimatedPrice}</Text>
+                                        </View>
+                                        <Text style={styles.transportNote}>
+                                            Max {taxi.maxPassengers} passengers • {taxi.waitingTime}
+                                        </Text>
+                                        {taxi.bookingUrl && (
+                                            <TouchableOpacity 
+                                                style={styles.transportBookButton}
+                                                onPress={() => Linking.openURL(taxi.bookingUrl)}
+                                            >
+                                                <Text style={styles.transportBookButtonText}>Book Transfer</Text>
+                                                <Ionicons name="open-outline" size={14} color="white" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                ))}
+                        </ScrollView>
+
+                        {/* Ride-sharing */}
+                        <Text style={styles.transportSubtitle}>📱 Ride-sharing</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
+                            {trip.itinerary.transportation
+                                .filter((t: any) => t.type === "rideshare")
+                                .map((ride: any, index: number) => (
+                                    <View key={index} style={styles.transportCard}>
+                                        <View style={styles.transportHeader}>
+                                            <Text style={styles.transportProvider}>{ride.provider}</Text>
+                                            <View style={[styles.transportCategoryBadge, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}>
+                                                <Text style={[styles.transportCategoryText, { color: "white" }]}>{ride.service}</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.transportDesc}>{ride.description}</Text>
+                                        <View style={styles.transportFeatures}>
+                                            {ride.features?.slice(0, 2).map((feature: string, i: number) => (
+                                                <View key={i} style={styles.featureBadge}>
+                                                    <Text style={styles.featureText}>{feature}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                        <View style={styles.transportPriceRow}>
+                                            <Text style={styles.transportPrice}>€{ride.estimatedPrice}</Text>
+                                        </View>
+                                        <Text style={styles.transportNote}>
+                                            Wait time: {ride.waitingTime} • Max {ride.maxPassengers} passengers
+                                        </Text>
+                                        <TouchableOpacity 
+                                            style={[styles.transportBookButton, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}
+                                            onPress={() => {
+                                                if (ride.bookingUrl) {
+                                                    Linking.openURL(ride.bookingUrl);
+                                                }
+                                            }}
+                                        >
+                                            <Text style={styles.transportBookButtonText}>Open {ride.provider}</Text>
+                                            <Ionicons name="open-outline" size={14} color="white" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                        </ScrollView>
+
+                        {/* Public Transport */}
+                        {trip.itinerary.transportation
+                            .filter((t: any) => t.type === "public_transport")
+                            .map((pt: any, index: number) => (
+                                <View key={index}>
+                                    <Text style={styles.transportSubtitle}>🚇 Public Transport</Text>
+                                    <View style={styles.publicTransportCard}>
+                                        {pt.options?.map((option: any, i: number) => (
+                                            <View key={i} style={styles.publicTransportOption}>
+                                                <View style={styles.publicTransportHeader}>
+                                                    <Ionicons 
+                                                        name={option.mode === "Metro/Subway" ? "subway" : option.mode === "Bus" ? "bus" : "train"} 
+                                                        size={20} 
+                                                        color="#1B3F92" 
+                                                    />
+                                                    <Text style={styles.publicTransportMode}>{option.mode}</Text>
+                                                </View>
+                                                <Text style={styles.publicTransportDesc}>{option.description}</Text>
+                                                <View style={styles.publicTransportPrices}>
+                                                    {option.singleTicketPrice && (
+                                                        <Text style={styles.publicTransportPrice}>
+                                                            Single: €{option.singleTicketPrice}
+                                                        </Text>
+                                                    )}
+                                                    {option.dayPassPrice && (
+                                                        <Text style={styles.publicTransportPrice}>
+                                                            Day Pass: €{option.dayPassPrice}
+                                                        </Text>
+                                                    )}
+                                                    {option.price && (
+                                                        <Text style={styles.publicTransportPrice}>
+                                                            €{option.price} ({option.duration})
+                                                        </Text>
+                                                    )}
+                                                </View>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
+                            ))}
+                    </Section>
+                )}
+
                 <Section title="Daily Itinerary">
                     {trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
                         <View key={index} style={styles.dayCard}>
@@ -1219,5 +1388,162 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: "#FF9500",
         fontWeight: "600",
+    },
+    transportSubtitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1B3F92",
+        marginBottom: 12,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    transportList: {
+        paddingRight: 16,
+        gap: 16,
+    },
+    transportCard: {
+        width: 280,
+        backgroundColor: "white",
+        borderRadius: 4, // Sharp corners
+        padding: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    transportHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    transportProvider: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#546E7A",
+    },
+    transportCategoryBadge: {
+        backgroundColor: "#E3F2FD",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        gap: 4,
+    },
+    transportCategoryText: {
+        fontSize: 12,
+        color: "#1B3F92",
+        fontWeight: "600",
+    },
+    transportVehicle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#263F38",
+        marginBottom: 8,
+    },
+    transportService: {
+        fontSize: 14,
+        color: "#546E7A",
+        marginBottom: 8,
+    },
+    transportDesc: {
+        fontSize: 13,
+        color: "#78909C",
+        marginBottom: 12,
+        lineHeight: 20,
+    },
+    transportFeatures: {
+        flexDirection: "row",
+        gap: 8,
+        marginBottom: 12,
+    },
+    featureBadge: {
+        backgroundColor: "#E3F2FD",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        gap: 4,
+    },
+    featureText: {
+        fontSize: 12,
+        color: "#1B3F92",
+        fontWeight: "600",
+    },
+    transportPriceRow: {
+        flexDirection: "row",
+        alignItems: "baseline",
+        gap: 8,
+    },
+    transportPrice: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#1B3F92",
+    },
+    transportPriceUnit: {
+        fontSize: 14,
+        color: "#546E7A",
+        fontWeight: "500",
+    },
+    transportNote: {
+        fontSize: 12,
+        color: "#78909C",
+        marginBottom: 12,
+    },
+    transportBookButton: {
+        backgroundColor: "#1B3F92",
+        paddingVertical: 10,
+        borderRadius: 4,
+        alignItems: "center",
+    },
+    transportBookButtonText: {
+        color: "white",
+        fontSize: 12,
+        fontWeight: "700",
+        textTransform: "uppercase",
+    },
+    publicTransportCard: {
+        backgroundColor: "white",
+        borderRadius: 4, // Sharp corners
+        padding: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    publicTransportOption: {
+        marginBottom: 12,
+    },
+    publicTransportHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 8,
+    },
+    publicTransportMode: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: "#78909C",
+        textTransform: "uppercase",
+        letterSpacing: 1,
+    },
+    publicTransportDesc: {
+        fontSize: 13,
+        color: "#546E7A",
+        marginBottom: 12,
+        lineHeight: 20,
+    },
+    publicTransportPrices: {
+        flexDirection: "row",
+        gap: 8,
+    },
+    publicTransportPrice: {
+        fontSize: 14,
+        color: "#546E7A",
+        fontWeight: "500",
     },
 });
