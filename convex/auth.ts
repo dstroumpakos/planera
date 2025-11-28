@@ -31,6 +31,10 @@ export const createAuth = (
                 clientId: process.env.GOOGLE_CLIENT_ID as string,
                 clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
             },
+            apple: {
+                clientId: process.env.APPLE_CLIENT_ID as string,
+                clientSecret: process.env.APPLE_CLIENT_SECRET as string,
+            },
         },
         // disable logging when createAuth is called just to generate options.
         // this is not required, but there's a lot of noise in logs without it.

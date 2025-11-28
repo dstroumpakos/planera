@@ -44,6 +44,14 @@ export default function Index() {
         }
     };
 
+    const handleAppleSignIn = async () => {
+        try {
+            await authClient.signIn.social({ provider: "apple" });
+        } catch (error: any) {
+            Alert.alert("Error", "Apple sign in failed");
+        }
+    };
+
     return (
         <View style={styles.container}>
             <AuthLoading>
@@ -139,6 +147,14 @@ export default function Index() {
                                     >
                                         <Ionicons name="logo-google" size={20} color="#DB4437" style={styles.buttonIcon} />
                                         <Text style={styles.socialButtonText}>Continue with Google</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity 
+                                        style={styles.appleButton} 
+                                        onPress={handleAppleSignIn}
+                                    >
+                                        <Ionicons name="logo-apple" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+                                        <Text style={styles.appleButtonText}>Continue with Apple</Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity 
@@ -273,6 +289,26 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: "700",
         letterSpacing: 0.5,
+    },
+    appleButton: {
+        backgroundColor: "#000000",
+        paddingHorizontal: 24,
+        paddingVertical: 18,
+        borderRadius: 16,
+        width: "100%",
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    appleButtonText: {
+        color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: "600",
     },
     socialButton: {
         backgroundColor: "#FFFFFF",
