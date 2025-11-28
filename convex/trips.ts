@@ -9,32 +9,56 @@ export const create = authMutation({
         origin: v.string(),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.union(v.string(), v.number()), // Accept both for migration
+        budget: v.union(v.string(), v.number()),
         travelers: v.number(),
         interests: v.array(v.string()),
     },
     handler: async (ctx, args) => {
-        // Check user plan and limits
+        // Check if user can generate a trip
         const userPlan = await ctx.db
             .query("userPlans")
             .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
             .unique();
 
-        const currentPlan = userPlan?.plan ?? "free";
+        // Check permissions
+        const isSubscriptionActive = userPlan?.plan === "premium" && 
+            userPlan?.subscriptionExpiresAt && 
+            userPlan.subscriptionExpiresAt > Date.now();
+        
+        const tripCredits = userPlan?.tripCredits ?? 0;
         const tripsGenerated = userPlan?.tripsGenerated ?? 0;
+        const hasFreeTrial = tripsGenerated < 1;
 
-        if (currentPlan === "free" && tripsGenerated >= 3) {
-            throw new Error("Free plan limit reached. Upgrade to Premium to generate more trips.");
+        if (!isSubscriptionActive && tripCredits <= 0 && !hasFreeTrial) {
+            throw new Error("No trip credits available. Please purchase a trip pack or subscribe to Premium.");
         }
 
-        // Increment trip count
+        // Deduct credit or use free trial
         if (userPlan) {
-            await ctx.db.patch(userPlan._id, { tripsGenerated: tripsGenerated + 1 });
+            if (isSubscriptionActive) {
+                // Premium users just increment stats
+                await ctx.db.patch(userPlan._id, { 
+                    tripsGenerated: tripsGenerated + 1,
+                });
+            } else if (tripCredits > 0) {
+                // Use a trip credit
+                await ctx.db.patch(userPlan._id, { 
+                    tripCredits: tripCredits - 1,
+                    tripsGenerated: tripsGenerated + 1,
+                });
+            } else {
+                // Free trial
+                await ctx.db.patch(userPlan._id, { 
+                    tripsGenerated: 1,
+                });
+            }
         } else {
+            // New user - create plan with 1 trip used (free trial)
             await ctx.db.insert("userPlans", {
                 userId: ctx.user._id,
                 plan: "free",
                 tripsGenerated: 1,
+                tripCredits: 0,
             });
         }
 

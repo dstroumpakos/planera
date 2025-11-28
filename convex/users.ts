@@ -10,10 +10,24 @@ export const getPlan = authQuery({
             .unique();
 
         if (!userPlan) {
-            return { plan: "free", tripsGenerated: 0 };
+            return { 
+                plan: "free", 
+                tripsGenerated: 0,
+                tripCredits: 0,
+                subscriptionExpiresAt: null,
+                isSubscriptionActive: false,
+            };
         }
 
-        return userPlan;
+        const isSubscriptionActive = userPlan.plan === "premium" && 
+            userPlan.subscriptionExpiresAt && 
+            userPlan.subscriptionExpiresAt > Date.now();
+
+        return {
+            ...userPlan,
+            tripCredits: userPlan.tripCredits ?? 0,
+            isSubscriptionActive,
+        };
     },
 });
 
@@ -25,15 +39,147 @@ export const upgradeToPremium = authMutation({
             .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
             .unique();
 
+        // Set subscription to expire in 30 days
+        const subscriptionExpiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
+
         if (userPlan) {
-            await ctx.db.patch(userPlan._id, { plan: "premium" });
+            await ctx.db.patch(userPlan._id, { 
+                plan: "premium",
+                subscriptionExpiresAt,
+            });
         } else {
             await ctx.db.insert("userPlans", {
                 userId: ctx.user._id,
                 plan: "premium",
                 tripsGenerated: 0,
+                tripCredits: 0,
+                subscriptionExpiresAt,
             });
         }
+    },
+});
+
+// Purchase trip packs
+export const purchaseTripPack = authMutation({
+    args: {
+        pack: v.union(v.literal("single"), v.literal("triple"), v.literal("ten")),
+    },
+    handler: async (ctx, args) => {
+        const creditsToAdd = args.pack === "single" ? 1 : args.pack === "triple" ? 3 : 10;
+
+        const userPlan = await ctx.db
+            .query("userPlans")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        if (userPlan) {
+            const currentCredits = userPlan.tripCredits ?? 0;
+            await ctx.db.patch(userPlan._id, { 
+                tripCredits: currentCredits + creditsToAdd,
+            });
+        } else {
+            await ctx.db.insert("userPlans", {
+                userId: ctx.user._id,
+                plan: "free",
+                tripsGenerated: 0,
+                tripCredits: creditsToAdd,
+            });
+        }
+
+        return { creditsAdded: creditsToAdd };
+    },
+});
+
+// Check if user can generate a trip
+export const canGenerateTrip = authQuery({
+    args: {},
+    handler: async (ctx) => {
+        const userPlan = await ctx.db
+            .query("userPlans")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        if (!userPlan) {
+            // New user gets 1 free trip
+            return { canGenerate: true, reason: "free_trial" };
+        }
+
+        // Premium subscribers with active subscription
+        const isSubscriptionActive = userPlan.plan === "premium" && 
+            userPlan.subscriptionExpiresAt && 
+            userPlan.subscriptionExpiresAt > Date.now();
+
+        if (isSubscriptionActive) {
+            return { canGenerate: true, reason: "premium" };
+        }
+
+        // Has trip credits
+        const tripCredits = userPlan.tripCredits ?? 0;
+        if (tripCredits > 0) {
+            return { canGenerate: true, reason: "credits", creditsRemaining: tripCredits };
+        }
+
+        // Free users get 1 free trip
+        if (userPlan.tripsGenerated < 1) {
+            return { canGenerate: true, reason: "free_trial" };
+        }
+
+        return { canGenerate: false, reason: "no_credits" };
+    },
+});
+
+// Use a trip credit (called when generating a trip)
+export const useTripCredit = authMutation({
+    args: {},
+    handler: async (ctx) => {
+        const userPlan = await ctx.db
+            .query("userPlans")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        if (!userPlan) {
+            // Create new user plan with 1 trip used
+            await ctx.db.insert("userPlans", {
+                userId: ctx.user._id,
+                plan: "free",
+                tripsGenerated: 1,
+                tripCredits: 0,
+            });
+            return;
+        }
+
+        // Premium subscribers don't use credits
+        const isSubscriptionActive = userPlan.plan === "premium" && 
+            userPlan.subscriptionExpiresAt && 
+            userPlan.subscriptionExpiresAt > Date.now();
+
+        if (isSubscriptionActive) {
+            // Just increment trips generated for stats
+            await ctx.db.patch(userPlan._id, { 
+                tripsGenerated: userPlan.tripsGenerated + 1,
+            });
+            return;
+        }
+
+        // Use trip credit if available
+        const tripCredits = userPlan.tripCredits ?? 0;
+        if (tripCredits > 0) {
+            await ctx.db.patch(userPlan._id, { 
+                tripCredits: tripCredits - 1,
+                tripsGenerated: userPlan.tripsGenerated + 1,
+            });
+            return;
+        }
+
+        // Free trial
+        if (userPlan.tripsGenerated < 1) {
+            await ctx.db.patch(userPlan._id, { 
+                tripsGenerated: 1,
+            });
+            return;
+        }
+
+        throw new Error("No trip credits available");
     },
 });
 
