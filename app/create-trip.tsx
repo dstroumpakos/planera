@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar, DateData } from 'react-native-calendars';
 
 export default function CreateTrip() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -20,10 +21,88 @@ export default function CreateTrip() {
         origin: "",
         startDate: new Date().getTime(),
         endDate: new Date().getTime() + 7 * 24 * 60 * 60 * 1000, // Default 1 week
-        budget: 2000, // Changed to number with default value
+        budget: 2000,
         travelers: 1,
         interests: [] as string[],
     });
+
+    const formatDate = (timestamp: number) => {
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+        });
+    };
+
+    const formatDateForCalendar = (timestamp: number) => {
+        const date = new Date(timestamp);
+        return date.toISOString().split('T')[0];
+    };
+
+    const getMarkedDates = () => {
+        const startStr = formatDateForCalendar(formData.startDate);
+        const endStr = formatDateForCalendar(formData.endDate);
+        
+        const marked: any = {};
+        
+        // Mark start date
+        marked[startStr] = {
+            startingDay: true,
+            color: '#1B3F92',
+            textColor: 'white',
+        };
+        
+        // Mark end date
+        marked[endStr] = {
+            endingDay: true,
+            color: '#1B3F92',
+            textColor: 'white',
+        };
+        
+        // Mark dates in between
+        const start = new Date(formData.startDate);
+        const end = new Date(formData.endDate);
+        const current = new Date(start);
+        current.setDate(current.getDate() + 1);
+        
+        while (current < end) {
+            const dateStr = current.toISOString().split('T')[0];
+            marked[dateStr] = {
+                color: '#E8EEF7',
+                textColor: '#1B3F92',
+            };
+            current.setDate(current.getDate() + 1);
+        }
+        
+        return marked;
+    };
+
+    const handleDayPress = (day: DateData) => {
+        const selectedTimestamp = new Date(day.dateString).getTime();
+        
+        if (selectingDate === 'start') {
+            // If selected start is after current end, adjust end
+            if (selectedTimestamp >= formData.endDate) {
+                setFormData({
+                    ...formData,
+                    startDate: selectedTimestamp,
+                    endDate: selectedTimestamp + 7 * 24 * 60 * 60 * 1000,
+                });
+            } else {
+                setFormData({ ...formData, startDate: selectedTimestamp });
+            }
+        } else {
+            // If selected end is before current start, don't allow
+            if (selectedTimestamp <= formData.startDate) {
+                Alert.alert("Invalid Date", "End date must be after start date");
+                return;
+            }
+            setFormData({ ...formData, endDate: selectedTimestamp });
+        }
+        setShowCalendar(false);
+    };
 
     const handleNext = () => {
         if (step === 1) {
@@ -82,6 +161,8 @@ export default function CreateTrip() {
         }
     };
 
+    const tripDuration = Math.round((formData.endDate - formData.startDate) / (24 * 60 * 60 * 1000));
+
     if (showLoadingScreen) {
         return (
             <View style={styles.loadingContainer}>
@@ -135,70 +216,107 @@ export default function CreateTrip() {
 
                 {step === 2 && (
                     <View>
-                        <Text style={styles.question}>When are you planning to go?</Text>
+                        <Text style={styles.question}>When are you traveling?</Text>
                         
-                        <Text style={styles.label}>Start Date</Text>
-                        <TouchableOpacity 
-                            style={styles.dateButton}
-                            onPress={() => setShowDatePicker(true)}
-                        >
-                            <Ionicons name="calendar-outline" size={24} color="#1B3F92" />
-                            <Text style={styles.dateText}>
-                                {new Date(formData.startDate).toLocaleDateString()}
-                            </Text>
-                        </TouchableOpacity>
-
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={new Date(formData.startDate)}
-                                mode="date"
-                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                minimumDate={new Date()}
-                                onChange={(event, selectedDate) => {
-                                    setShowDatePicker(false);
-                                    if (selectedDate) {
-                                        const newStart = selectedDate.getTime();
-                                        // Maintain duration if possible, or reset end date
-                                        const duration = formData.endDate - formData.startDate;
-                                        setFormData({
-                                            ...formData,
-                                            startDate: newStart,
-                                            endDate: newStart + duration
-                                        });
-                                    }
-                                }}
-                            />
-                        )}
-
-                        <Text style={[styles.label, { marginTop: 24 }]}>Duration (Days)</Text>
-                        <View style={styles.row}>
+                        {/* Date Selection Cards */}
+                        <View style={styles.dateCardsContainer}>
                             <TouchableOpacity 
-                                style={styles.counterBtn} 
+                                style={[styles.dateCard, selectingDate === 'start' && styles.dateCardActive]}
                                 onPress={() => {
-                                    const newEnd = formData.endDate - 24 * 60 * 60 * 1000;
-                                    if (newEnd > formData.startDate) {
-                                        setFormData({ ...formData, endDate: newEnd });
-                                    }
+                                    setSelectingDate('start');
+                                    setShowCalendar(true);
                                 }}
                             >
-                                <Ionicons name="remove" size={24} color="#1B3F92" />
+                                <View style={styles.dateCardIcon}>
+                                    <Ionicons name="airplane" size={20} color="#1B3F92" />
+                                </View>
+                                <Text style={styles.dateCardLabel}>DEPARTURE</Text>
+                                <Text style={styles.dateCardValue}>{formatDate(formData.startDate)}</Text>
                             </TouchableOpacity>
-                            <Text style={styles.counterText}>
-                                {Math.round((formData.endDate - formData.startDate) / (24 * 60 * 60 * 1000))} Days
-                            </Text>
+
                             <TouchableOpacity 
-                                style={styles.counterBtn}
+                                style={[styles.dateCard, selectingDate === 'end' && styles.dateCardActive]}
                                 onPress={() => {
-                                    const newEnd = formData.endDate + 24 * 60 * 60 * 1000;
-                                    setFormData({ ...formData, endDate: newEnd });
+                                    setSelectingDate('end');
+                                    setShowCalendar(true);
                                 }}
                             >
-                                <Ionicons name="add" size={24} color="#1B3F92" />
+                                <View style={styles.dateCardIcon}>
+                                    <Ionicons name="airplane" size={20} color="#1B3F92" style={{ transform: [{ rotate: '180deg' }] }} />
+                                </View>
+                                <Text style={styles.dateCardLabel}>RETURN</Text>
+                                <Text style={styles.dateCardValue}>{formatDate(formData.endDate)}</Text>
                             </TouchableOpacity>
                         </View>
-                        <Text style={styles.helperText}>
-                            Trip ends on {new Date(formData.endDate).toLocaleDateString()}
-                        </Text>
+
+                        {/* Trip Duration Summary */}
+                        <View style={styles.durationSummary}>
+                            <Ionicons name="time-outline" size={20} color="#546E7A" />
+                            <Text style={styles.durationText}>
+                                {tripDuration} {tripDuration === 1 ? 'day' : 'days'} trip
+                            </Text>
+                        </View>
+
+                        {/* Calendar Modal */}
+                        <Modal
+                            visible={showCalendar}
+                            animationType="slide"
+                            transparent={true}
+                            onRequestClose={() => setShowCalendar(false)}
+                        >
+                            <View style={styles.modalOverlay}>
+                                <View style={styles.calendarModal}>
+                                    <View style={styles.calendarHeader}>
+                                        <Text style={styles.calendarTitle}>
+                                            Select {selectingDate === 'start' ? 'Departure' : 'Return'} Date
+                                        </Text>
+                                        <TouchableOpacity onPress={() => setShowCalendar(false)}>
+                                            <Ionicons name="close" size={24} color="#1B3F92" />
+                                        </TouchableOpacity>
+                                    </View>
+                                    
+                                    <Calendar
+                                        current={formatDateForCalendar(selectingDate === 'start' ? formData.startDate : formData.endDate)}
+                                        minDate={selectingDate === 'start' ? formatDateForCalendar(Date.now()) : formatDateForCalendar(formData.startDate + 24 * 60 * 60 * 1000)}
+                                        onDayPress={handleDayPress}
+                                        markingType={'period'}
+                                        markedDates={getMarkedDates()}
+                                        theme={{
+                                            backgroundColor: '#ffffff',
+                                            calendarBackground: '#ffffff',
+                                            textSectionTitleColor: '#546E7A',
+                                            selectedDayBackgroundColor: '#1B3F92',
+                                            selectedDayTextColor: '#ffffff',
+                                            todayTextColor: '#1B3F92',
+                                            dayTextColor: '#263238',
+                                            textDisabledColor: '#CFD8DC',
+                                            dotColor: '#1B3F92',
+                                            selectedDotColor: '#ffffff',
+                                            arrowColor: '#1B3F92',
+                                            monthTextColor: '#1B3F92',
+                                            textDayFontWeight: '500',
+                                            textMonthFontWeight: '700',
+                                            textDayHeaderFontWeight: '600',
+                                            textDayFontSize: 16,
+                                            textMonthFontSize: 18,
+                                            textDayHeaderFontSize: 14,
+                                        }}
+                                        style={styles.calendar}
+                                    />
+                                    
+                                    <View style={styles.calendarLegend}>
+                                        <View style={styles.legendItem}>
+                                            <View style={[styles.legendDot, { backgroundColor: '#1B3F92' }]} />
+                                            <Text style={styles.legendText}>Selected dates</Text>
+                                        </View>
+                                        <View style={styles.legendItem}>
+                                            <View style={[styles.legendDot, { backgroundColor: '#E8EEF7' }]} />
+                                            <Text style={styles.legendText}>Trip duration</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+                        </Modal>
                     </View>
                 )}
 
@@ -279,7 +397,7 @@ export default function CreateTrip() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F4F6F8", // Light Gray Background
+        backgroundColor: "#F4F6F8",
     },
     header: {
         flexDirection: "row",
@@ -297,7 +415,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#1B3F92", // Aegean Blue
+        color: "#1B3F92",
         letterSpacing: 0.5,
     },
     progressBar: {
@@ -307,15 +425,15 @@ const styles = StyleSheet.create({
     },
     progressFill: {
         height: "100%",
-        backgroundColor: "#1B3F92", // Aegean Blue
+        backgroundColor: "#1B3F92",
     },
     content: {
         padding: 24,
     },
     question: {
         fontSize: 24,
-        fontWeight: "300", // Elegant light weight
-        color: "#1B3F92", // Aegean Blue
+        fontWeight: "300",
+        color: "#1B3F92",
         marginBottom: 32,
         letterSpacing: 0.5,
     },
@@ -324,7 +442,7 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         borderWidth: 1,
         borderColor: "#CFD8DC",
-        borderRadius: 4, // Sharp corners
+        borderRadius: 4,
         padding: 16,
         marginBottom: 16,
         color: "#263238",
@@ -341,31 +459,6 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
         letterSpacing: 1,
     },
-    optionsContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 12,
-    },
-    option: {
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 4, // Sharp corners
-        backgroundColor: "white",
-        borderWidth: 1,
-        borderColor: "#CFD8DC",
-    },
-    optionSelected: {
-        backgroundColor: "#1B3F92", // Aegean Blue
-        borderColor: "#1B3F92",
-    },
-    optionText: {
-        fontSize: 16,
-        color: "#546E7A",
-    },
-    optionTextSelected: {
-        color: "white",
-        fontWeight: "600",
-    },
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -375,7 +468,7 @@ const styles = StyleSheet.create({
     counterBtn: {
         width: 44,
         height: 44,
-        borderRadius: 4, // Sharp corners
+        borderRadius: 4,
         backgroundColor: "white",
         borderWidth: 1,
         borderColor: "#CFD8DC",
@@ -395,13 +488,13 @@ const styles = StyleSheet.create({
     tag: {
         paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 4, // Sharp corners
+        borderRadius: 4,
         backgroundColor: "white",
         borderWidth: 1,
         borderColor: "#CFD8DC",
     },
     tagSelected: {
-        backgroundColor: "#1B3F92", // Aegean Blue
+        backgroundColor: "#1B3F92",
         borderColor: "#1B3F92",
     },
     tagText: {
@@ -419,9 +512,9 @@ const styles = StyleSheet.create({
         borderTopColor: "#ECEFF1",
     },
     nextButton: {
-        backgroundColor: "#1B3F92", // Aegean Blue
+        backgroundColor: "#1B3F92",
         paddingVertical: 16,
-        borderRadius: 4, // Sharp corners
+        borderRadius: 4,
         alignItems: "center",
         shadowColor: "#1B3F92",
         shadowOffset: { width: 0, height: 4 },
@@ -438,22 +531,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         letterSpacing: 1,
         textTransform: "uppercase",
-    },
-    dateButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "white",
-        borderWidth: 1,
-        borderColor: "#CFD8DC",
-        padding: 16,
-        borderRadius: 4, // Sharp corners
-        gap: 12,
-        marginBottom: 8,
-    },
-    dateText: {
-        fontSize: 18,
-        color: "#263238",
-        fontWeight: "500",
     },
     loadingContainer: {
         flex: 1,
@@ -475,5 +552,112 @@ const styles = StyleSheet.create({
         color: "#546E7A",
         textAlign: "center",
         lineHeight: 24,
+    },
+    // New Date Picker Styles
+    dateCardsContainer: {
+        flexDirection: "row",
+        gap: 12,
+        marginBottom: 24,
+    },
+    dateCard: {
+        flex: 1,
+        backgroundColor: "white",
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 2,
+        borderColor: "#E5E5EA",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    dateCardActive: {
+        borderColor: "#1B3F92",
+    },
+    dateCardIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#E8EEF7",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    dateCardLabel: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#78909C",
+        letterSpacing: 1,
+        marginBottom: 4,
+    },
+    dateCardValue: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#263238",
+    },
+    durationSummary: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#E8EEF7",
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        gap: 8,
+    },
+    durationText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1B3F92",
+    },
+    // Calendar Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "flex-end",
+    },
+    calendarModal: {
+        backgroundColor: "white",
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingBottom: 40,
+    },
+    calendarHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: "#ECEFF1",
+    },
+    calendarTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#1B3F92",
+    },
+    calendar: {
+        marginHorizontal: 10,
+    },
+    calendarLegend: {
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: 24,
+        paddingTop: 16,
+        paddingHorizontal: 20,
+    },
+    legendItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    legendDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+    },
+    legendText: {
+        fontSize: 13,
+        color: "#546E7A",
     },
 });
