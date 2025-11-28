@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
 
-import logoImage from "@/assets/bloom/images/image-zyrrgm.png";
+import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
 
 export default function CreateTrip() {
     const router = useRouter();
@@ -52,14 +52,14 @@ export default function CreateTrip() {
         // Mark start date
         marked[startStr] = {
             startingDay: true,
-            color: '#00BFA6',
+            color: '#14B8A6',
             textColor: 'white',
         };
         
         // Mark end date
         marked[endStr] = {
             endingDay: true,
-            color: '#00BFA6',
+            color: '#14B8A6',
             textColor: 'white',
         };
         
@@ -72,8 +72,8 @@ export default function CreateTrip() {
         while (current < end) {
             const dateStr = current.toISOString().split('T')[0];
             marked[dateStr] = {
-                color: '#E0F7F4',
-                textColor: '#00BFA6',
+                color: '#CCFBF1',
+                textColor: '#0D9488',
             };
             current.setDate(current.getDate() + 1);
         }
@@ -293,16 +293,16 @@ export default function CreateTrip() {
                                         theme={{
                                             backgroundColor: '#ffffff',
                                             calendarBackground: '#ffffff',
-                                            textSectionTitleColor: '#607D8B',
-                                            selectedDayBackgroundColor: '#00BFA6',
+                                            textSectionTitleColor: '#5EEAD4',
+                                            selectedDayBackgroundColor: '#14B8A6',
                                             selectedDayTextColor: '#ffffff',
-                                            todayTextColor: '#00BFA6',
-                                            dayTextColor: '#263238',
-                                            textDisabledColor: '#CFD8DC',
-                                            dotColor: '#00BFA6',
+                                            todayTextColor: '#14B8A6',
+                                            dayTextColor: '#134E4A',
+                                            textDisabledColor: '#99F6E4',
+                                            dotColor: '#14B8A6',
                                             selectedDotColor: '#ffffff',
-                                            arrowColor: '#00BFA6',
-                                            monthTextColor: '#1A237E',
+                                            arrowColor: '#14B8A6',
+                                            monthTextColor: '#0D9488',
                                             textDayFontWeight: '500',
                                             textMonthFontWeight: '700',
                                             textDayHeaderFontWeight: '600',
@@ -315,11 +315,11 @@ export default function CreateTrip() {
                                     
                                     <View style={styles.calendarLegend}>
                                         <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#00BFA6' }]} />
+                                            <View style={[styles.legendDot, { backgroundColor: '#14B8A6' }]} />
                                             <Text style={styles.legendText}>Selected dates</Text>
                                         </View>
                                         <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#E0F7F4' }]} />
+                                            <View style={[styles.legendDot, { backgroundColor: '#CCFBF1' }]} />
                                             <Text style={styles.legendText}>Trip duration</Text>
                                         </View>
                                     </View>
@@ -412,7 +412,7 @@ export default function CreateTrip() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F7FA",
+        backgroundColor: "#F0FFFE",
     },
     header: {
         flexDirection: "row",
@@ -421,48 +421,52 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 16,
         backgroundColor: "white",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E8EDF2",
+        borderBottomWidth: 0,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
     },
     backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: "#F5F7FA",
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: "#CCFBF1",
         justifyContent: "center",
         alignItems: "center",
     },
     headerTitle: {
         fontSize: 16,
-        fontWeight: "600",
-        color: "#1A237E",
+        fontWeight: "700",
+        color: "#0D9488",
         letterSpacing: 0.5,
     },
     progressBar: {
-        height: 4,
-        backgroundColor: "#E8EDF2",
+        height: 5,
+        backgroundColor: "#CCFBF1",
         width: "100%",
     },
     progressFill: {
         height: "100%",
-        backgroundColor: "#00BFA6",
+        backgroundColor: "#14B8A6",
     },
     content: {
         padding: 24,
     },
     question: {
         fontSize: 28,
-        fontWeight: "700",
-        color: "#1A237E",
+        fontWeight: "800",
+        color: "#0D9488",
         marginBottom: 32,
     },
     inputContainer: {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "white",
-        borderWidth: 1,
-        borderColor: "#E8EDF2",
-        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: "#99F6E4",
+        borderRadius: 16,
         paddingHorizontal: 16,
         marginBottom: 8,
     },
@@ -472,19 +476,20 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: 16,
-        paddingVertical: 16,
-        color: "#263238",
+        paddingVertical: 18,
+        color: "#134E4A",
     },
     helperText: {
         fontSize: 14,
-        color: "#90A4AE",
+        color: "#5EEAD4",
         marginTop: 4,
+        fontWeight: "500",
     },
     label: {
         fontSize: 12,
         fontWeight: "700",
         marginBottom: 10,
-        color: "#607D8B",
+        color: "#5EEAD4",
         textTransform: "uppercase",
         letterSpacing: 1,
     },
@@ -495,19 +500,19 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     counterBtn: {
-        width: 52,
-        height: 52,
-        borderRadius: 12,
+        width: 56,
+        height: 56,
+        borderRadius: 16,
         backgroundColor: "white",
-        borderWidth: 1,
-        borderColor: "#E8EDF2",
+        borderWidth: 2,
+        borderColor: "#99F6E4",
         justifyContent: "center",
         alignItems: "center",
     },
     counterText: {
-        fontSize: 32,
-        fontWeight: "700",
-        color: "#1A237E",
+        fontSize: 36,
+        fontWeight: "800",
+        color: "#0D9488",
     },
     tagsContainer: {
         flexDirection: "row",
@@ -515,78 +520,83 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     tag: {
-        paddingHorizontal: 18,
-        paddingVertical: 12,
-        borderRadius: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        borderRadius: 14,
         backgroundColor: "white",
-        borderWidth: 1,
-        borderColor: "#E8EDF2",
+        borderWidth: 2,
+        borderColor: "#99F6E4",
     },
     tagSelected: {
-        backgroundColor: "#00BFA6",
-        borderColor: "#00BFA6",
+        backgroundColor: "#14B8A6",
+        borderColor: "#14B8A6",
     },
     tagText: {
         fontSize: 16,
-        color: "#607D8B",
-        fontWeight: "500",
+        color: "#5EEAD4",
+        fontWeight: "600",
     },
     tagTextSelected: {
         color: "white",
-        fontWeight: "600",
+        fontWeight: "700",
     },
     footer: {
         padding: 24,
         backgroundColor: "white",
-        borderTopWidth: 1,
-        borderTopColor: "#E8EDF2",
+        borderTopWidth: 0,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 8,
     },
     nextButton: {
-        backgroundColor: "#00BFA6",
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: "#14B8A6",
+        paddingVertical: 18,
+        borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
         flexDirection: "row",
-        gap: 8,
-        shadowColor: "#00BFA6",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        gap: 10,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 6,
     },
     disabledButton: {
         opacity: 0.7,
     },
     nextButtonText: {
         color: "white",
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: "700",
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F5F7FA",
+        backgroundColor: "#F0FFFE",
         padding: 24,
     },
     loadingLogo: {
-        width: 120,
-        height: 120,
+        width: 140,
+        height: 140,
     },
     loadingText: {
         marginTop: 16,
-        fontSize: 24,
-        fontWeight: "700",
-        color: "#1A237E",
+        fontSize: 26,
+        fontWeight: "800",
+        color: "#0D9488",
         textAlign: "center",
     },
     loadingSubtext: {
         marginTop: 8,
         fontSize: 16,
-        color: "#607D8B",
+        color: "#5EEAD4",
         textAlign: "center",
         lineHeight: 24,
+        fontWeight: "500",
     },
     // Date Picker Styles
     dateCardsContainer: {
@@ -597,24 +607,25 @@ const styles = StyleSheet.create({
     dateCard: {
         flex: 1,
         backgroundColor: "white",
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 18,
+        padding: 18,
         borderWidth: 2,
-        borderColor: "#E8EDF2",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        borderColor: "#99F6E4",
+        shadowColor: "#0D9488",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 3,
     },
     dateCardActive: {
-        borderColor: "#00BFA6",
+        borderColor: "#14B8A6",
+        borderWidth: 3,
     },
     dateCardIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: "#E0F7F4",
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        backgroundColor: "#CCFBF1",
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 12,
@@ -622,40 +633,40 @@ const styles = StyleSheet.create({
     dateCardLabel: {
         fontSize: 11,
         fontWeight: "700",
-        color: "#90A4AE",
+        color: "#5EEAD4",
         letterSpacing: 1,
         marginBottom: 4,
     },
     dateCardValue: {
         fontSize: 14,
-        fontWeight: "600",
-        color: "#1A237E",
+        fontWeight: "700",
+        color: "#0D9488",
     },
     durationSummary: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#E0F7F4",
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        gap: 8,
+        backgroundColor: "#CCFBF1",
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 14,
+        gap: 10,
     },
     durationText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#00BFA6",
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#0D9488",
     },
     // Calendar Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backgroundColor: "rgba(13, 148, 136, 0.3)",
         justifyContent: "flex-end",
     },
     calendarModal: {
         backgroundColor: "white",
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
         paddingBottom: 40,
     },
     calendarHeader: {
@@ -664,12 +675,12 @@ const styles = StyleSheet.create({
         alignItems: "center",
         padding: 20,
         borderBottomWidth: 1,
-        borderBottomColor: "#E8EDF2",
+        borderBottomColor: "#CCFBF1",
     },
     calendarTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: "700",
-        color: "#1A237E",
+        color: "#0D9488",
     },
     calendar: {
         marginHorizontal: 10,
@@ -687,12 +698,13 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     legendDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
     },
     legendText: {
         fontSize: 13,
-        color: "#607D8B",
+        color: "#5EEAD4",
+        fontWeight: "500",
     },
 });

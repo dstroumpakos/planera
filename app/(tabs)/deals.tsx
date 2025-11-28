@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { DEALS } from "@/lib/data";
 
-import logoImage from "@/assets/bloom/images/image-zyrrgm.png";
+import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
 
 export default function Deals() {
     const router = useRouter();
@@ -70,30 +70,35 @@ export default function Deals() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F7FA",
+        backgroundColor: "#F0FFFE",
     },
     header: {
         flexDirection: "row",
         alignItems: "center",
         padding: 20,
         backgroundColor: "white",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E8EDF2",
+        borderBottomWidth: 0,
         gap: 14,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
     },
     headerLogo: {
-        width: 44,
-        height: 44,
+        width: 50,
+        height: 50,
     },
     headerTitle: {
         fontSize: 22,
-        fontWeight: "700",
-        color: "#1A237E",
+        fontWeight: "800",
+        color: "#0D9488",
         marginBottom: 2,
     },
     headerSubtitle: {
         fontSize: 14,
-        color: "#78909C",
+        color: "#5EEAD4",
+        fontWeight: "500",
     },
     listContent: {
         padding: 16,
@@ -101,14 +106,16 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: "white",
-        borderRadius: 16,
+        borderRadius: 20,
         marginBottom: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
+        shadowColor: "#0D9488",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: 4,
         overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "#CCFBF1",
     },
     cardImage: {
         width: "100%",
@@ -118,10 +125,15 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 16,
         right: 16,
-        backgroundColor: "#00BFA6",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
+        backgroundColor: "#14B8A6",
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 10,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     discountText: {
         color: "white",
@@ -129,7 +141,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     cardContent: {
-        padding: 16,
+        padding: 18,
     },
     cardHeader: {
         flexDirection: "row",
@@ -140,7 +152,7 @@ const styles = StyleSheet.create({
     destination: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#1A237E",
+        color: "#0D9488",
         flex: 1,
         marginRight: 8,
     },
@@ -149,14 +161,14 @@ const styles = StyleSheet.create({
     },
     originalPrice: {
         fontSize: 14,
-        color: "#B0BEC5",
+        color: "#99F6E4",
         textDecorationLine: "line-through",
         marginBottom: 2,
     },
     price: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#00BFA6",
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#14B8A6",
     },
     cardFooter: {
         flexDirection: "row",
@@ -164,7 +176,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingTop: 14,
         borderTopWidth: 1,
-        borderTopColor: "#F5F7FA",
+        borderTopColor: "#F0FFFE",
     },
     dateContainer: {
         flexDirection: "row",
@@ -173,20 +185,21 @@ const styles = StyleSheet.create({
     },
     dateText: {
         fontSize: 14,
-        color: "#78909C",
+        color: "#5EEAD4",
+        fontWeight: "500",
     },
     bookButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#E0F7F4",
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 8,
+        backgroundColor: "#CCFBF1",
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
         gap: 6,
     },
     bookButtonText: {
-        color: "#00BFA6",
-        fontWeight: "600",
+        color: "#0D9488",
+        fontWeight: "700",
         fontSize: 14,
     },
     emptyState: {
@@ -197,24 +210,25 @@ const styles = StyleSheet.create({
         marginTop: 60,
     },
     emptyIconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: "#E0F7F4",
+        width: 110,
+        height: 110,
+        borderRadius: 55,
+        backgroundColor: "#CCFBF1",
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 24,
     },
     emptyText: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#1A237E",
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#0D9488",
         marginBottom: 8,
     },
     emptySubtext: {
         fontSize: 16,
-        color: "#78909C",
+        color: "#5EEAD4",
         textAlign: "center",
         lineHeight: 24,
+        fontWeight: "500",
     },
 });

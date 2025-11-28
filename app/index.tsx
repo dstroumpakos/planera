@@ -5,8 +5,8 @@ import { Redirect } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 
-// Import the logo
-import logoImage from "@/assets/bloom/images/image-zyrrgm.png";
+// Import the new logo
+import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
 
 export default function Index() {
     const [isEmailAuth, setIsEmailAuth] = useState(false);
@@ -183,13 +183,13 @@ export default function Index() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F0FFFE",
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F0FFFE",
     },
     keyboardView: {
         flex: 1,
@@ -208,23 +208,24 @@ const styles = StyleSheet.create({
         marginBottom: 40,
     },
     logo: {
-        width: 140,
-        height: 140,
-        marginBottom: 20,
+        width: 180,
+        height: 180,
+        marginBottom: 16,
     },
     title: {
-        fontSize: 36,
-        fontWeight: "700",
+        fontSize: 32,
+        fontWeight: "800",
         marginBottom: 12,
-        color: "#1A237E",
+        color: "#0D9488",
         textAlign: "center",
-        letterSpacing: 0.5,
+        letterSpacing: 1,
     },
     subtitle: {
         fontSize: 16,
-        color: "#607D8B",
+        color: "#5EEAD4",
         textAlign: "center",
         lineHeight: 24,
+        fontWeight: "500",
     },
     optionsContainer: {
         width: "100%",
@@ -237,10 +238,10 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#F5F7FA",
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#E8EDF2",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: "#99F6E4",
         paddingHorizontal: 16,
     },
     inputIcon: {
@@ -250,43 +251,48 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 16,
         fontSize: 16,
-        color: "#263238",
+        color: "#134E4A",
     },
     primaryButton: {
-        backgroundColor: "#00BFA6",
+        backgroundColor: "#14B8A6",
         paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 12,
+        paddingVertical: 18,
+        borderRadius: 16,
         width: "100%",
         alignItems: "center",
         flexDirection: "row",
         justifyContent: "center",
-        shadowColor: "#00BFA6",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        elevation: 6,
     },
     primaryButtonText: {
         color: "white",
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: "700",
         letterSpacing: 0.5,
     },
     socialButton: {
         backgroundColor: "#FFFFFF",
         paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 12,
+        paddingVertical: 18,
+        borderRadius: 16,
         width: "100%",
         alignItems: "center",
         flexDirection: "row",
         justifyContent: "center",
-        borderWidth: 1,
-        borderColor: "#E8EDF2",
+        borderWidth: 2,
+        borderColor: "#CCFBF1",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     socialButtonText: {
-        color: "#37474F",
+        color: "#134E4A",
         fontSize: 16,
         fontWeight: "600",
     },
@@ -301,28 +307,29 @@ const styles = StyleSheet.create({
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: "#E8EDF2",
+        backgroundColor: "#99F6E4",
     },
     dividerText: {
-        color: "#90A4AE",
+        color: "#5EEAD4",
         fontSize: 14,
         marginHorizontal: 16,
+        fontWeight: "500",
     },
     guestButton: {
         backgroundColor: "transparent",
         paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 12,
+        paddingVertical: 18,
+        borderRadius: 16,
         width: "100%",
         alignItems: "center",
         flexDirection: "row",
         justifyContent: "center",
-        borderWidth: 1.5,
-        borderColor: "#00BFA6",
+        borderWidth: 2,
+        borderColor: "#14B8A6",
         borderStyle: "dashed",
     },
     guestButtonText: {
-        color: "#00BFA6",
+        color: "#14B8A6",
         fontSize: 16,
         fontWeight: "600",
     },
@@ -331,12 +338,12 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     switchText: {
-        color: "#78909C",
+        color: "#5EEAD4",
         fontSize: 14,
     },
     switchTextBold: {
-        color: "#00BFA6",
-        fontWeight: "600",
+        color: "#0D9488",
+        fontWeight: "700",
     },
     backButton: {
         flexDirection: "row",
@@ -346,11 +353,11 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     backText: {
-        color: "#78909C",
+        color: "#5EEAD4",
         fontSize: 14,
     },
     termsText: {
-        color: "#B0BEC5",
+        color: "#99F6E4",
         fontSize: 12,
         textAlign: "center",
         marginTop: 32,

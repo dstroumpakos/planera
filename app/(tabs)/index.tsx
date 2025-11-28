@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import logoImage from "@/assets/bloom/images/image-zyrrgm.png";
+import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
 
 export default function TripListScreen() {
     const router = useRouter();
@@ -32,7 +32,7 @@ export default function TripListScreen() {
     if (trips === undefined) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#00BFA6" />
+                <ActivityIndicator size="large" color="#14B8A6" />
             </View>
         );
     }
@@ -120,13 +120,13 @@ export default function TripListScreen() {
 
 function StatusBadge({ status }: { status: string }) {
     const colors: Record<string, string> = {
-        generating: "#FFB300",
-        completed: "#00BFA6",
-        failed: "#EF5350",
+        generating: "#F59E0B",
+        completed: "#14B8A6",
+        failed: "#EF4444",
     };
     
     return (
-        <View style={[styles.badge, { backgroundColor: colors[status] || "#90A4AE" }]}>
+        <View style={[styles.badge, { backgroundColor: colors[status] || "#94A3B8" }]}>
             <Text style={styles.badgeText}>{status.toUpperCase()}</Text>
         </View>
     );
@@ -135,7 +135,7 @@ function StatusBadge({ status }: { status: string }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F7FA",
+        backgroundColor: "#F0FFFE",
     },
     header: {
         flexDirection: "row",
@@ -144,48 +144,52 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 16,
         backgroundColor: "white",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E8EDF2",
+        borderBottomWidth: 0,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
     },
     headerLeft: {
         flexDirection: "row",
         alignItems: "center",
     },
     headerLogo: {
-        width: 44,
-        height: 44,
+        width: 50,
+        height: 50,
         marginRight: 12,
     },
     headerSubtitle: {
         fontSize: 12,
-        color: "#90A4AE",
-        fontWeight: "500",
+        color: "#5EEAD4",
+        fontWeight: "600",
         textTransform: "uppercase",
         letterSpacing: 0.5,
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: "700",
-        color: "#1A237E",
+        fontWeight: "800",
+        color: "#0D9488",
     },
     addButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: "#00BFA6",
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: "#14B8A6",
         justifyContent: "center",
         alignItems: "center",
-        shadowColor: "#00BFA6",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 8,
     },
     center: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F5F7FA",
+        backgroundColor: "#F0FFFE",
     },
     listContent: {
         padding: 20,
@@ -193,19 +197,21 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: "white",
-        borderRadius: 16,
+        borderRadius: 20,
         marginBottom: 16,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
+        shadowColor: "#0D9488",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: 4,
         flexDirection: "row",
         overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "#CCFBF1",
     },
     cardImagePlaceholder: {
-        width: 80,
-        backgroundColor: "#00BFA6",
+        width: 85,
+        backgroundColor: "#14B8A6",
         justifyContent: "center",
         alignItems: "center",
     },
@@ -222,14 +228,15 @@ const styles = StyleSheet.create({
     destination: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#1A237E",
+        color: "#0D9488",
         flex: 1,
         marginRight: 8,
     },
     dates: {
         fontSize: 14,
-        color: "#607D8B",
+        color: "#5EEAD4",
         marginBottom: 12,
+        fontWeight: "500",
     },
     cardFooter: {
         flexDirection: "row",
@@ -245,13 +252,13 @@ const styles = StyleSheet.create({
     },
     details: {
         fontSize: 13,
-        color: "#607D8B",
-        fontWeight: "500",
+        color: "#5EEAD4",
+        fontWeight: "600",
     },
     badge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
     },
     badgeText: {
         color: "white",
@@ -270,44 +277,45 @@ const styles = StyleSheet.create({
         padding: 32,
     },
     emptyIconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: "#E0F7F4",
+        width: 110,
+        height: 110,
+        borderRadius: 55,
+        backgroundColor: "#CCFBF1",
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 24,
     },
     emptyText: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#1A237E",
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#0D9488",
         marginBottom: 8,
     },
     emptySubtext: {
         fontSize: 16,
-        color: "#78909C",
+        color: "#5EEAD4",
         textAlign: "center",
         marginBottom: 32,
         lineHeight: 24,
+        fontWeight: "500",
     },
     createTripButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#00BFA6",
-        paddingHorizontal: 24,
-        paddingVertical: 14,
-        borderRadius: 12,
-        gap: 8,
-        shadowColor: "#00BFA6",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        backgroundColor: "#14B8A6",
+        paddingHorizontal: 28,
+        paddingVertical: 16,
+        borderRadius: 16,
+        gap: 10,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 6,
     },
     createTripButtonText: {
         color: "white",
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: "700",
     },
 });
