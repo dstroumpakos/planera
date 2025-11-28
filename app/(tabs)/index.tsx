@@ -1,10 +1,12 @@
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Image } from "react-native";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import logoImage from "@/assets/bloom/images/image-zyrrgm.png";
 
 export default function TripListScreen() {
     const router = useRouter();
@@ -30,7 +32,7 @@ export default function TripListScreen() {
     if (trips === undefined) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#00BFA6" />
             </View>
         );
     }
@@ -38,9 +40,12 @@ export default function TripListScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.headerSubtitle}>Welcome back</Text>
-                    <Text style={styles.headerTitle}>My Trips</Text>
+                <View style={styles.headerLeft}>
+                    <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
+                    <View>
+                        <Text style={styles.headerSubtitle}>Welcome to</Text>
+                        <Text style={styles.headerTitle}>Voyage Buddy</Text>
+                    </View>
                 </View>
                 <TouchableOpacity 
                     style={styles.addButton}
@@ -52,9 +57,18 @@ export default function TripListScreen() {
 
             {trips.length === 0 ? (
                 <View style={styles.emptyState}>
-                    <Ionicons name="airplane-outline" size={64} color="#ccc" />
-                    <Text style={styles.emptyText}>No trips yet.</Text>
+                    <View style={styles.emptyIconContainer}>
+                        <Ionicons name="airplane-outline" size={48} color="#00BFA6" />
+                    </View>
+                    <Text style={styles.emptyText}>No trips yet</Text>
                     <Text style={styles.emptySubtext}>Tap the + button to plan your first adventure!</Text>
+                    <TouchableOpacity 
+                        style={styles.createTripButton}
+                        onPress={() => router.push("/create-trip")}
+                    >
+                        <Ionicons name="add-circle" size={20} color="white" />
+                        <Text style={styles.createTripButtonText}>Create Your First Trip</Text>
+                    </TouchableOpacity>
                 </View>
             ) : (
                 <FlatList
@@ -80,11 +94,11 @@ export default function TripListScreen() {
                                 </Text>
                                 <View style={styles.cardFooter}>
                                     <View style={styles.detailItem}>
-                                        <Ionicons name="people-outline" size={16} color="#546E7A" />
+                                        <Ionicons name="people-outline" size={16} color="#607D8B" />
                                         <Text style={styles.details}>{item.travelers}</Text>
                                     </View>
                                     <View style={styles.detailItem}>
-                                        <Ionicons name="wallet-outline" size={16} color="#546E7A" />
+                                        <Ionicons name="wallet-outline" size={16} color="#607D8B" />
                                         <Text style={styles.details}>{item.budget}</Text>
                                     </View>
                                     <TouchableOpacity 
@@ -106,9 +120,9 @@ export default function TripListScreen() {
 
 function StatusBadge({ status }: { status: string }) {
     const colors: Record<string, string> = {
-        generating: "#FFB300", // Amber
-        completed: "#1B3F92", // Aegean Blue
-        failed: "#D32F2F", // Red
+        generating: "#FFB300",
+        completed: "#00BFA6",
+        failed: "#EF5350",
     };
     
     return (
@@ -121,38 +135,47 @@ function StatusBadge({ status }: { status: string }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F4F6F8", // Light Gray Background
+        backgroundColor: "#F5F7FA",
     },
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: 24,
-        paddingVertical: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
         backgroundColor: "white",
         borderBottomWidth: 1,
-        borderBottomColor: "#ECEFF1",
+        borderBottomColor: "#E8EDF2",
+    },
+    headerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    headerLogo: {
+        width: 44,
+        height: 44,
+        marginRight: 12,
     },
     headerSubtitle: {
-        fontSize: 14,
-        color: "#546E7A",
-        fontWeight: "600",
+        fontSize: 12,
+        color: "#90A4AE",
+        fontWeight: "500",
         textTransform: "uppercase",
-        letterSpacing: 1,
+        letterSpacing: 0.5,
     },
     headerTitle: {
-        fontSize: 32,
-        fontWeight: "300", // Elegant light weight
-        color: "#1B3F92", // Aegean Blue
+        fontSize: 24,
+        fontWeight: "700",
+        color: "#1A237E",
     },
     addButton: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: "#1B3F92", // Aegean Blue
+        backgroundColor: "#00BFA6",
         justifyContent: "center",
         alignItems: "center",
-        shadowColor: "#1B3F92",
+        shadowColor: "#00BFA6",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -162,6 +185,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+        backgroundColor: "#F5F7FA",
     },
     listContent: {
         padding: 20,
@@ -169,19 +193,19 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: "white",
-        borderRadius: 8, // Sharper corners
+        borderRadius: 16,
         marginBottom: 16,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 3,
         flexDirection: "row",
         overflow: "hidden",
     },
     cardImagePlaceholder: {
         width: 80,
-        backgroundColor: "#1B3F92",
+        backgroundColor: "#00BFA6",
         justifyContent: "center",
         alignItems: "center",
     },
@@ -198,13 +222,13 @@ const styles = StyleSheet.create({
     destination: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#263238",
+        color: "#1A237E",
         flex: 1,
         marginRight: 8,
     },
     dates: {
         fontSize: 14,
-        color: "#546E7A",
+        color: "#607D8B",
         marginBottom: 12,
     },
     cardFooter: {
@@ -221,24 +245,19 @@ const styles = StyleSheet.create({
     },
     details: {
         fontSize: 13,
-        color: "#546E7A",
+        color: "#607D8B",
         fontWeight: "500",
     },
     badge: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 4,
+        borderRadius: 6,
     },
     badgeText: {
         color: "white",
         fontSize: 10,
         fontWeight: "700",
         letterSpacing: 0.5,
-    },
-    headerRight: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
     },
     deleteBtn: {
         padding: 4,
@@ -250,17 +269,45 @@ const styles = StyleSheet.create({
         alignItems: "center",
         padding: 32,
     },
+    emptyIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: "#E0F7F4",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 24,
+    },
     emptyText: {
-        fontSize: 20,
-        fontWeight: "600",
-        color: "#263238",
-        marginTop: 16,
+        fontSize: 22,
+        fontWeight: "700",
+        color: "#1A237E",
+        marginBottom: 8,
     },
     emptySubtext: {
         fontSize: 16,
         color: "#78909C",
         textAlign: "center",
-        marginTop: 8,
+        marginBottom: 32,
         lineHeight: 24,
+    },
+    createTripButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#00BFA6",
+        paddingHorizontal: 24,
+        paddingVertical: 14,
+        borderRadius: 12,
+        gap: 8,
+        shadowColor: "#00BFA6",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    createTripButtonText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "700",
     },
 });

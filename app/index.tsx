@@ -5,6 +5,9 @@ import { Redirect } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 
+// Import the logo
+import logoImage from "@/assets/bloom/images/image-zyrrgm.png";
+
 export default function Index() {
     const [isEmailAuth, setIsEmailAuth] = useState(false);
     const [isSignUp, setIsSignUp] = useState(false);
@@ -44,7 +47,9 @@ export default function Index() {
     return (
         <View style={styles.container}>
             <AuthLoading>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#00BFA6" />
+                </View>
             </AuthLoading>
 
             <Unauthenticated>
@@ -54,88 +59,115 @@ export default function Index() {
                 >
                     <ScrollView contentContainerStyle={styles.scrollContent}>
                         <View style={styles.authContainer}>
-                            <Image source={require("../assets/images/adaptive-icon.png")} style={styles.logo} />
-                            <Text style={styles.title}>AI Trip Generator</Text>
-                            <Text style={styles.subtitle}>Plan your dream vacation in seconds.</Text>
+                            {/* Hero Section with Logo */}
+                            <View style={styles.heroSection}>
+                                <Image source={logoImage} style={styles.logo} resizeMode="contain" />
+                                <Text style={styles.title}>Voyage Buddy</Text>
+                                <Text style={styles.subtitle}>Your AI-powered travel companion.{"\n"}Plan your dream vacation in seconds.</Text>
+                            </View>
                             
                             {isEmailAuth ? (
                                 <View style={styles.formContainer}>
                                     {isSignUp && (
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="person-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Full Name"
+                                                placeholderTextColor="#90A4AE"
+                                                value={name}
+                                                onChangeText={setName}
+                                                autoCapitalize="words"
+                                            />
+                                        </View>
+                                    )}
+                                    <View style={styles.inputContainer}>
+                                        <Ionicons name="mail-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
                                         <TextInput
                                             style={styles.input}
-                                            placeholder="Full Name"
-                                            value={name}
-                                            onChangeText={setName}
-                                            autoCapitalize="words"
+                                            placeholder="Email"
+                                            placeholderTextColor="#90A4AE"
+                                            value={email}
+                                            onChangeText={setEmail}
+                                            autoCapitalize="none"
+                                            keyboardType="email-address"
                                         />
-                                    )}
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Email"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                        autoCapitalize="none"
-                                        keyboardType="email-address"
-                                    />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Password"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                        secureTextEntry
-                                    />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <Ionicons name="lock-closed-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Password"
+                                            placeholderTextColor="#90A4AE"
+                                            value={password}
+                                            onChangeText={setPassword}
+                                            secureTextEntry
+                                        />
+                                    </View>
                                     
                                     <TouchableOpacity 
-                                        style={styles.button} 
+                                        style={styles.primaryButton} 
                                         onPress={handleEmailAuth}
                                         disabled={loading}
                                     >
                                         {loading ? (
                                             <ActivityIndicator color="white" />
                                         ) : (
-                                            <Text style={styles.buttonText}>
-                                                {isSignUp ? "Sign Up" : "Sign In"}
+                                            <Text style={styles.primaryButtonText}>
+                                                {isSignUp ? "Create Account" : "Sign In"}
                                             </Text>
                                         )}
                                     </TouchableOpacity>
 
                                     <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)} style={styles.switchButton}>
                                         <Text style={styles.switchText}>
-                                            {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+                                            {isSignUp ? "Already have an account? " : "Don't have an account? "}
+                                            <Text style={styles.switchTextBold}>{isSignUp ? "Sign In" : "Sign Up"}</Text>
                                         </Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity onPress={() => setIsEmailAuth(false)} style={styles.backButton}>
+                                        <Ionicons name="arrow-back" size={16} color="#78909C" />
                                         <Text style={styles.backText}>Back to options</Text>
                                     </TouchableOpacity>
                                 </View>
                             ) : (
                                 <View style={styles.optionsContainer}>
                                     <TouchableOpacity 
-                                        style={[styles.button, styles.googleButton]} 
+                                        style={styles.socialButton} 
                                         onPress={handleGoogleSignIn}
                                     >
-                                        <Ionicons name="logo-google" size={20} color="white" style={styles.buttonIcon} />
-                                        <Text style={styles.buttonText}>Continue with Google</Text>
+                                        <Ionicons name="logo-google" size={20} color="#DB4437" style={styles.buttonIcon} />
+                                        <Text style={styles.socialButtonText}>Continue with Google</Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity 
-                                        style={[styles.button, styles.emailButton]} 
+                                        style={styles.primaryButton} 
                                         onPress={() => setIsEmailAuth(true)}
                                     >
                                         <Ionicons name="mail" size={20} color="white" style={styles.buttonIcon} />
-                                        <Text style={styles.buttonText}>Continue with Email</Text>
+                                        <Text style={styles.primaryButtonText}>Continue with Email</Text>
                                     </TouchableOpacity>
 
+                                    <View style={styles.divider}>
+                                        <View style={styles.dividerLine} />
+                                        <Text style={styles.dividerText}>or</Text>
+                                        <View style={styles.dividerLine} />
+                                    </View>
+
                                     <TouchableOpacity 
-                                        style={[styles.button, styles.guestButton]} 
+                                        style={styles.guestButton} 
                                         onPress={() => authClient.signIn.anonymous()}
                                     >
-                                        <Ionicons name="person" size={20} color="#007AFF" style={styles.buttonIcon} />
-                                        <Text style={[styles.buttonText, styles.guestButtonText]}>Continue as Guest</Text>
+                                        <Ionicons name="compass-outline" size={20} color="#00BFA6" style={styles.buttonIcon} />
+                                        <Text style={styles.guestButtonText}>Explore as Guest</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
+
+                            <Text style={styles.termsText}>
+                                By continuing, you agree to our Terms of Service and Privacy Policy
+                            </Text>
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
@@ -151,7 +183,13 @@ export default function Index() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F2F2F7",
+        backgroundColor: "#FFFFFF",
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
     },
     keyboardView: {
         flex: 1,
@@ -162,87 +200,130 @@ const styles = StyleSheet.create({
     },
     authContainer: {
         width: "100%",
-        padding: 20,
+        padding: 24,
         alignItems: "center",
     },
+    heroSection: {
+        alignItems: "center",
+        marginBottom: 40,
+    },
     logo: {
-        width: 100,
-        height: 100,
-        marginBottom: 30,
-        borderRadius: 12,
+        width: 140,
+        height: 140,
+        marginBottom: 20,
     },
     title: {
-        fontSize: 28,
-        fontWeight: "300", // Lighter, more elegant font weight
-        marginBottom: 8,
-        color: "#1B3F92", // Aegean Blue
+        fontSize: 36,
+        fontWeight: "700",
+        marginBottom: 12,
+        color: "#1A237E",
         textAlign: "center",
-        letterSpacing: 1,
+        letterSpacing: 0.5,
     },
     subtitle: {
         fontSize: 16,
-        color: "#546E7A",
+        color: "#607D8B",
         textAlign: "center",
-        marginBottom: 48,
         lineHeight: 24,
     },
     optionsContainer: {
         width: "100%",
-        gap: 16,
+        gap: 14,
     },
     formContainer: {
         width: "100%",
-        gap: 16,
+        gap: 14,
+    },
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F5F7FA",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E8EDF2",
+        paddingHorizontal: 16,
+    },
+    inputIcon: {
+        marginRight: 12,
     },
     input: {
-        backgroundColor: "white",
-        padding: 16,
-        borderRadius: 4, // Sharper corners
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: "#CFD8DC",
-        color: "#1C1C1E",
-    },
-    button: {
-        backgroundColor: "#1B3F92", // Aegean Deep Blue
-        paddingHorizontal: 30,
+        flex: 1,
         paddingVertical: 16,
-        borderRadius: 4, // Sharper corners like Aegean
+        fontSize: 16,
+        color: "#263238",
+    },
+    primaryButton: {
+        backgroundColor: "#00BFA6",
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderRadius: 12,
         width: "100%",
         alignItems: "center",
         flexDirection: "row",
         justifyContent: "center",
-        shadowColor: "#1B3F92",
+        shadowColor: "#00BFA6",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
+    },
+    primaryButtonText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "700",
+        letterSpacing: 0.5,
+    },
+    socialButton: {
+        backgroundColor: "#FFFFFF",
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderRadius: 12,
+        width: "100%",
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "#E8EDF2",
+    },
+    socialButtonText: {
+        color: "#37474F",
+        fontSize: 16,
+        fontWeight: "600",
     },
     buttonIcon: {
         marginRight: 10,
     },
-    buttonText: {
-        color: "white",
-        fontSize: 16,
-        fontWeight: "700", // Bolder text
-        letterSpacing: 0.5,
+    divider: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 8,
     },
-    googleButton: {
-        backgroundColor: "white",
-        borderWidth: 1,
-        borderColor: "#E5E5EA",
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: "#E8EDF2",
     },
-    emailButton: {
-        backgroundColor: "#1B3F92", // Aegean Blue
+    dividerText: {
+        color: "#90A4AE",
+        fontSize: 14,
+        marginHorizontal: 16,
     },
     guestButton: {
         backgroundColor: "transparent",
-        borderWidth: 1,
-        borderColor: "#1B3F92",
-        borderRadius: 4,
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderRadius: 12,
+        width: "100%",
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        borderWidth: 1.5,
+        borderColor: "#00BFA6",
+        borderStyle: "dashed",
     },
     guestButtonText: {
-        color: "#1B3F92",
+        color: "#00BFA6",
+        fontSize: 16,
         fontWeight: "600",
     },
     switchButton: {
@@ -250,15 +331,29 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     switchText: {
-        color: "#007AFF",
+        color: "#78909C",
         fontSize: 14,
+    },
+    switchTextBold: {
+        color: "#00BFA6",
+        fontWeight: "600",
     },
     backButton: {
+        flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
         marginTop: 8,
+        gap: 6,
     },
     backText: {
-        color: "#8E8E93",
+        color: "#78909C",
         fontSize: 14,
+    },
+    termsText: {
+        color: "#B0BEC5",
+        fontSize: 12,
+        textAlign: "center",
+        marginTop: 32,
+        lineHeight: 18,
     },
 });

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "voyage buddy",
+    "name": "Voyage Buddy",
     "slug": "voyage-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -40,6 +40,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "displayName": "voyage buddy"
+    "displayName": "Voyage Buddy"
   }
 }

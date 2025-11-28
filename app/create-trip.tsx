@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
+
+import logoImage from "@/assets/bloom/images/image-zyrrgm.png";
 
 export default function CreateTrip() {
     const router = useRouter();
@@ -50,14 +52,14 @@ export default function CreateTrip() {
         // Mark start date
         marked[startStr] = {
             startingDay: true,
-            color: '#1B3F92',
+            color: '#00BFA6',
             textColor: 'white',
         };
         
         // Mark end date
         marked[endStr] = {
             endingDay: true,
-            color: '#1B3F92',
+            color: '#00BFA6',
             textColor: 'white',
         };
         
@@ -70,8 +72,8 @@ export default function CreateTrip() {
         while (current < end) {
             const dateStr = current.toISOString().split('T')[0];
             marked[dateStr] = {
-                color: '#E8EEF7',
-                textColor: '#1B3F92',
+                color: '#E0F7F4',
+                textColor: '#00BFA6',
             };
             current.setDate(current.getDate() + 1);
         }
@@ -166,7 +168,8 @@ export default function CreateTrip() {
     if (showLoadingScreen) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#1B3F92" />
+                <Image source={logoImage} style={styles.loadingLogo} resizeMode="contain" />
+                <ActivityIndicator size="large" color="#00BFA6" style={{ marginTop: 24 }} />
                 <Text style={styles.loadingText}>Generating your dream trip...</Text>
                 <Text style={styles.loadingSubtext}>Finding the best flights, hotels, and activities for you.</Text>
             </View>
@@ -177,10 +180,10 @@ export default function CreateTrip() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1B3F92" />
+                    <Ionicons name="arrow-back" size={24} color="#1A237E" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Step {step} of 4</Text>
-                <View style={{ width: 24 }} />
+                <View style={{ width: 40 }} />
             </View>
 
             <View style={styles.progressBar}>
@@ -193,23 +196,29 @@ export default function CreateTrip() {
                         <Text style={styles.question}>Where is your adventure?</Text>
                         
                         <Text style={styles.label}>Destination</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. Paris, Tokyo, New York"
-                            placeholderTextColor="#90A4AE"
-                            value={formData.destination}
-                            onChangeText={(text) => setFormData({ ...formData, destination: text })}
-                            autoFocus
-                        />
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="location-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Paris, Tokyo, New York"
+                                placeholderTextColor="#90A4AE"
+                                value={formData.destination}
+                                onChangeText={(text) => setFormData({ ...formData, destination: text })}
+                                autoFocus
+                            />
+                        </View>
                         
                         <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. Athens International Airport"
-                            placeholderTextColor="#90A4AE"
-                            value={formData.origin}
-                            onChangeText={(text) => setFormData({ ...formData, origin: text })}
-                        />
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="airplane-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Athens International Airport"
+                                placeholderTextColor="#90A4AE"
+                                value={formData.origin}
+                                onChangeText={(text) => setFormData({ ...formData, origin: text })}
+                            />
+                        </View>
                         <Text style={styles.helperText}>Enter your departure city or airport.</Text>
                     </View>
                 )}
@@ -228,7 +237,7 @@ export default function CreateTrip() {
                                 }}
                             >
                                 <View style={styles.dateCardIcon}>
-                                    <Ionicons name="airplane" size={20} color="#1B3F92" />
+                                    <Ionicons name="airplane" size={20} color="#00BFA6" />
                                 </View>
                                 <Text style={styles.dateCardLabel}>DEPARTURE</Text>
                                 <Text style={styles.dateCardValue}>{formatDate(formData.startDate)}</Text>
@@ -242,7 +251,7 @@ export default function CreateTrip() {
                                 }}
                             >
                                 <View style={styles.dateCardIcon}>
-                                    <Ionicons name="airplane" size={20} color="#1B3F92" style={{ transform: [{ rotate: '180deg' }] }} />
+                                    <Ionicons name="airplane" size={20} color="#00BFA6" style={{ transform: [{ rotate: '180deg' }] }} />
                                 </View>
                                 <Text style={styles.dateCardLabel}>RETURN</Text>
                                 <Text style={styles.dateCardValue}>{formatDate(formData.endDate)}</Text>
@@ -251,7 +260,7 @@ export default function CreateTrip() {
 
                         {/* Trip Duration Summary */}
                         <View style={styles.durationSummary}>
-                            <Ionicons name="time-outline" size={20} color="#546E7A" />
+                            <Ionicons name="time-outline" size={20} color="#00BFA6" />
                             <Text style={styles.durationText}>
                                 {tripDuration} {tripDuration === 1 ? 'day' : 'days'} trip
                             </Text>
@@ -271,7 +280,7 @@ export default function CreateTrip() {
                                             Select {selectingDate === 'start' ? 'Departure' : 'Return'} Date
                                         </Text>
                                         <TouchableOpacity onPress={() => setShowCalendar(false)}>
-                                            <Ionicons name="close" size={24} color="#1B3F92" />
+                                            <Ionicons name="close" size={24} color="#1A237E" />
                                         </TouchableOpacity>
                                     </View>
                                     
@@ -284,16 +293,16 @@ export default function CreateTrip() {
                                         theme={{
                                             backgroundColor: '#ffffff',
                                             calendarBackground: '#ffffff',
-                                            textSectionTitleColor: '#546E7A',
-                                            selectedDayBackgroundColor: '#1B3F92',
+                                            textSectionTitleColor: '#607D8B',
+                                            selectedDayBackgroundColor: '#00BFA6',
                                             selectedDayTextColor: '#ffffff',
-                                            todayTextColor: '#1B3F92',
+                                            todayTextColor: '#00BFA6',
                                             dayTextColor: '#263238',
                                             textDisabledColor: '#CFD8DC',
-                                            dotColor: '#1B3F92',
+                                            dotColor: '#00BFA6',
                                             selectedDotColor: '#ffffff',
-                                            arrowColor: '#1B3F92',
-                                            monthTextColor: '#1B3F92',
+                                            arrowColor: '#00BFA6',
+                                            monthTextColor: '#1A237E',
                                             textDayFontWeight: '500',
                                             textMonthFontWeight: '700',
                                             textDayHeaderFontWeight: '600',
@@ -306,11 +315,11 @@ export default function CreateTrip() {
                                     
                                     <View style={styles.calendarLegend}>
                                         <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#1B3F92' }]} />
+                                            <View style={[styles.legendDot, { backgroundColor: '#00BFA6' }]} />
                                             <Text style={styles.legendText}>Selected dates</Text>
                                         </View>
                                         <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#E8EEF7' }]} />
+                                            <View style={[styles.legendDot, { backgroundColor: '#E0F7F4' }]} />
                                             <Text style={styles.legendText}>Trip duration</Text>
                                         </View>
                                     </View>
@@ -325,17 +334,20 @@ export default function CreateTrip() {
                         <Text style={styles.question}>Travel Style</Text>
                         
                         <Text style={styles.label}>Budget (€)</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. 2000"
-                            placeholderTextColor="#90A4AE"
-                            value={formData.budget.toString()}
-                            onChangeText={(text) => {
-                                const numValue = parseInt(text) || 0;
-                                setFormData({ ...formData, budget: numValue });
-                            }}
-                            keyboardType="numeric"
-                        />
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="wallet-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. 2000"
+                                placeholderTextColor="#90A4AE"
+                                value={formData.budget.toString()}
+                                onChangeText={(text) => {
+                                    const numValue = parseInt(text) || 0;
+                                    setFormData({ ...formData, budget: numValue });
+                                }}
+                                keyboardType="numeric"
+                            />
+                        </View>
                         <Text style={styles.helperText}>Enter your total budget in euros.</Text>
 
                         <Text style={[styles.label, { marginTop: 24 }]}>Travelers</Text>
@@ -344,14 +356,14 @@ export default function CreateTrip() {
                                 style={styles.counterBtn}
                                 onPress={() => setFormData({ ...formData, travelers: Math.max(1, formData.travelers - 1) })}
                             >
-                                <Ionicons name="remove" size={24} color="#1B3F92" />
+                                <Ionicons name="remove" size={24} color="#00BFA6" />
                             </TouchableOpacity>
                             <Text style={styles.counterText}>{formData.travelers}</Text>
                             <TouchableOpacity 
                                 style={styles.counterBtn}
                                 onPress={() => setFormData({ ...formData, travelers: formData.travelers + 1 })}
                             >
-                                <Ionicons name="add" size={24} color="#1B3F92" />
+                                <Ionicons name="add" size={24} color="#00BFA6" />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -386,7 +398,10 @@ export default function CreateTrip() {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text style={styles.nextButtonText}>{step === 4 ? "Generate Trip" : "Next"}</Text>
+                        <>
+                            <Text style={styles.nextButtonText}>{step === 4 ? "Generate Trip" : "Next"}</Text>
+                            <Ionicons name={step === 4 ? "sparkles" : "arrow-forward"} size={20} color="white" />
+                        </>
                     )}
                 </TouchableOpacity>
             </View>
@@ -397,7 +412,7 @@ export default function CreateTrip() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F4F6F8",
+        backgroundColor: "#F5F7FA",
     },
     header: {
         flexDirection: "row",
@@ -407,55 +422,69 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         backgroundColor: "white",
         borderBottomWidth: 1,
-        borderBottomColor: "#ECEFF1",
+        borderBottomColor: "#E8EDF2",
     },
     backButton: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: "#F5F7FA",
+        justifyContent: "center",
+        alignItems: "center",
     },
     headerTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#1B3F92",
+        color: "#1A237E",
         letterSpacing: 0.5,
     },
     progressBar: {
         height: 4,
-        backgroundColor: "#CFD8DC",
+        backgroundColor: "#E8EDF2",
         width: "100%",
     },
     progressFill: {
         height: "100%",
-        backgroundColor: "#1B3F92",
+        backgroundColor: "#00BFA6",
     },
     content: {
         padding: 24,
     },
     question: {
-        fontSize: 24,
-        fontWeight: "300",
-        color: "#1B3F92",
+        fontSize: 28,
+        fontWeight: "700",
+        color: "#1A237E",
         marginBottom: 32,
-        letterSpacing: 0.5,
     },
-    input: {
-        fontSize: 18,
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: "white",
         borderWidth: 1,
-        borderColor: "#CFD8DC",
-        borderRadius: 4,
-        padding: 16,
-        marginBottom: 16,
+        borderColor: "#E8EDF2",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        marginBottom: 8,
+    },
+    inputIcon: {
+        marginRight: 12,
+    },
+    input: {
+        flex: 1,
+        fontSize: 16,
+        paddingVertical: 16,
         color: "#263238",
     },
     helperText: {
         fontSize: 14,
-        color: "#78909C",
+        color: "#90A4AE",
+        marginTop: 4,
     },
     label: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: "700",
-        marginBottom: 8,
-        color: "#546E7A",
+        marginBottom: 10,
+        color: "#607D8B",
         textTransform: "uppercase",
         letterSpacing: 1,
     },
@@ -466,19 +495,19 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     counterBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 4,
+        width: 52,
+        height: 52,
+        borderRadius: 12,
         backgroundColor: "white",
         borderWidth: 1,
-        borderColor: "#CFD8DC",
+        borderColor: "#E8EDF2",
         justifyContent: "center",
         alignItems: "center",
     },
     counterText: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#263238",
+        fontSize: 32,
+        fontWeight: "700",
+        color: "#1A237E",
     },
     tagsContainer: {
         flexDirection: "row",
@@ -486,20 +515,21 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     tag: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 4,
+        paddingHorizontal: 18,
+        paddingVertical: 12,
+        borderRadius: 12,
         backgroundColor: "white",
         borderWidth: 1,
-        borderColor: "#CFD8DC",
+        borderColor: "#E8EDF2",
     },
     tagSelected: {
-        backgroundColor: "#1B3F92",
-        borderColor: "#1B3F92",
+        backgroundColor: "#00BFA6",
+        borderColor: "#00BFA6",
     },
     tagText: {
         fontSize: 16,
-        color: "#546E7A",
+        color: "#607D8B",
+        fontWeight: "500",
     },
     tagTextSelected: {
         color: "white",
@@ -509,16 +539,19 @@ const styles = StyleSheet.create({
         padding: 24,
         backgroundColor: "white",
         borderTopWidth: 1,
-        borderTopColor: "#ECEFF1",
+        borderTopColor: "#E8EDF2",
     },
     nextButton: {
-        backgroundColor: "#1B3F92",
+        backgroundColor: "#00BFA6",
         paddingVertical: 16,
-        borderRadius: 4,
+        borderRadius: 12,
         alignItems: "center",
-        shadowColor: "#1B3F92",
+        justifyContent: "center",
+        flexDirection: "row",
+        gap: 8,
+        shadowColor: "#00BFA6",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
     },
@@ -529,31 +562,33 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 16,
         fontWeight: "700",
-        letterSpacing: 1,
-        textTransform: "uppercase",
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F4F6F8",
+        backgroundColor: "#F5F7FA",
         padding: 24,
     },
+    loadingLogo: {
+        width: 120,
+        height: 120,
+    },
     loadingText: {
-        marginTop: 24,
+        marginTop: 16,
         fontSize: 24,
-        fontWeight: "300",
-        color: "#1B3F92",
+        fontWeight: "700",
+        color: "#1A237E",
         textAlign: "center",
     },
     loadingSubtext: {
-        marginTop: 12,
+        marginTop: 8,
         fontSize: 16,
-        color: "#546E7A",
+        color: "#607D8B",
         textAlign: "center",
         lineHeight: 24,
     },
-    // New Date Picker Styles
+    // Date Picker Styles
     dateCardsContainer: {
         flexDirection: "row",
         gap: 12,
@@ -562,10 +597,10 @@ const styles = StyleSheet.create({
     dateCard: {
         flex: 1,
         backgroundColor: "white",
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
         borderWidth: 2,
-        borderColor: "#E5E5EA",
+        borderColor: "#E8EDF2",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -573,13 +608,13 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     dateCardActive: {
-        borderColor: "#1B3F92",
+        borderColor: "#00BFA6",
     },
     dateCardIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#E8EEF7",
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: "#E0F7F4",
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 12,
@@ -587,29 +622,29 @@ const styles = StyleSheet.create({
     dateCardLabel: {
         fontSize: 11,
         fontWeight: "700",
-        color: "#78909C",
+        color: "#90A4AE",
         letterSpacing: 1,
         marginBottom: 4,
     },
     dateCardValue: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#263238",
+        color: "#1A237E",
     },
     durationSummary: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#E8EEF7",
-        paddingVertical: 12,
+        backgroundColor: "#E0F7F4",
+        paddingVertical: 14,
         paddingHorizontal: 20,
-        borderRadius: 8,
+        borderRadius: 12,
         gap: 8,
     },
     durationText: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#1B3F92",
+        color: "#00BFA6",
     },
     // Calendar Modal Styles
     modalOverlay: {
@@ -629,12 +664,12 @@ const styles = StyleSheet.create({
         alignItems: "center",
         padding: 20,
         borderBottomWidth: 1,
-        borderBottomColor: "#ECEFF1",
+        borderBottomColor: "#E8EDF2",
     },
     calendarTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#1B3F92",
+        color: "#1A237E",
     },
     calendar: {
         marginHorizontal: 10,
@@ -658,6 +693,6 @@ const styles = StyleSheet.create({
     },
     legendText: {
         fontSize: 13,
-        color: "#546E7A",
+        color: "#607D8B",
     },
 });
