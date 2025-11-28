@@ -412,7 +412,7 @@ function getActivitiesWithPrices(destination: string) {
     return [
         { title: `City Highlights Tour`, description: "Guided tour of main attractions", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
         { title: "Main Museum", description: "Discover local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
-        { title: "Historic Walking Tour", description: "Explore the old town", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
+        { title: "Walking Tour", description: "Explore the old town", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
         { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1-2 hours", bookingUrl: null, tips: "Best in the morning" },
         { title: "Sunset Viewpoint", description: "Best views of the city", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: null, tips: "Arrive 30 min before sunset" },
     ];
@@ -863,6 +863,413 @@ async function searchRestaurants(destination: string) {
     }
 }
 
+// Generate transportation options (car rental, taxi, Uber) - DESTINATION SPECIFIC PRICING
+function generateTransportationOptions(destination: string, origin: string, travelers: number) {
+    const destLower = destination.toLowerCase();
+    
+    // Destination-specific pricing data (based on real-world costs)
+    const destinationPricing: Record<string, {
+        taxiFromAirport: number;
+        uberX: { min: number; max: number };
+        uberComfort: { min: number; max: number };
+        bolt: { min: number; max: number };
+        carRentalEconomy: number;
+        carRentalCompact: number;
+        carRentalSUV: number;
+        metroTicket: number;
+        dayPass: number;
+        airportExpress: number;
+        premiumTransfer: number;
+    }> = {
+        "paris": {
+            taxiFromAirport: 55, // CDG to city center
+            uberX: { min: 45, max: 65 },
+            uberComfort: { min: 60, max: 85 },
+            bolt: { min: 40, max: 60 },
+            carRentalEconomy: 45,
+            carRentalCompact: 60,
+            carRentalSUV: 95,
+            metroTicket: 2.15,
+            dayPass: 16.60,
+            airportExpress: 11.50, // RER B
+            premiumTransfer: 120,
+        },
+        "london": {
+            taxiFromAirport: 70, // Heathrow to city center (GBP converted to EUR)
+            uberX: { min: 55, max: 80 },
+            uberComfort: { min: 75, max: 110 },
+            bolt: { min: 50, max: 75 },
+            carRentalEconomy: 55,
+            carRentalCompact: 75,
+            carRentalSUV: 120,
+            metroTicket: 6.50, // Tube zone 1-6
+            dayPass: 15.50,
+            airportExpress: 25, // Heathrow Express
+            premiumTransfer: 150,
+        },
+        "rome": {
+            taxiFromAirport: 50, // FCO to city center (fixed fare)
+            uberX: { min: 40, max: 55 },
+            uberComfort: { min: 55, max: 75 },
+            bolt: { min: 35, max: 50 },
+            carRentalEconomy: 35,
+            carRentalCompact: 50,
+            carRentalSUV: 85,
+            metroTicket: 1.50,
+            dayPass: 7,
+            airportExpress: 14, // Leonardo Express
+            premiumTransfer: 100,
+        },
+        "barcelona": {
+            taxiFromAirport: 42, // BCN to city center
+            uberX: { min: 30, max: 45 },
+            uberComfort: { min: 45, max: 65 },
+            bolt: { min: 25, max: 40 },
+            carRentalEconomy: 30,
+            carRentalCompact: 45,
+            carRentalSUV: 75,
+            metroTicket: 2.40,
+            dayPass: 11.20,
+            airportExpress: 7.75, // Aerobus
+            premiumTransfer: 90,
+        },
+        "amsterdam": {
+            taxiFromAirport: 50, // Schiphol to city center
+            uberX: { min: 40, max: 55 },
+            uberComfort: { min: 55, max: 75 },
+            bolt: { min: 35, max: 50 },
+            carRentalEconomy: 45,
+            carRentalCompact: 60,
+            carRentalSUV: 95,
+            metroTicket: 3.40,
+            dayPass: 9,
+            airportExpress: 5.70, // Train to Centraal
+            premiumTransfer: 110,
+        },
+        "athens": {
+            taxiFromAirport: 40, // ATH to city center (fixed fare)
+            uberX: { min: 30, max: 45 },
+            uberComfort: { min: 45, max: 60 },
+            bolt: { min: 25, max: 40 },
+            carRentalEconomy: 25,
+            carRentalCompact: 40,
+            carRentalSUV: 65,
+            metroTicket: 1.20,
+            dayPass: 4.10,
+            airportExpress: 9, // Metro Line 3
+            premiumTransfer: 75,
+        },
+        "berlin": {
+            taxiFromAirport: 45, // BER to city center
+            uberX: { min: 35, max: 50 },
+            uberComfort: { min: 50, max: 70 },
+            bolt: { min: 30, max: 45 },
+            carRentalEconomy: 35,
+            carRentalCompact: 50,
+            carRentalSUV: 80,
+            metroTicket: 3.20,
+            dayPass: 9.50,
+            airportExpress: 4, // S-Bahn
+            premiumTransfer: 95,
+        },
+        "madrid": {
+            taxiFromAirport: 33, // MAD to city center (fixed fare)
+            uberX: { min: 25, max: 40 },
+            uberComfort: { min: 40, max: 55 },
+            bolt: { min: 22, max: 35 },
+            carRentalEconomy: 28,
+            carRentalCompact: 42,
+            carRentalSUV: 70,
+            metroTicket: 1.50,
+            dayPass: 8.40,
+            airportExpress: 5, // Metro
+            premiumTransfer: 80,
+        },
+        "dubai": {
+            taxiFromAirport: 25, // DXB to city center (cheap taxis)
+            uberX: { min: 20, max: 35 },
+            uberComfort: { min: 35, max: 50 },
+            bolt: { min: 18, max: 30 },
+            carRentalEconomy: 30,
+            carRentalCompact: 45,
+            carRentalSUV: 80,
+            metroTicket: 2,
+            dayPass: 6,
+            airportExpress: 3, // Metro Red Line
+            premiumTransfer: 70,
+        },
+        "new york": {
+            taxiFromAirport: 75, // JFK to Manhattan (flat fare + tolls)
+            uberX: { min: 60, max: 90 },
+            uberComfort: { min: 85, max: 120 },
+            bolt: { min: 55, max: 85 },
+            carRentalEconomy: 65,
+            carRentalCompact: 85,
+            carRentalSUV: 130,
+            metroTicket: 2.90,
+            dayPass: 34, // 7-day unlimited
+            airportExpress: 11, // AirTrain + Subway
+            premiumTransfer: 180,
+        },
+        "tokyo": {
+            taxiFromAirport: 200, // NRT to city center (expensive!)
+            uberX: { min: 150, max: 220 },
+            uberComfort: { min: 200, max: 280 },
+            bolt: { min: 140, max: 200 },
+            carRentalEconomy: 50,
+            carRentalCompact: 70,
+            carRentalSUV: 110,
+            metroTicket: 2,
+            dayPass: 8,
+            airportExpress: 36, // Narita Express
+            premiumTransfer: 250,
+        },
+        "singapore": {
+            taxiFromAirport: 25, // Changi to city center
+            uberX: { min: 20, max: 30 },
+            uberComfort: { min: 30, max: 45 },
+            bolt: { min: 18, max: 28 },
+            carRentalEconomy: 60,
+            carRentalCompact: 80,
+            carRentalSUV: 120,
+            metroTicket: 2,
+            dayPass: 12,
+            airportExpress: 2.50, // MRT
+            premiumTransfer: 65,
+        },
+        "lisbon": {
+            taxiFromAirport: 20, // LIS to city center
+            uberX: { min: 15, max: 25 },
+            uberComfort: { min: 25, max: 40 },
+            bolt: { min: 12, max: 22 },
+            carRentalEconomy: 22,
+            carRentalCompact: 35,
+            carRentalSUV: 60,
+            metroTicket: 1.65,
+            dayPass: 6.80,
+            airportExpress: 2, // Metro
+            premiumTransfer: 55,
+        },
+        "prague": {
+            taxiFromAirport: 30, // PRG to city center
+            uberX: { min: 20, max: 35 },
+            uberComfort: { min: 35, max: 50 },
+            bolt: { min: 18, max: 30 },
+            carRentalEconomy: 25,
+            carRentalCompact: 38,
+            carRentalSUV: 65,
+            metroTicket: 1.30,
+            dayPass: 5,
+            airportExpress: 2.50, // Bus 119 + Metro
+            premiumTransfer: 65,
+        },
+        "vienna": {
+            taxiFromAirport: 40, // VIE to city center
+            uberX: { min: 30, max: 45 },
+            uberComfort: { min: 45, max: 65 },
+            bolt: { min: 28, max: 42 },
+            carRentalEconomy: 35,
+            carRentalCompact: 50,
+            carRentalSUV: 85,
+            metroTicket: 2.40,
+            dayPass: 8.60,
+            airportExpress: 13, // CAT train
+            premiumTransfer: 90,
+        },
+    };
+    
+    // Find matching destination pricing or use default
+    let pricing = null;
+    for (const [city, cityPricing] of Object.entries(destinationPricing)) {
+        if (destLower.includes(city)) {
+            pricing = cityPricing;
+            break;
+        }
+    }
+    
+    // Default pricing for unknown destinations
+    if (!pricing) {
+        pricing = {
+            taxiFromAirport: 40,
+            uberX: { min: 30, max: 50 },
+            uberComfort: { min: 45, max: 70 },
+            bolt: { min: 25, max: 45 },
+            carRentalEconomy: 35,
+            carRentalCompact: 50,
+            carRentalSUV: 85,
+            metroTicket: 2,
+            dayPass: 8,
+            airportExpress: 10,
+            premiumTransfer: 90,
+        };
+    }
+    
+    // Car rental options with destination-specific pricing
+    const carRentals = [
+        {
+            type: "car_rental",
+            provider: "Europcar",
+            category: "Economy",
+            vehicle: "Fiat 500 or similar",
+            pricePerDay: pricing.carRentalEconomy,
+            currency: "EUR",
+            features: ["Air Conditioning", "Manual", "4 Seats", "2 Bags"],
+            pickupLocation: `${destination} Airport`,
+            dropoffLocation: `${destination} Airport`,
+            insuranceIncluded: true,
+            fuelPolicy: "Full to Full",
+            bookingUrl: "https://www.europcar.com",
+        },
+        {
+            type: "car_rental",
+            provider: "Hertz",
+            category: "Compact",
+            vehicle: "Volkswagen Golf or similar",
+            pricePerDay: pricing.carRentalCompact,
+            currency: "EUR",
+            features: ["Air Conditioning", "Automatic", "5 Seats", "3 Bags"],
+            pickupLocation: `${destination} Airport`,
+            dropoffLocation: `${destination} Airport`,
+            insuranceIncluded: true,
+            fuelPolicy: "Full to Full",
+            bookingUrl: "https://www.hertz.com",
+        },
+        {
+            type: "car_rental",
+            provider: "Sixt",
+            category: "SUV",
+            vehicle: "BMW X1 or similar",
+            pricePerDay: pricing.carRentalSUV,
+            currency: "EUR",
+            features: ["Air Conditioning", "Automatic", "5 Seats", "5 Bags", "GPS"],
+            pickupLocation: `${destination} Airport`,
+            dropoffLocation: `${destination} Airport`,
+            insuranceIncluded: true,
+            fuelPolicy: "Full to Full",
+            bookingUrl: "https://www.sixt.com",
+        },
+    ];
+    
+    // Taxi/Transfer options with destination-specific pricing
+    const taxiOptions = [
+        {
+            type: "taxi",
+            provider: "Airport Taxi",
+            service: "Standard Taxi",
+            description: `Metered taxi from ${destination} airport to city center`,
+            estimatedPrice: pricing.taxiFromAirport,
+            currency: "EUR",
+            maxPassengers: 4,
+            waitingTime: "5-15 min at taxi stand",
+            features: ["Metered fare", "Available 24/7", "No booking required"],
+            bookingUrl: null,
+        },
+        {
+            type: "taxi",
+            provider: "Welcome Pickups",
+            service: "Pre-booked Transfer",
+            description: "Private transfer with driver waiting at arrivals",
+            estimatedPrice: Math.round(pricing.taxiFromAirport * 1.3),
+            currency: "EUR",
+            maxPassengers: travelers <= 3 ? 3 : 6,
+            waitingTime: "Driver waiting at arrivals",
+            features: ["Fixed price", "Meet & Greet", "Flight tracking", "Free cancellation"],
+            bookingUrl: "https://www.welcomepickups.com",
+        },
+        {
+            type: "taxi",
+            provider: "Blacklane",
+            service: "Premium Chauffeur",
+            description: "Luxury sedan with professional chauffeur",
+            estimatedPrice: pricing.premiumTransfer,
+            currency: "EUR",
+            maxPassengers: 3,
+            waitingTime: "Driver waiting at arrivals",
+            features: ["Luxury vehicle", "Professional chauffeur", "Complimentary water", "WiFi"],
+            bookingUrl: "https://www.blacklane.com",
+        },
+    ];
+    
+    // Ride-sharing options with destination-specific pricing
+    const rideSharingOptions = [
+        {
+            type: "rideshare",
+            provider: "Uber",
+            service: "UberX",
+            description: "Affordable everyday rides",
+            estimatedPrice: `${pricing.uberX.min}-${pricing.uberX.max}`,
+            currency: "EUR",
+            maxPassengers: 4,
+            waitingTime: "3-8 min",
+            features: ["App-based booking", "Cashless payment", "Driver rating", "Trip tracking"],
+            bookingUrl: "https://www.uber.com",
+        },
+        {
+            type: "rideshare",
+            provider: "Uber",
+            service: "Uber Comfort",
+            description: "Newer cars with extra legroom",
+            estimatedPrice: `${pricing.uberComfort.min}-${pricing.uberComfort.max}`,
+            currency: "EUR",
+            maxPassengers: 4,
+            waitingTime: "5-10 min",
+            features: ["Newer vehicles", "Extra legroom", "Experienced drivers", "Quiet mode available"],
+            bookingUrl: "https://www.uber.com",
+        },
+        {
+            type: "rideshare",
+            provider: "Bolt",
+            service: "Bolt Standard",
+            description: "Budget-friendly rides",
+            estimatedPrice: `${pricing.bolt.min}-${pricing.bolt.max}`,
+            currency: "EUR",
+            maxPassengers: 4,
+            waitingTime: "3-7 min",
+            features: ["App-based booking", "Often cheaper than Uber", "Cashless payment"],
+            bookingUrl: "https://www.bolt.eu",
+        },
+    ];
+    
+    // Public transport info with destination-specific pricing
+    const publicTransport = {
+        type: "public_transport",
+        provider: "Local Transit",
+        options: [
+            {
+                mode: "Metro/Subway",
+                description: "Fast and affordable way to get around the city",
+                singleTicketPrice: pricing.metroTicket,
+                dayPassPrice: pricing.dayPass,
+                currency: "EUR",
+                features: ["Frequent service", "City-wide coverage", "Air conditioned"],
+            },
+            {
+                mode: "Bus",
+                description: "Extensive network covering all areas",
+                singleTicketPrice: pricing.metroTicket,
+                dayPassPrice: pricing.dayPass,
+                currency: "EUR",
+                features: ["Wide coverage", "Night buses available", "Scenic routes"],
+            },
+            {
+                mode: "Airport Express",
+                description: `Direct connection from ${destination} airport to city center`,
+                price: pricing.airportExpress,
+                currency: "EUR",
+                duration: "30-45 min",
+                features: ["Direct service", "Luggage space", "WiFi"],
+            },
+        ],
+    };
+    
+    return [
+        ...carRentals,
+        ...taxiOptions,
+        ...rideSharingOptions,
+        publicTransport,
+    ];
+}
+
 // TripAdvisor API - Search for activities/attractions
 async function searchTripAdvisorActivities(destination: string, apiKey: string) {
     try {
@@ -1301,185 +1708,7 @@ function getAirlineName(carrierCode: string): string {
         "GA": "Garuda Indonesia",
         "PR": "Philippine Airlines",
         "VN": "Vietnam Airlines",
-        // Add more as needed
     };
 
     return airlineMap[carrierCode] || `${carrierCode} Airlines`;
-}
-
-// Generate transportation options (car rental, taxi, Uber)
-function generateTransportationOptions(destination: string, origin: string, travelers: number) {
-    const destLower = destination.toLowerCase();
-    
-    // Determine if destination is a major city (affects pricing)
-    const majorCities = ["paris", "london", "rome", "barcelona", "amsterdam", "berlin", "madrid", "athens", "new york", "tokyo", "dubai", "singapore"];
-    const isMajorCity = majorCities.some(city => destLower.includes(city));
-    
-    // Base prices (adjusted for major cities)
-    const priceMultiplier = isMajorCity ? 1.3 : 1.0;
-    
-    // Car rental options
-    const carRentals = [
-        {
-            type: "car_rental",
-            provider: "Europcar",
-            category: "Economy",
-            vehicle: "Fiat 500 or similar",
-            pricePerDay: Math.round(35 * priceMultiplier),
-            currency: "EUR",
-            features: ["Air Conditioning", "Manual", "4 Seats", "2 Bags"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
-            bookingUrl: "https://www.europcar.com",
-        },
-        {
-            type: "car_rental",
-            provider: "Hertz",
-            category: "Compact",
-            vehicle: "Volkswagen Golf or similar",
-            pricePerDay: Math.round(50 * priceMultiplier),
-            currency: "EUR",
-            features: ["Air Conditioning", "Automatic", "5 Seats", "3 Bags"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
-            bookingUrl: "https://www.hertz.com",
-        },
-        {
-            type: "car_rental",
-            provider: "Sixt",
-            category: "SUV",
-            vehicle: "BMW X1 or similar",
-            pricePerDay: Math.round(85 * priceMultiplier),
-            currency: "EUR",
-            features: ["Air Conditioning", "Automatic", "5 Seats", "5 Bags", "GPS"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
-            bookingUrl: "https://www.sixt.com",
-        },
-    ];
-    
-    // Taxi/Transfer options
-    const taxiOptions = [
-        {
-            type: "taxi",
-            provider: "Airport Taxi",
-            service: "Standard Taxi",
-            description: "Metered taxi from airport to city center",
-            estimatedPrice: Math.round(40 * priceMultiplier),
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "5-15 min at taxi stand",
-            features: ["Metered fare", "Available 24/7", "No booking required"],
-            bookingUrl: null,
-        },
-        {
-            type: "taxi",
-            provider: "Welcome Pickups",
-            service: "Pre-booked Transfer",
-            description: "Private transfer with driver waiting at arrivals",
-            estimatedPrice: Math.round(55 * priceMultiplier),
-            currency: "EUR",
-            maxPassengers: travelers <= 3 ? 3 : 6,
-            waitingTime: "Driver waiting at arrivals",
-            features: ["Fixed price", "Meet & Greet", "Flight tracking", "Free cancellation"],
-            bookingUrl: "https://www.welcomepickups.com",
-        },
-        {
-            type: "taxi",
-            provider: "Blacklane",
-            service: "Premium Chauffeur",
-            description: "Luxury sedan with professional chauffeur",
-            estimatedPrice: Math.round(90 * priceMultiplier),
-            currency: "EUR",
-            maxPassengers: 3,
-            waitingTime: "Driver waiting at arrivals",
-            features: ["Luxury vehicle", "Professional chauffeur", "Complimentary water", "WiFi"],
-            bookingUrl: "https://www.blacklane.com",
-        },
-    ];
-    
-    // Ride-sharing options
-    const rideSharingOptions = [
-        {
-            type: "rideshare",
-            provider: "Uber",
-            service: "UberX",
-            description: "Affordable everyday rides",
-            estimatedPrice: `${Math.round(25 * priceMultiplier)}-${Math.round(40 * priceMultiplier)}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "3-8 min",
-            features: ["App-based booking", "Cashless payment", "Driver rating", "Trip tracking"],
-            bookingUrl: "https://www.uber.com",
-        },
-        {
-            type: "rideshare",
-            provider: "Uber",
-            service: "Uber Comfort",
-            description: "Newer cars with extra legroom",
-            estimatedPrice: `${Math.round(35 * priceMultiplier)}-${Math.round(55 * priceMultiplier)}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "5-10 min",
-            features: ["Newer vehicles", "Extra legroom", "Experienced drivers", "Quiet mode available"],
-            bookingUrl: "https://www.uber.com",
-        },
-        {
-            type: "rideshare",
-            provider: "Bolt",
-            service: "Bolt Standard",
-            description: "Budget-friendly rides",
-            estimatedPrice: `${Math.round(20 * priceMultiplier)}-${Math.round(35 * priceMultiplier)}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "3-7 min",
-            features: ["App-based booking", "Often cheaper than Uber", "Cashless payment"],
-            bookingUrl: "https://www.bolt.eu",
-        },
-    ];
-    
-    // Public transport info
-    const publicTransport = {
-        type: "public_transport",
-        provider: "Local Transit",
-        options: [
-            {
-                mode: "Metro/Subway",
-                description: "Fast and affordable way to get around the city",
-                singleTicketPrice: Math.round(2 * priceMultiplier),
-                dayPassPrice: Math.round(8 * priceMultiplier),
-                currency: "EUR",
-                features: ["Frequent service", "City-wide coverage", "Air conditioned"],
-            },
-            {
-                mode: "Bus",
-                description: "Extensive network covering all areas",
-                singleTicketPrice: Math.round(2 * priceMultiplier),
-                dayPassPrice: Math.round(8 * priceMultiplier),
-                currency: "EUR",
-                features: ["Wide coverage", "Night buses available", "Scenic routes"],
-            },
-            {
-                mode: "Airport Express",
-                description: "Direct connection from airport to city center",
-                price: Math.round(12 * priceMultiplier),
-                currency: "EUR",
-                duration: "30-45 min",
-                features: ["Direct service", "Luggage space", "WiFi"],
-            },
-        ],
-    };
-    
-    return [
-        ...carRentals,
-        ...taxiOptions,
-        ...rideSharingOptions,
-        publicTransport,
-    ];
 }
