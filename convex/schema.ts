@@ -18,8 +18,8 @@ export default defineSchema({
         userId: v.string(),
         plan: v.union(v.literal("free"), v.literal("premium")),
         tripsGenerated: v.number(),
-        tripCredits: v.optional(v.number()), // Purchased trip credits
-        subscriptionExpiresAt: v.optional(v.number()), // Premium subscription expiry
+        tripCredits: v.optional(v.number()),
+        subscriptionExpiresAt: v.optional(v.number()),
     }).index("by_user", ["userId"]),
     bookings: defineTable({
         userId: v.string(),
@@ -30,6 +30,29 @@ export default defineSchema({
         status: v.string(),
         clickedAt: v.number(),
     }).index("by_user", ["userId"]),
+    // Cart for storing selected trip items before checkout
+    cart: defineTable({
+        userId: v.string(),
+        tripId: v.id("trips"),
+        items: v.array(v.object({
+            type: v.string(), // "flight", "hotel", "activity"
+            name: v.string(),
+            price: v.number(),
+            currency: v.string(),
+            quantity: v.number(),
+            day: v.optional(v.number()), // For activities - which day
+            bookingUrl: v.optional(v.string()),
+            productCode: v.optional(v.string()), // Viator product code
+            skipTheLine: v.optional(v.boolean()),
+            image: v.optional(v.string()),
+            details: v.optional(v.any()), // Additional booking details
+        })),
+        totalAmount: v.number(),
+        currency: v.string(),
+        status: v.union(v.literal("pending"), v.literal("checkout"), v.literal("completed")),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_user", ["userId"]).index("by_trip", ["tripId"]),
     userSettings: defineTable({
         userId: v.string(),
         // Personal Info
@@ -39,14 +62,14 @@ export default defineSchema({
         dateOfBirth: v.optional(v.string()),
         // Travel Preferences
         preferredAirlines: v.optional(v.array(v.string())),
-        seatPreference: v.optional(v.string()), // "window", "aisle", "middle"
-        mealPreference: v.optional(v.string()), // "vegetarian", "vegan", "halal", "kosher", "none"
-        hotelStarRating: v.optional(v.number()), // 3, 4, 5
-        budgetRange: v.optional(v.string()), // "budget", "mid-range", "luxury"
-        travelStyle: v.optional(v.string()), // "adventure", "relaxation", "culture", "family"
+        seatPreference: v.optional(v.string()),
+        mealPreference: v.optional(v.string()),
+        hotelStarRating: v.optional(v.number()),
+        budgetRange: v.optional(v.string()),
+        travelStyle: v.optional(v.string()),
         // App Settings
-        language: v.optional(v.string()), // "en", "es", "fr", "de", etc.
-        currency: v.optional(v.string()), // "USD", "EUR", "GBP", etc.
+        language: v.optional(v.string()),
+        currency: v.optional(v.string()),
         // Notifications
         pushNotifications: v.optional(v.boolean()),
         emailNotifications: v.optional(v.boolean()),
