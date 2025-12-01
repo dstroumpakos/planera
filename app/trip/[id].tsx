@@ -9,6 +9,13 @@ import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+// Cart item type for local state
+interface CartItem {
+    name: string;
+    day?: number;
+    skipTheLine?: boolean;
+}
+
 export default function TripDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
@@ -17,11 +24,17 @@ export default function TripDetails() {
     const regenerateTrip = useMutation(api.trips.regenerate);
     const trackClick = useMutation(api.bookings.trackClick);
     
+    // Cart mutations and query
+    const addToCart = useMutation(api.cart.addToCart);
+    const removeFromCart = useMutation(api.cart.removeFromCart);
+    const cart = useQuery(api.cart.getCart, id ? { tripId: id as Id<"trips"> } : "skip");
+    
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [accommodationType, setAccommodationType] = useState<'all' | 'hotel' | 'airbnb'>('all');
     const [isEditing, setIsEditing] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
+    const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
 
     const [editForm, setEditForm] = useState({
         destination: "",
@@ -97,6 +110,78 @@ export default function TripDetails() {
                     endDate: selectedDate.getTime()
                 }));
             }
+        }
+    };
+
+    // Cart helper functions
+    const isInCart = (activityName: string, day?: number, skipTheLine?: boolean): boolean => {
+        if (!cart || !cart.items) return false;
+        return cart.items.some(
+            (item) => item.name === activityName && item.day === day && item.skipTheLine === skipTheLine
+        );
+    };
+
+    const getCartItemCount = (): number => {
+        if (!cart || !cart.items) return 0;
+        return cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    };
+
+    const handleAddToCart = async (activity: any, day: number, skipTheLine: boolean = false) => {
+        if (!id) return;
+        
+        const itemKey = `${activity.title}-${day}-${skipTheLine}`;
+        setAddingToCart(itemKey);
+        
+        try {
+            const price = skipTheLine && activity.skipTheLinePrice 
+                ? activity.skipTheLinePrice 
+                : activity.price || 0;
+            
+            await addToCart({
+                tripId: id as Id<"trips">,
+                item: {
+                    type: "activity",
+                    name: activity.title,
+                    price: price,
+                    currency: "EUR",
+                    quantity: 1,
+                    day: day,
+                    bookingUrl: activity.bookingUrl,
+                    productCode: activity.productCode,
+                    skipTheLine: skipTheLine,
+                    details: {
+                        time: activity.time,
+                        duration: activity.duration,
+                        description: activity.description,
+                    },
+                },
+            });
+            
+            if (Platform.OS !== 'web') {
+                Alert.alert("Added to Cart", `${activity.title}${skipTheLine ? " (Skip the Line)" : ""} has been added to your cart.`);
+            }
+        } catch (error) {
+            console.error("Error adding to cart:", error);
+            if (Platform.OS !== 'web') {
+                Alert.alert("Error", "Failed to add item to cart. Please try again.");
+            }
+        } finally {
+            setAddingToCart(null);
+        }
+    };
+
+    const handleRemoveFromCart = async (activityName: string, day?: number, skipTheLine?: boolean) => {
+        if (!id) return;
+        
+        try {
+            await removeFromCart({
+                tripId: id as Id<"trips">,
+                itemName: activityName,
+                day: day,
+                skipTheLine: skipTheLine,
+            });
+        } catch (error) {
+            console.error("Error removing from cart:", error);
         }
     };
 
@@ -358,6 +443,37 @@ export default function TripDetails() {
                 </TouchableOpacity>
                 
                 <View style={styles.headerRightButtons}>
+                    {/* Cart Button with Badge */}
+                    <TouchableOpacity 
+                        onPress={() => {
+                            if (Platform.OS !== 'web') {
+                                const itemCount = getCartItemCount();
+                                const total = cart?.totalAmount || 0;
+                                if (itemCount > 0) {
+                                    Alert.alert(
+                                        "Your Cart",
+                                        `${itemCount} item${itemCount > 1 ? 's' : ''} in cart\nTotal: €${total.toFixed(2)}`,
+                                        [
+                                            { text: "Continue Shopping", style: "cancel" },
+                                            { text: "Clear Cart", style: "destructive", onPress: () => {
+                                                // Clear cart functionality
+                                            }},
+                                        ]
+                                    );
+                                } else {
+                                    Alert.alert("Cart Empty", "Add activities to your cart to book them together.");
+                                }
+                            }
+                        }} 
+                        style={styles.iconButton}
+                    >
+                        <Ionicons name="cart-outline" size={20} color="white" />
+                        {getCartItemCount() > 0 && (
+                            <View style={styles.cartBadge}>
+                                <Text style={styles.cartBadgeText}>{getCartItemCount()}</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.iconButton}>
                         <Ionicons name="pencil" size={20} color="white" />
                     </TouchableOpacity>
@@ -845,40 +961,79 @@ export default function TripDetails() {
                                             </View>
                                         )}
                                         
-                                        {/* Book Now Button */}
-                                        {activity.bookingUrl && activity.price > 0 && (
+                                        {/* Action Buttons - Add to Cart and Book Now */}
+                                        {activity.price > 0 && (
                                             <View style={styles.bookingButtons}>
-                                                <TouchableOpacity 
-                                                    style={styles.bookActivityButton}
-                                                    onPress={() => {
-                                                        trackClick({
-                                                            tripId: id as Id<"trips">,
-                                                            type: "activity",
-                                                            item: activity.title,
-                                                            url: activity.bookingUrl
-                                                        }).catch(console.error);
-                                                        Linking.openURL(activity.bookingUrl);
-                                                    }}
-                                                >
-                                                    <Ionicons name="ticket-outline" size={16} color="white" />
-                                                    <Text style={styles.bookActivityButtonText}>Book Now</Text>
-                                                </TouchableOpacity>
-                                                
-                                                {activity.skipTheLine && activity.skipTheLinePrice && (
+                                                {/* Regular Entry - Add to Cart */}
+                                                {isInCart(activity.title, day.day, false) ? (
                                                     <TouchableOpacity 
-                                                        style={styles.skipLineButton}
+                                                        style={styles.inCartButton}
+                                                        onPress={() => handleRemoveFromCart(activity.title, day.day, false)}
+                                                    >
+                                                        <Ionicons name="checkmark-circle" size={16} color="#14B8A6" />
+                                                        <Text style={styles.inCartButtonText}>In Cart</Text>
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <TouchableOpacity 
+                                                        style={styles.addToCartButton}
+                                                        onPress={() => handleAddToCart(activity, day.day, false)}
+                                                        disabled={addingToCart === `${activity.title}-${day.day}-false`}
+                                                    >
+                                                        {addingToCart === `${activity.title}-${day.day}-false` ? (
+                                                            <ActivityIndicator size="small" color="#14B8A6" />
+                                                        ) : (
+                                                            <>
+                                                                <Ionicons name="cart-outline" size={16} color="#14B8A6" />
+                                                                <Text style={styles.addToCartButtonText}>Add €{activity.price}</Text>
+                                                            </>
+                                                        )}
+                                                    </TouchableOpacity>
+                                                )}
+                                                
+                                                {/* Skip the Line - Add to Cart */}
+                                                {activity.skipTheLine && activity.skipTheLinePrice && (
+                                                    isInCart(activity.title, day.day, true) ? (
+                                                        <TouchableOpacity 
+                                                            style={styles.inCartSkipLineButton}
+                                                            onPress={() => handleRemoveFromCart(activity.title, day.day, true)}
+                                                        >
+                                                            <Ionicons name="checkmark-circle" size={16} color="#F59E0B" />
+                                                            <Text style={styles.inCartSkipLineButtonText}>Skip Line ✓</Text>
+                                                        </TouchableOpacity>
+                                                    ) : (
+                                                        <TouchableOpacity 
+                                                            style={styles.addToCartSkipLineButton}
+                                                            onPress={() => handleAddToCart(activity, day.day, true)}
+                                                            disabled={addingToCart === `${activity.title}-${day.day}-true`}
+                                                        >
+                                                            {addingToCart === `${activity.title}-${day.day}-true` ? (
+                                                                <ActivityIndicator size="small" color="#F59E0B" />
+                                                            ) : (
+                                                                <>
+                                                                    <Ionicons name="flash" size={16} color="#F59E0B" />
+                                                                    <Text style={styles.addToCartSkipLineButtonText}>Skip €{activity.skipTheLinePrice}</Text>
+                                                                </>
+                                                            )}
+                                                        </TouchableOpacity>
+                                                    )
+                                                )}
+                                                
+                                                {/* Book Now Button (external link) */}
+                                                {activity.bookingUrl && (
+                                                    <TouchableOpacity 
+                                                        style={styles.bookActivityButton}
                                                         onPress={() => {
                                                             trackClick({
                                                                 tripId: id as Id<"trips">,
-                                                                type: "activity_skip_line",
-                                                                item: `${activity.title} (Skip the Line)`,
+                                                                type: "activity",
+                                                                item: activity.title,
                                                                 url: activity.bookingUrl
                                                             }).catch(console.error);
                                                             Linking.openURL(activity.bookingUrl);
                                                         }}
                                                     >
-                                                        <Ionicons name="flash" size={16} color="#FF9500" />
-                                                        <Text style={styles.skipLineButtonText}>Skip Line €{activity.skipTheLinePrice}</Text>
+                                                        <Ionicons name="open-outline" size={16} color="white" />
+                                                        <Text style={styles.bookActivityButtonText}>Book</Text>
                                                     </TouchableOpacity>
                                                 )}
                                             </View>
@@ -1251,7 +1406,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
-        elevation: 3,
+        elevation: 10,
     },
     dayHeader: {
         flexDirection: "row",
@@ -1280,10 +1435,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         marginBottom: 24,
     },
-    activityRow: {
-        flexDirection: "row",
-        marginBottom: 20,
-    },
     activityTime: {
         width: 70,
         fontSize: 14,
@@ -1306,7 +1457,7 @@ const styles = StyleSheet.create({
     activityDesc: {
         fontSize: 14,
         color: "#5EEAD4",
-        lineHeight: 22,
+        lineHeight: 20,
     },
     mapLink: {
         marginTop: 4,
@@ -1462,7 +1613,7 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         fontSize: 16,
         textTransform: "uppercase",
-        letterSpacing: 0.5,
+        letterSpacing: 1,
     },
     blurContainer: {
         position: "absolute",
@@ -1507,7 +1658,7 @@ const styles = StyleSheet.create({
         elevation: 6,
     },
     unlockButtonText: {
-        color: "#FFF",
+        color: "white",
         fontSize: 16,
         fontWeight: "700",
         textTransform: "uppercase",
@@ -1672,7 +1823,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         borderRadius: 14,
         alignItems: "center",
-        marginTop: 16,
     },
     upgradeButtonText: {
         color: "white",
@@ -2059,7 +2209,7 @@ const styles = StyleSheet.create({
         color: "#5EEAD4",
     },
     filterTabTextActive: {
-        color: "#fff",
+        color: "white",
     },
     
     // Airbnb Card Styles
@@ -2182,7 +2332,6 @@ const styles = StyleSheet.create({
     totalStayPrice: {
         fontSize: 12,
         color: "#5EEAD4",
-        marginBottom: 8,
     },
     airbnbBookButton: {
         backgroundColor: "#FF5A5F",
@@ -2231,5 +2380,88 @@ const styles = StyleSheet.create({
     },
     priceBreakdownToggle: {
         flex: 1,
+    },
+    // Cart Button Styles
+    addToCartButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#CCFBF1",
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 10,
+        gap: 6,
+        borderWidth: 1,
+        borderColor: "#14B8A6",
+    },
+    addToCartButtonText: {
+        color: "#0D9488",
+        fontSize: 13,
+        fontWeight: "600",
+    },
+    inCartButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#14B8A6",
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 10,
+        gap: 6,
+    },
+    inCartButtonText: {
+        color: "white",
+        fontSize: 13,
+        fontWeight: "600",
+    },
+    addToCartSkipLineButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FEF3C7",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 10,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: "#F59E0B",
+    },
+    addToCartSkipLineButtonText: {
+        color: "#B45309",
+        fontSize: 12,
+        fontWeight: "600",
+    },
+    inCartSkipLineButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#F59E0B",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 10,
+        gap: 4,
+    },
+    inCartSkipLineButtonText: {
+        color: "white",
+        fontSize: 12,
+        fontWeight: "600",
+    },
+    cartBadge: {
+        position: "absolute",
+        top: -4,
+        right: -4,
+        backgroundColor: "#FF5A5F",
+        minWidth: 18,
+        height: 18,
+        paddingHorizontal: 4,
+        borderRadius: 9,
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10,
+    },
+    cartBadgeText: {
+        color: "white",
+        fontSize: 10,
+        fontWeight: "700",
     },
 });

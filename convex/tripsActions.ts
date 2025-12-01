@@ -817,24 +817,24 @@ async function searchHotels(
 
 // Helper function to search activities
 async function searchActivities(destination: string) {
-    const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
+    const viatorKey = process.env.VIATOR_API_KEY;
     
-    if (!tripAdvisorKey) {
-        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback activities.");
+    if (!viatorKey) {
+        console.warn("⚠️ Viator API key not configured. Using destination-specific fallback activities.");
         return getFallbackActivities(destination);
     }
 
-    console.log(`🎯 Searching activities in ${destination} via TripAdvisor`);
+    console.log(`🎯 Searching activities in ${destination} via Viator`);
     try {
-        const activities = await searchTripAdvisorActivities(destination, tripAdvisorKey);
+        const activities = await searchViatorActivities(destination, viatorKey);
         if (activities.length > 0) {
-            console.log(`✅ Found ${activities.length} activities via TripAdvisor`);
+            console.log(`✅ Found ${activities.length} activities via Viator`);
             return activities;
         }
-        console.warn("⚠️ No activities found via TripAdvisor. Using fallback.");
+        console.warn("⚠️ No activities found via Viator. Using fallback.");
         return getFallbackActivities(destination);
     } catch (error) {
-        console.error("❌ TripAdvisor activities failed:", error);
+        console.error("❌ Viator activities failed:", error);
         return getFallbackActivities(destination);
     }
 }
@@ -861,6 +861,326 @@ async function searchRestaurants(destination: string) {
         console.error("❌ TripAdvisor restaurants failed:", error);
         return getFallbackRestaurants(destination);
     }
+}
+
+// Viator API - Search for activities/experiences
+async function searchViatorActivities(destination: string, apiKey: string) {
+    try {
+        // Step 1: Search for destination ID
+        const searchResponse = await fetch(
+            "https://api.viator.com/partner/v1/taxonomy/destinations",
+            {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json;version=2.0",
+                    "Accept-Language": "en-US",
+                    "exp-api-key": apiKey,
+                }
+            }
+        );
+
+        if (!searchResponse.ok) {
+            const errorText = await searchResponse.text();
+            console.error("Viator destinations API error:", searchResponse.status, errorText);
+            throw new Error(`Viator destinations failed: ${searchResponse.status}`);
+        }
+
+        const destinationsData = await searchResponse.json();
+        
+        // Find matching destination
+        const destLower = destination.toLowerCase();
+        let destinationId: number | null = null;
+        
+        if (destinationsData.data) {
+            for (const dest of destinationsData.data) {
+                if (dest.destinationName?.toLowerCase().includes(destLower) ||
+                    destLower.includes(dest.destinationName?.toLowerCase())) {
+                    destinationId = dest.destinationId;
+                    console.log(`✅ Found Viator destination: ${dest.destinationName} (ID: ${destinationId})`);
+                    break;
+                }
+            }
+        }
+
+        if (!destinationId) {
+            // Try free-text search as fallback
+            console.log("⚠️ Destination not found in taxonomy, trying product search...");
+            return await searchViatorProductsByText(destination, apiKey);
+        }
+
+        // Step 2: Search for products in this destination
+        const productsResponse = await fetch(
+            "https://api.viator.com/partner/products/search",
+            {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json;version=2.0",
+                    "Accept-Language": "en-US",
+                    "Content-Type": "application/json",
+                    "exp-api-key": apiKey,
+                },
+                body: JSON.stringify({
+                    filtering: {
+                        destination: destinationId.toString(),
+                    },
+                    sorting: {
+                        sort: "TRAVELER_RATING",
+                        order: "DESC"
+                    },
+                    pagination: {
+                        start: 1,
+                        count: 10
+                    },
+                    currency: "EUR"
+                })
+            }
+        );
+
+        if (!productsResponse.ok) {
+            const errorText = await productsResponse.text();
+            console.error("Viator products API error:", productsResponse.status, errorText);
+            throw new Error(`Viator products failed: ${productsResponse.status}`);
+        }
+
+        const productsData = await productsResponse.json();
+        
+        if (!productsData.products || productsData.products.length === 0) {
+            console.warn("⚠️ No products found for destination, trying text search...");
+            return await searchViatorProductsByText(destination, apiKey);
+        }
+
+        return productsData.products.slice(0, 8).map((product: any) => ({
+            title: product.title,
+            price: product.pricing?.summary?.fromPrice || 25,
+            currency: product.pricing?.currency || "EUR",
+            duration: product.duration?.fixedDurationInMinutes 
+                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
+                : product.duration?.variableDurationFromMinutes
+                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
+                    : "2-3h",
+            description: product.description?.substring(0, 200) || "Popular activity",
+            rating: product.reviews?.combinedAverageRating || 4.5,
+            reviewCount: product.reviews?.totalReviews || 0,
+            productCode: product.productCode,
+            bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
+            image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
+                   product.images?.[0]?.variants?.[0]?.url || null,
+            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
+                        product.title?.toLowerCase().includes("skip") ||
+                        product.title?.toLowerCase().includes("priority"),
+            skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
+                ? (product.pricing?.summary?.fromPrice || 25) 
+                : null,
+        }));
+    } catch (error) {
+        console.error("❌ Viator activities error:", error);
+        throw error;
+    }
+}
+
+// Viator API - Search products by free text
+async function searchViatorProductsByText(searchText: string, apiKey: string) {
+    try {
+        const response = await fetch(
+            "https://api.viator.com/partner/products/search",
+            {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json;version=2.0",
+                    "Accept-Language": "en-US",
+                    "Content-Type": "application/json",
+                    "exp-api-key": apiKey,
+                },
+                body: JSON.stringify({
+                    filtering: {
+                        searchTerm: searchText,
+                    },
+                    sorting: {
+                        sort: "TRAVELER_RATING",
+                        order: "DESC"
+                    },
+                    pagination: {
+                        start: 1,
+                        count: 10
+                    },
+                    currency: "EUR"
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Viator text search API error:", response.status, errorText);
+            throw new Error(`Viator text search failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.products || data.products.length === 0) {
+            return [];
+        }
+
+        return data.products.slice(0, 8).map((product: any) => ({
+            title: product.title,
+            price: product.pricing?.summary?.fromPrice || 25,
+            currency: product.pricing?.currency || "EUR",
+            duration: product.duration?.fixedDurationInMinutes 
+                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
+                : product.duration?.variableDurationFromMinutes
+                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
+                    : "2-3h",
+            description: product.description?.substring(0, 200) || "Popular activity",
+            rating: product.reviews?.combinedAverageRating || 4.5,
+            reviewCount: product.reviews?.totalReviews || 0,
+            productCode: product.productCode,
+            bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
+            image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
+                   product.images?.[0]?.variants?.[0]?.url || null,
+            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
+                        product.title?.toLowerCase().includes("skip") ||
+                        product.title?.toLowerCase().includes("priority"),
+            skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
+                ? (product.pricing?.summary?.fromPrice || 25) 
+                : null,
+        }));
+    } catch (error) {
+        console.error("❌ Viator text search error:", error);
+        throw error;
+    }
+}
+
+// Fallback activities - now destination-specific
+function getFallbackActivities(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    // Destination-specific activities
+    const destinationActivities: Record<string, Array<{title: string, price: string, duration: string, description: string}>> = {
+        "paris": [
+            { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
+            { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
+            { title: "Seine River Cruise", price: "€15", duration: "1h", description: "Scenic boat tour along the Seine" },
+            { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
+            { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
+        ],
+        "rome": [
+            { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
+            { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
+            { title: "Roman Forum", price: "€16", duration: "2h", description: "Ancient Roman ruins" },
+            { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
+            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
+        ],
+        "london": [
+            { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
+            { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
+            { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
+            { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
+            { title: "Thames River Cruise", price: "€15", duration: "1h", description: "Sightseeing boat tour" },
+        ],
+        "barcelona": [
+            { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
+            { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
+            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
+            { title: "La Rambla", price: "Free", duration: "1h", description: "Famous tree-lined street" },
+            { title: "Casa Batlló", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
+        ],
+        "athens": [
+            { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
+            { title: "Acropolis Museum", price: "€10", duration: "2h", description: "Archaeological museum" },
+            { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
+            { title: "Plaka Walking Tour", price: "Free", duration: "2h", description: "Historic neighborhood" },
+            { title: "Temple of Olympian Zeus", price: "€8", duration: "1h", description: "Ancient Greek temple ruins" },
+        ],
+        "amsterdam": [
+            { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
+            { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
+            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
+            { title: "Rijksmuseum", price: "€22", duration: "3h", description: "Dutch art and history" },
+            { title: "Vondelpark", price: "Free", duration: "1-2h", description: "Large public park" },
+        ],
+    };
+    
+    // Check if we have specific activities for this destination
+    for (const [city, activities] of Object.entries(destinationActivities)) {
+        if (destLower.includes(city)) {
+            return activities;
+        }
+    }
+    
+    // Generic fallback
+    return [
+        { title: `City Tour of ${destination}`, price: "€25", duration: "3h", description: "Explore the main attractions" },
+        { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
+        { title: "Walking Tour", price: "€10", duration: "2h", description: "Guided walking tour of historic sites" },
+        { title: "Local Market", price: "Free", duration: "1-2h", description: "Experience local life and cuisine" },
+        { title: "Sunset Viewpoint", price: "Free", duration: "1h", description: "Best views of the city" },
+    ];
+}
+
+// Fallback restaurants - now destination-specific
+function getFallbackRestaurants(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    // Destination-specific restaurants
+    const destinationRestaurants: Record<string, Array<{name: string, priceRange: string, cuisine: string, rating: number}>> = {
+        "paris": [
+            { name: "Le Comptoir du Relais", priceRange: "€€€", cuisine: "French Bistro", rating: 4.5 },
+            { name: "L'As du Fallafel", priceRange: "€", cuisine: "Middle Eastern", rating: 4.6 },
+            { name: "Breizh Café", priceRange: "€€", cuisine: "Crêperie", rating: 4.4 },
+            { name: "Le Jules Verne", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.7 },
+            { name: "Marché des Enfants Rouges", priceRange: "€", cuisine: "Market Food", rating: 4.3 },
+        ],
+        "rome": [
+            { name: "Trattoria Da Enzo", priceRange: "€€", cuisine: "Traditional Roman", rating: 4.6 },
+            { name: "Pizzarium", priceRange: "€", cuisine: "Pizza al Taglio", rating: 4.5 },
+            { name: "La Pergola", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
+            { name: "Roscioli", priceRange: "€€€", cuisine: "Italian Deli", rating: 4.7 },
+            { name: "Supplizio", priceRange: "€", cuisine: "Street Food", rating: 4.4 },
+        ],
+        "london": [
+            { name: "Dishoom", priceRange: "€€", cuisine: "Indian", rating: 4.5 },
+            { name: "Borough Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
+            { name: "The Ledbury", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
+            { name: "Flat Iron", priceRange: "€€", cuisine: "Steakhouse", rating: 4.4 },
+            { name: "Padella", priceRange: "€€", cuisine: "Italian Pasta", rating: 4.7 },
+        ],
+        "barcelona": [
+            { name: "Cervecería Catalana", priceRange: "€€", cuisine: "Tapas", rating: 4.5 },
+            { name: "La Boqueria Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
+            { name: "Tickets Bar", priceRange: "€€€", cuisine: "Modern Tapas", rating: 4.7 },
+            { name: "Can Culleretes", priceRange: "€€", cuisine: "Traditional Catalan", rating: 4.4 },
+            { name: "El Xampanyet", priceRange: "€", cuisine: "Tapas Bar", rating: 4.5 },
+        ],
+        "athens": [
+            { name: "Taverna Tou Psyrri", priceRange: "€€", cuisine: "Traditional Greek", rating: 4.5 },
+            { name: "Kostas Souvlaki", priceRange: "€", cuisine: "Souvlaki", rating: 4.6 },
+            { name: "Spondi", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
+            { name: "Karamanlidika", priceRange: "€€", cuisine: "Greek Meze", rating: 4.7 },
+            { name: "Varvakios Agora", priceRange: "€", cuisine: "Market Food", rating: 4.4 },
+        ],
+        "amsterdam": [
+            { name: "De Kas", priceRange: "€€€", cuisine: "Farm-to-Table", rating: 4.6 },
+            { name: "Foodhallen", priceRange: "€€", cuisine: "Food Hall", rating: 4.4 },
+            { name: "The Pantry", priceRange: "€€", cuisine: "Dutch Traditional", rating: 4.5 },
+            { name: "Café de Klos", priceRange: "€€", cuisine: "Grill House", rating: 4.6 },
+            { name: "Albert Cuyp Market", priceRange: "€", cuisine: "Street Food", rating: 4.3 },
+        ],
+    };
+    
+    // Check if we have specific restaurants for this destination
+    for (const [city, restaurants] of Object.entries(destinationRestaurants)) {
+        if (destLower.includes(city)) {
+            return restaurants;
+        }
+    }
+    
+    // Generic fallback
+    return [
+        { name: `Traditional ${destination} Restaurant`, priceRange: "€€", cuisine: "Local", rating: 4.5 },
+        { name: "Mediterranean Bistro", priceRange: "€€€", cuisine: "Mediterranean", rating: 4.3 },
+        { name: "Casual Dining Spot", priceRange: "€", cuisine: "International", rating: 4.0 },
+        { name: "Fine Dining Experience", priceRange: "€€€€", cuisine: "Fusion", rating: 4.7 },
+        { name: "Street Food Market", priceRange: "€", cuisine: "Various", rating: 4.2 },
+    ];
 }
 
 // Generate transportation options (car rental, taxi, Uber) - DESTINATION SPECIFIC PRICING
@@ -956,7 +1276,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             carRentalSUV: 65,
             metroTicket: 1.20,
             dayPass: 4.10,
-            airportExpress: 9, // Metro Line 3
+            airportExpress: 2, // Metro Line 3
             premiumTransfer: 75,
         },
         "berlin": {
@@ -989,14 +1309,14 @@ function generateTransportationOptions(destination: string, origin: string, trav
             taxiFromAirport: 25, // DXB to city center (cheap taxis)
             uberX: { min: 20, max: 35 },
             uberComfort: { min: 35, max: 50 },
-            bolt: { min: 18, max: 30 },
+            bolt: { min: 18, max: 28 },
             carRentalEconomy: 30,
             carRentalCompact: 45,
             carRentalSUV: 80,
             metroTicket: 2,
             dayPass: 6,
-            airportExpress: 3, // Metro Red Line
-            premiumTransfer: 70,
+            airportExpress: 36, // Narita Express
+            premiumTransfer: 250,
         },
         "new york": {
             taxiFromAirport: 75, // JFK to Manhattan (flat fare + tolls)
@@ -1270,129 +1590,6 @@ function generateTransportationOptions(destination: string, origin: string, trav
     ];
 }
 
-// TripAdvisor API - Search for activities/attractions
-async function searchTripAdvisorActivities(destination: string, apiKey: string) {
-    try {
-        // Step 1: Search for location ID
-        const searchResponse = await fetch(
-            `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&language=en`,
-            {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }
-        );
-
-        if (!searchResponse.ok) {
-            throw new Error(`TripAdvisor search failed: ${searchResponse.status}`);
-        }
-
-        const searchData = await searchResponse.json();
-        
-        if (!searchData.data || searchData.data.length === 0) {
-            throw new Error("No location found");
-        }
-
-        const locationId = searchData.data[0].location_id;
-
-        // Step 2: Get attractions for this location
-        const attractionsResponse = await fetch(
-            `https://api.content.tripadvisor.com/api/v1/location/${locationId}/nearby_search?key=${apiKey}&language=en&category=attractions&limit=10`,
-            {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }
-        );
-
-        if (!attractionsResponse.ok) {
-            throw new Error(`TripAdvisor attractions failed: ${attractionsResponse.status}`);
-        }
-
-        const attractionsData = await attractionsResponse.json();
-        
-        if (!attractionsData.data || attractionsData.data.length === 0) {
-            throw new Error("No attractions found");
-        }
-
-        return attractionsData.data.slice(0, 5).map((attraction: any) => ({
-            title: attraction.name,
-            price: "€20", // TripAdvisor doesn't provide pricing in free tier
-            duration: "2-3h",
-            description: attraction.description || attraction.address_obj?.address_string || "Popular attraction",
-            coordinates: attraction.latitude && attraction.longitude ? {
-                latitude: parseFloat(attraction.latitude),
-                longitude: parseFloat(attraction.longitude),
-            } : undefined,
-            rating: attraction.rating,
-        }));
-    } catch (error) {
-        console.error("❌ TripAdvisor activities error:", error);
-        throw error;
-    }
-}
-
-// TripAdvisor API - Search for restaurants
-async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
-    try {
-        // Step 1: Search for location ID
-        const searchResponse = await fetch(
-            `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&language=en`,
-            {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }
-        );
-
-        if (!searchResponse.ok) {
-            throw new Error(`TripAdvisor search failed: ${searchResponse.status}`);
-        }
-
-        const searchData = await searchResponse.json();
-        
-        if (!searchData.data || searchData.data.length === 0) {
-            throw new Error("No location found");
-        }
-
-        const locationId = searchData.data[0].location_id;
-
-        // Step 2: Get restaurants for this location
-        const restaurantsResponse = await fetch(
-            `https://api.content.tripadvisor.com/api/v1/location/${locationId}/nearby_search?key=${apiKey}&language=en&category=restaurants&limit=10`,
-            {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }
-        );
-
-        if (!restaurantsResponse.ok) {
-            throw new Error(`TripAdvisor restaurants failed: ${restaurantsResponse.status}`);
-        }
-
-        const restaurantsData = await restaurantsResponse.json();
-        
-        if (!restaurantsData.data || restaurantsData.data.length === 0) {
-            throw new Error("No restaurants found");
-        }
-
-        return restaurantsData.data.slice(0, 5).map((restaurant: any) => ({
-            name: restaurant.name,
-            priceRange: restaurant.price_level || "€€",
-            cuisine: restaurant.cuisine?.[0]?.name || "International",
-            rating: parseFloat(restaurant.rating) || 4.0,
-            coordinates: restaurant.latitude && restaurant.longitude ? {
-                latitude: parseFloat(restaurant.latitude),
-                longitude: parseFloat(restaurant.longitude),
-            } : undefined,
-        }));
-    } catch (error) {
-        console.error("❌ TripAdvisor restaurants error:", error);
-        throw error;
-    }
-}
-
 // Fallback activities - now destination-specific
 function getFallbackActivities(destination: string) {
     const destLower = destination.toLowerCase();
@@ -1527,62 +1724,16 @@ function getFallbackRestaurants(destination: string) {
     ];
 }
 
-// Fallback hotels
-function getFallbackHotels(destination: string) {
-    const hotels = [
-        {
-            type: "hotel",
-            name: `Grand Hotel ${destination}`,
-            rating: "4",
-            stars: 4,
-            price: "120",
-            pricePerNight: 120,
-            currency: "EUR",
-            amenities: ["WiFi", "Breakfast", "Pool", "Gym"],
-            address: `City Center, ${destination}`,
-            description: "Comfortable accommodation with modern amenities in the heart of the city",
-            bookingUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
-        },
-        {
-            type: "hotel",
-            name: `Budget Inn ${destination}`,
-            rating: "3",
-            stars: 3,
-            price: "80",
-            pricePerNight: 80,
-            currency: "EUR",
-            amenities: ["WiFi", "Breakfast"],
-            address: `Downtown, ${destination}`,
-            description: "Affordable and clean accommodation perfect for budget travelers",
-            bookingUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
-        },
-        {
-            type: "hotel",
-            name: `Luxury ${destination} Resort`,
-            rating: "5",
-            stars: 5,
-            price: "250",
-            pricePerNight: 250,
-            currency: "EUR",
-            amenities: ["WiFi", "Breakfast", "Pool", "Spa", "Gym", "Restaurant"],
-            address: `Premium District, ${destination}`,
-            description: "Premium accommodation with exceptional service and world-class facilities",
-            bookingUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
-        },
-    ];
-    
-    // Add Airbnb options
-    const airbnbs = getAirbnbOptions(destination);
-    
-    return [...hotels, ...airbnbs];
-}
-
 // Generate Airbnb options based on destination
 function getAirbnbOptions(destination: string) {
     const destLower = destination.toLowerCase();
     
     // Destination-specific Airbnb pricing (average per night)
-    const airbnbPricing: Record<string, { studio: number; apartment: number; villa: number }> = {
+    const airbnbPricing: Record<string, {
+        studio: number;
+        apartment: number;
+        villa: number;
+    }> = {
         "paris": { studio: 85, apartment: 150, villa: 350 },
         "london": { studio: 95, apartment: 180, villa: 450 },
         "rome": { studio: 70, apartment: 120, villa: 280 },
