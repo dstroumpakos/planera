@@ -77,6 +77,7 @@ export default function TravelPreferences() {
         { value: "relaxation", label: "Relaxation", icon: "sunny-outline" },
         { value: "culture", label: "Culture", icon: "library-outline" },
         { value: "family", label: "Family", icon: "people-outline" },
+        { value: "sports", label: "Sports", icon: "football-outline" },
     ];
 
     return (
