@@ -12,6 +12,7 @@ export const create = authMutation({
         budget: v.union(v.string(), v.number()),
         travelers: v.number(),
         interests: v.array(v.string()),
+        skipFlights: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         // Check if user can generate a trip
@@ -72,15 +73,21 @@ export const create = authMutation({
             travelers: args.travelers,
             interests: args.interests,
             status: "generating",
+            skipFlights: args.skipFlights ?? false,
         });
 
-        const prompt = `Plan a trip to ${args.destination} from ${args.origin} for ${args.travelers} people.
+        const flightInfo = args.skipFlights 
+            ? "Note: User already has flights booked, so DO NOT include flight recommendations."
+            : `Flying from: ${args.origin}`;
+
+        const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
+        ${flightInfo}
         Budget: ${args.budget}.
         Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
         Interests: ${args.interests.join(", ")}.`;
 
         // Schedule the generation action from tripsActions.ts
-        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId, prompt });
+        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId, prompt, skipFlights: args.skipFlights ?? false });
 
         return tripId;
     },

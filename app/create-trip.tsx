@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image, Switch } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -26,6 +26,7 @@ export default function CreateTrip() {
         budget: 2000,
         travelers: 1,
         interests: [] as string[],
+        skipFlights: false,
     });
 
     const formatDate = (timestamp: number) => {
@@ -112,7 +113,7 @@ export default function CreateTrip() {
                 Alert.alert("Required", "Please enter a destination");
                 return;
             }
-            if (!formData.origin) {
+            if (!formData.skipFlights && !formData.origin) {
                 Alert.alert("Required", "Please enter where you are flying from");
                 return;
             }
@@ -137,12 +138,13 @@ export default function CreateTrip() {
         try {
             const tripId = await createTrip({
                 destination: formData.destination,
-                origin: formData.origin,
+                origin: formData.skipFlights ? "N/A" : formData.origin,
                 startDate: formData.startDate,
                 endDate: formData.endDate,
                 budget: formData.budget,
                 travelers: formData.travelers,
                 interests: formData.interests,
+                skipFlights: formData.skipFlights,
             });
             // Wait a bit to show the animation
             setTimeout(() => {
@@ -171,7 +173,12 @@ export default function CreateTrip() {
                 <Image source={logoImage} style={styles.loadingLogo} resizeMode="contain" />
                 <ActivityIndicator size="large" color="#00BFA6" style={{ marginTop: 24 }} />
                 <Text style={styles.loadingText}>Generating your dream trip...</Text>
-                <Text style={styles.loadingSubtext}>Finding the best flights, hotels, and activities for you.</Text>
+                <Text style={styles.loadingSubtext}>
+                    {formData.skipFlights 
+                        ? "Finding the best hotels, activities, and restaurants for you."
+                        : "Finding the best flights, hotels, and activities for you."
+                    }
+                </Text>
             </View>
         );
     }
@@ -208,18 +215,46 @@ export default function CreateTrip() {
                             />
                         </View>
                         
-                        <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="airplane-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g. Athens International Airport"
-                                placeholderTextColor="#90A4AE"
-                                value={formData.origin}
-                                onChangeText={(text) => setFormData({ ...formData, origin: text })}
+                        {/* Skip Flights Toggle */}
+                        <View style={styles.skipFlightsContainer}>
+                            <View style={styles.skipFlightsTextContainer}>
+                                <Ionicons name="airplane" size={20} color="#14B8A6" />
+                                <Text style={styles.skipFlightsText}>I already have flights booked</Text>
+                            </View>
+                            <Switch
+                                value={formData.skipFlights}
+                                onValueChange={(value) => setFormData({ ...formData, skipFlights: value })}
+                                trackColor={{ false: "#E0F2F1", true: "#5EEAD4" }}
+                                thumbColor={formData.skipFlights ? "#14B8A6" : "#B2DFDB"}
+                                ios_backgroundColor="#E0F2F1"
                             />
                         </View>
-                        <Text style={styles.helperText}>Enter your departure city or airport.</Text>
+                        
+                        {!formData.skipFlights && (
+                            <>
+                                <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="airplane-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="e.g. Athens International Airport"
+                                        placeholderTextColor="#90A4AE"
+                                        value={formData.origin}
+                                        onChangeText={(text) => setFormData({ ...formData, origin: text })}
+                                    />
+                                </View>
+                                <Text style={styles.helperText}>Enter your departure city or airport.</Text>
+                            </>
+                        )}
+                        
+                        {formData.skipFlights && (
+                            <View style={styles.skipFlightsInfo}>
+                                <Ionicons name="information-circle-outline" size={18} color="#5EEAD4" />
+                                <Text style={styles.skipFlightsInfoText}>
+                                    We'll skip flight recommendations and focus on hotels, activities, and restaurants for your trip.
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -706,5 +741,43 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#5EEAD4",
         fontWeight: "500",
+    },
+    // Skip Flights Toggle Styles
+    skipFlightsContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "white",
+        borderWidth: 2,
+        borderColor: "#99F6E4",
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        marginTop: 20,
+    },
+    skipFlightsTextContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    skipFlightsText: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#0D9488",
+    },
+    skipFlightsInfo: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        backgroundColor: "#CCFBF1",
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 16,
+        gap: 10,
+    },
+    skipFlightsInfoText: {
+        flex: 1,
+        fontSize: 13,
+        color: "#0D9488",
+        lineHeight: 18,
     },
 });

@@ -6,15 +6,16 @@ import { internal } from "./_generated/api";
 import OpenAI from "openai";
 
 export const generate = internalAction({
-    args: { tripId: v.id("trips"), prompt: v.string() },
+    args: { tripId: v.id("trips"), prompt: v.string(), skipFlights: v.optional(v.boolean()) },
     handler: async (ctx, args) => {
-        const { tripId } = args;
+        const { tripId, skipFlights } = args;
 
         console.log("=".repeat(80));
         console.log("🚀 TRIP GENERATION STARTED");
         console.log("=".repeat(80));
         console.log("Trip ID:", tripId);
         console.log("Prompt:", args.prompt);
+        console.log("Skip Flights:", skipFlights ? "Yes" : "No");
 
         // Get trip details
         const trip = await ctx.runQuery(internal.trips.getTripDetails, { tripId });
@@ -32,7 +33,7 @@ export const generate = internalAction({
         console.log("  - Budget:", trip.budget);
         console.log("  - Interests:", trip.interests);
         
-        if (!trip.origin) {
+        if (!skipFlights && !trip.origin) {
             console.error("❌ Trip origin is missing!");
             await ctx.runMutation(internal.trips.updateItinerary, {
                 tripId,
@@ -65,26 +66,45 @@ export const generate = internalAction({
         console.log("=".repeat(80));
 
         try {
-            let flights;
+            let flights = null;
             let hotels;
             let activities;
             let restaurants;
 
-            // 1. Fetch flights (with fallback)
-            console.log("✈️ Fetching flights...");
-            if (hasAmadeusKeys) {
-                try {
-                    const amadeusToken = await getAmadeusToken();
-                    flights = await searchFlights(
-                        amadeusToken,
-                        trip.origin,
-                        trip.destination,
-                        new Date(trip.startDate).toISOString().split('T')[0],
-                        new Date(trip.endDate).toISOString().split('T')[0],
-                        trip.travelers
-                    );
-                } catch (error) {
-                    console.error("❌ Amadeus flights failed:", error);
+            // 1. Fetch flights (with fallback) - SKIP if user already has flights
+            if (skipFlights) {
+                console.log("✈️ Skipping flight search - user already has flights booked");
+                flights = {
+                    skipped: true,
+                    message: "You indicated you already have flights booked",
+                    dataSource: "user-provided",
+                };
+            } else {
+                console.log("✈️ Fetching flights...");
+                if (hasAmadeusKeys) {
+                    try {
+                        const amadeusToken = await getAmadeusToken();
+                        flights = await searchFlights(
+                            amadeusToken,
+                            trip.origin,
+                            trip.destination,
+                            new Date(trip.startDate).toISOString().split('T')[0],
+                            new Date(trip.endDate).toISOString().split('T')[0],
+                            trip.travelers
+                        );
+                    } catch (error) {
+                        console.error("❌ Amadeus flights failed:", error);
+                        flights = await generateRealisticFlights(
+                            trip.origin,
+                            extractIATACode(trip.origin),
+                            trip.destination,
+                            extractIATACode(trip.destination),
+                            new Date(trip.startDate).toISOString().split('T')[0],
+                            new Date(trip.endDate).toISOString().split('T')[0],
+                            trip.travelers
+                        );
+                    }
+                } else {
                     flights = await generateRealisticFlights(
                         trip.origin,
                         extractIATACode(trip.origin),
@@ -95,18 +115,8 @@ export const generate = internalAction({
                         trip.travelers
                     );
                 }
-            } else {
-                flights = await generateRealisticFlights(
-                    trip.origin,
-                    extractIATACode(trip.origin),
-                    trip.destination,
-                    extractIATACode(trip.destination),
-                    new Date(trip.startDate).toISOString().split('T')[0],
-                    new Date(trip.endDate).toISOString().split('T')[0],
-                    trip.travelers
-                );
+                console.log("✅ Flights ready:", flights.dataSource);
             }
-            console.log("✅ Flights ready:", flights.dataSource);
 
             // 2. Fetch hotels (with fallback)
             console.log("🏨 Fetching hotels...");

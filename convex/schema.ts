@@ -13,6 +13,7 @@ export default defineSchema({
         interests: v.array(v.string()),
         status: v.union(v.literal("generating"), v.literal("completed"), v.literal("failed")),
         itinerary: v.optional(v.any()),
+        skipFlights: v.optional(v.boolean()),
     }).index("by_user", ["userId"]),
     userPlans: defineTable({
         userId: v.string(),
