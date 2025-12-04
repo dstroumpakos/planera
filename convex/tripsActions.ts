@@ -6,9 +6,14 @@ import { internal } from "./_generated/api";
 import OpenAI from "openai";
 
 export const generate = internalAction({
-    args: { tripId: v.id("trips"), prompt: v.string(), skipFlights: v.optional(v.boolean()) },
+    args: { 
+        tripId: v.id("trips"), 
+        prompt: v.string(), 
+        skipFlights: v.optional(v.boolean()),
+        preferredFlightTime: v.optional(v.string()),
+    },
     handler: async (ctx, args) => {
-        const { tripId, skipFlights } = args;
+        const { tripId, skipFlights, preferredFlightTime } = args;
 
         console.log("=".repeat(80));
         console.log("🚀 TRIP GENERATION STARTED");
@@ -16,6 +21,7 @@ export const generate = internalAction({
         console.log("Trip ID:", tripId);
         console.log("Prompt:", args.prompt);
         console.log("Skip Flights:", skipFlights ? "Yes" : "No");
+        console.log("Preferred Flight Time:", preferredFlightTime || "any");
 
         // Get trip details
         const trip = await ctx.runQuery(internal.trips.getTripDetails, { tripId });
@@ -81,6 +87,7 @@ export const generate = internalAction({
                 };
             } else {
                 console.log("✈️ Fetching flights...");
+                console.log("  - Preferred time:", preferredFlightTime || "any");
                 if (hasAmadeusKeys) {
                     try {
                         const amadeusToken = await getAmadeusToken();
@@ -90,7 +97,8 @@ export const generate = internalAction({
                             trip.destination,
                             new Date(trip.startDate).toISOString().split('T')[0],
                             new Date(trip.endDate).toISOString().split('T')[0],
-                            trip.travelers
+                            trip.travelers,
+                            preferredFlightTime || "any"
                         );
                     } catch (error) {
                         console.error("❌ Amadeus flights failed:", error);
@@ -101,7 +109,8 @@ export const generate = internalAction({
                             extractIATACode(trip.destination),
                             new Date(trip.startDate).toISOString().split('T')[0],
                             new Date(trip.endDate).toISOString().split('T')[0],
-                            trip.travelers
+                            trip.travelers,
+                            preferredFlightTime || "any"
                         );
                     }
                 } else {
@@ -112,7 +121,8 @@ export const generate = internalAction({
                         extractIATACode(trip.destination),
                         new Date(trip.startDate).toISOString().split('T')[0],
                         new Date(trip.endDate).toISOString().split('T')[0],
-                        trip.travelers
+                        trip.travelers,
+                        preferredFlightTime || "any"
                     );
                 }
                 console.log("✅ Flights ready:", flights.dataSource);
@@ -375,7 +385,7 @@ function getActivitiesWithPrices(destination: string) {
             { title: "Seine River Cruise", description: "Scenic boat tour along the Seine", type: "tour", price: 15, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: "https://www.getyourguide.com/paris-l16/seine-river-cruise-t395602/", tips: "Sunset cruises are most romantic" },
         ],
         "rome": [
-            { title: "Colosseum & Roman Forum", description: "Ancient amphitheater and ruins", type: "attraction", price: 18, skipTheLine: true, skipTheLinePrice: 35, duration: "3 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/colosseum-roman-forum-palatine-hill-skip-the-line-t395441/", tips: "Book arena floor access for best experience" },
+            { title: "Colosseum & Roman Forum", description: "Ancient amphitheater and ruins", type: "attraction", price: 18, skipTheLine: true, skipTheLinePrice: 35, duration: "3 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/colosseum-roman-forum-skip-the-line-t395441/", tips: "Book arena floor access for best experience" },
             { title: "Vatican Museums & Sistine Chapel", description: "World-famous art collection and Michelangelo's ceiling", type: "museum", price: 17, skipTheLine: true, skipTheLinePrice: 40, duration: "3-4 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/vatican-museums-sistine-chapel-skip-the-line-t395442/", tips: "Visit on Wednesday morning when Pope is at St. Peter's" },
             { title: "St. Peter's Basilica Dome", description: "Climb to the top for panoramic views", type: "attraction", price: 10, skipTheLine: true, skipTheLinePrice: 25, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/st-peters-basilica-dome-climb-t395443/", tips: "Take the elevator option to save energy" },
             { title: "Borghese Gallery", description: "Stunning art collection in beautiful villa", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 28, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/rome-l33/borghese-gallery-skip-the-line-t395444/", tips: "Reservations mandatory - book weeks ahead" },
@@ -486,17 +496,19 @@ async function searchFlights(
     destination: string,
     departureDate: string,
     returnDate: string,
-    adults: number
+    adults: number,
+    preferredFlightTime: string = "any"
 ) {
     // Extract IATA codes from city names (simplified - in production, use a proper airport lookup)
     const originCode = extractIATACode(origin);
     const destCode = extractIATACode(destination);
 
     console.log(`🔍 Searching flights: ${origin} (${originCode}) → ${destination} (${destCode}), ${departureDate} to ${returnDate}, ${adults} adults`);
+    console.log(`   Preferred time: ${preferredFlightTime}`);
 
     try {
-        // Search for round-trip flights (outbound + return in one request)
-        const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${originCode}&destinationLocationCode=${destCode}&departureDate=${departureDate}&adults=${adults}&nonStop=false&max=5`;
+        // Search for outbound flights - get more results for multiple options
+        const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${originCode}&destinationLocationCode=${destCode}&departureDate=${departureDate}&adults=${adults}&nonStop=false&max=10`;
 
         const response = await fetch(url, {
             headers: {
@@ -509,18 +521,18 @@ async function searchFlights(
         if (!response.ok) {
             console.error("❌ Amadeus API error:", data);
             console.warn("⚠️ Falling back to AI-generated flight data");
-            return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults);
+            return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults, preferredFlightTime);
         }
         
         if (!data.data || data.data.length === 0) {
             console.warn("⚠️ No flights found in Amadeus. Generating realistic flight data with AI...");
-            return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults);
+            return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults, preferredFlightTime);
         }
 
         console.log(`✅ Found ${data.data.length} flight offers from Amadeus`);
 
         // Now search for return flights separately
-        const returnUrl = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${destCode}&destinationLocationCode=${originCode}&departureDate=${returnDate}&adults=${adults}&nonStop=false&max=5`;
+        const returnUrl = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${destCode}&destinationLocationCode=${originCode}&departureDate=${returnDate}&adults=${adults}&nonStop=false&max=10`;
 
         const returnResponse = await fetch(returnUrl, {
             headers: {
@@ -534,37 +546,87 @@ async function searchFlights(
             console.warn("⚠️ No return flights found, using outbound data for both directions");
         }
 
-        // Take the first offer for outbound
-        const outboundOffer = data.data[0];
-        const outbound = outboundOffer.itineraries[0];
+        // Process multiple flight options
+        const flightOptions = [];
+        const numOptions = Math.min(data.data.length, 4); // Up to 4 options
         
-        // Take the first offer for return (or use outbound as fallback)
-        const returnOffer = returnData.data?.[0] || outboundOffer;
-        const returnFlight = returnOffer.itineraries[0];
-        
+        // Find the best (lowest) price
+        let bestPrice = Infinity;
+        for (let i = 0; i < numOptions; i++) {
+            const outboundOffer = data.data[i];
+            const returnOffer = returnData.data?.[i] || returnData.data?.[0] || outboundOffer;
+            const totalPrice = parseFloat(outboundOffer.price.total) + (returnData.data?.[i] ? parseFloat(returnOffer.price.total) : parseFloat(outboundOffer.price.total));
+            if (totalPrice < bestPrice) {
+                bestPrice = totalPrice;
+            }
+        }
+
+        for (let i = 0; i < numOptions; i++) {
+            const outboundOffer = data.data[i];
+            const outbound = outboundOffer.itineraries[0];
+            
+            const returnOffer = returnData.data?.[i] || returnData.data?.[0] || outboundOffer;
+            const returnFlight = returnOffer.itineraries[0];
+            
+            const totalPrice = parseFloat(outboundOffer.price.total) + (returnData.data?.[i] ? parseFloat(returnOffer.price.total) : parseFloat(outboundOffer.price.total));
+            
+            // Determine flight time category
+            const departureHour = new Date(outbound.segments[0].departure.at).getHours();
+            let timeCategory = "morning";
+            if (departureHour >= 12 && departureHour < 17) timeCategory = "afternoon";
+            else if (departureHour >= 17 && departureHour < 21) timeCategory = "evening";
+            else if (departureHour >= 21 || departureHour < 6) timeCategory = "night";
+            
+            flightOptions.push({
+                id: i + 1,
+                outbound: {
+                    airline: getAirlineName(outbound.segments[0].carrierCode),
+                    airlineCode: outbound.segments[0].carrierCode,
+                    flightNumber: `${outbound.segments[0].carrierCode}${outbound.segments[0].number}`,
+                    duration: formatDuration(outbound.duration),
+                    departure: formatTime(outbound.segments[0].departure.at),
+                    arrival: formatTime(outbound.segments[outbound.segments.length - 1].arrival.at),
+                    stops: outbound.segments.length - 1,
+                    departureTime: outbound.segments[0].departure.at,
+                },
+                return: {
+                    airline: getAirlineName(returnFlight.segments[0].carrierCode),
+                    airlineCode: returnFlight.segments[0].carrierCode,
+                    flightNumber: `${returnFlight.segments[0].carrierCode}${returnFlight.segments[0].number}`,
+                    duration: formatDuration(returnFlight.duration),
+                    departure: formatTime(returnFlight.segments[0].departure.at),
+                    arrival: formatTime(returnFlight.segments[returnFlight.segments.length - 1].arrival.at),
+                    stops: returnFlight.segments.length - 1,
+                    departureTime: returnFlight.segments[0].departure.at,
+                },
+                luggage: `${outboundOffer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags?.quantity || 0} checked bag(s) included`,
+                cabinBaggage: "1 cabin bag included",
+                pricePerPerson: totalPrice,
+                totalPrice: totalPrice * adults,
+                currency: outboundOffer.price.currency || "EUR",
+                isBestPrice: totalPrice === bestPrice,
+                timeCategory,
+                matchesPreference: preferredFlightTime === "any" || timeCategory === preferredFlightTime,
+            });
+        }
+
+        // Sort by preference match first, then by price
+        flightOptions.sort((a, b) => {
+            if (a.matchesPreference && !b.matchesPreference) return -1;
+            if (!a.matchesPreference && b.matchesPreference) return 1;
+            return a.pricePerPerson - b.pricePerPerson;
+        });
+
         return {
-            outbound: {
-                airline: getAirlineName(outbound.segments[0].carrierCode),
-                flightNumber: `${outbound.segments[0].carrierCode}${outbound.segments[0].number}`,
-                duration: formatDuration(outbound.duration),
-                departure: formatTime(outbound.segments[0].departure.at),
-                arrival: formatTime(outbound.segments[outbound.segments.length - 1].arrival.at),
-            },
-            return: {
-                airline: getAirlineName(returnFlight.segments[0].carrierCode),
-                flightNumber: `${returnFlight.segments[0].carrierCode}${returnFlight.segments[0].number}`,
-                duration: formatDuration(returnFlight.duration),
-                departure: formatTime(returnFlight.segments[0].departure.at),
-                arrival: formatTime(returnFlight.segments[returnFlight.segments.length - 1].arrival.at),
-            },
-            luggage: `${outboundOffer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags?.quantity || 0} bag(s) included`,
-            pricePerPerson: parseFloat(outboundOffer.price.total) + (returnData.data?.[0] ? parseFloat(returnOffer.price.total) : parseFloat(outboundOffer.price.total)),
-            dataSource: "amadeus", // Real data from Amadeus
+            options: flightOptions,
+            bestPrice,
+            preferredTime: preferredFlightTime,
+            dataSource: "amadeus",
         };
     } catch (error: any) {
         console.error("❌ Error searching flights:", error);
         console.warn("⚠️ Falling back to AI-generated flight data");
-        return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults);
+        return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults, preferredFlightTime);
     }
 }
 
@@ -576,47 +638,128 @@ async function generateRealisticFlights(
     destCode: string,
     departureDate: string,
     returnDate: string,
-    adults: number
+    adults: number,
+    preferredFlightTime: string = "any"
 ) {
     console.log("🤖 Generating realistic flight data with AI...");
+    console.log(`   Preferred time: ${preferredFlightTime}`);
     
     // Get realistic airlines for this route
     const airlines = getRealisticAirlinesForRoute(originCode, destCode);
-    const selectedAirline = airlines[0];
     
     // Calculate realistic flight duration based on distance
     const duration = calculateFlightDuration(originCode, destCode);
     
-    // Generate realistic departure times
-    const outboundDeparture = "08:30 AM";
-    const outboundArrival = addHoursToTime(outboundDeparture, duration);
+    // Define time slots based on preference
+    const timeSlots = [
+        { name: "morning", departure: "06:30 AM", label: "Early Morning" },
+        { name: "morning", departure: "09:15 AM", label: "Morning" },
+        { name: "afternoon", departure: "13:45 PM", label: "Afternoon" },
+        { name: "evening", departure: "18:30 PM", label: "Evening" },
+        { name: "night", departure: "22:15 PM", label: "Night" },
+    ];
     
-    const returnDeparture = "03:45 PM";
-    const returnArrival = addHoursToTime(returnDeparture, duration);
-    
-    // Calculate realistic pricing
+    // Calculate base price
     const basePrice = calculateRealisticPrice(originCode, destCode);
-    const pricePerPerson = basePrice * adults;
+    
+    // Generate multiple flight options
+    const flightOptions = [];
+    
+    // Generate 4 different flight options with varying times and prices
+    const selectedSlots = preferredFlightTime === "any" 
+        ? [timeSlots[1], timeSlots[2], timeSlots[3], timeSlots[0]] // Morning, Afternoon, Evening, Early
+        : [
+            timeSlots.find(s => s.name === preferredFlightTime) || timeSlots[1],
+            ...timeSlots.filter(s => s.name !== preferredFlightTime).slice(0, 3)
+        ];
+    
+    let bestPrice = Infinity;
+    
+    // First pass to find best price
+    for (let i = 0; i < 4; i++) {
+        // Price varies: early morning and night are cheaper, afternoon is most expensive
+        const priceMultiplier = i === 0 ? 1.0 : i === 1 ? 1.15 : i === 2 ? 1.25 : 0.9;
+        const price = Math.round(basePrice * priceMultiplier);
+        if (price < bestPrice) bestPrice = price;
+    }
+    
+    for (let i = 0; i < 4; i++) {
+        const slot = selectedSlots[i] || timeSlots[i];
+        const airline = airlines[i % airlines.length];
+        
+        // Price varies: early morning and night are cheaper, afternoon is most expensive
+        const priceMultiplier = i === 0 ? 1.0 : i === 1 ? 1.15 : i === 2 ? 1.25 : 0.9;
+        const price = Math.round(basePrice * priceMultiplier);
+        
+        const outboundDeparture = slot.departure;
+        const outboundArrival = addHoursToTime(outboundDeparture, duration);
+        
+        // Return flight times (different from outbound)
+        const returnSlot = timeSlots[(i + 2) % timeSlots.length];
+        const returnDeparture = returnSlot.departure;
+        const returnArrival = addHoursToTime(returnDeparture, duration);
+        
+        flightOptions.push({
+            id: i + 1,
+            outbound: {
+                airline: airline.name,
+                airlineCode: airline.code,
+                flightNumber: `${airline.code}${Math.floor(Math.random() * 9000) + 1000}`,
+                duration: `${Math.floor(duration)}h ${Math.round((duration % 1) * 60)}m`,
+                departure: outboundDeparture,
+                arrival: outboundArrival,
+                stops: i === 3 ? 1 : 0, // Last option has 1 stop (cheaper)
+                departureTime: `${departureDate}T${convertTo24Hour(outboundDeparture)}:00`,
+            },
+            return: {
+                airline: airline.name,
+                airlineCode: airline.code,
+                flightNumber: `${airline.code}${Math.floor(Math.random() * 9000) + 1000}`,
+                duration: `${Math.floor(duration)}h ${Math.round((duration % 1) * 60)}m`,
+                departure: returnDeparture,
+                arrival: returnArrival,
+                stops: i === 3 ? 1 : 0,
+                departureTime: `${returnDate}T${convertTo24Hour(returnDeparture)}:00`,
+            },
+            luggage: i < 2 ? "1 checked bag(s) included" : "0 checked bag(s) included",
+            cabinBaggage: "1 cabin bag included",
+            pricePerPerson: price,
+            totalPrice: price * adults,
+            currency: "EUR",
+            isBestPrice: price === bestPrice,
+            timeCategory: slot.name,
+            matchesPreference: preferredFlightTime === "any" || slot.name === preferredFlightTime,
+            label: slot.label,
+        });
+    }
+    
+    // Sort by preference match first, then by price
+    flightOptions.sort((a, b) => {
+        if (a.matchesPreference && !b.matchesPreference) return -1;
+        if (!a.matchesPreference && b.matchesPreference) return 1;
+        return a.pricePerPerson - b.pricePerPerson;
+    });
     
     return {
-        outbound: {
-            airline: selectedAirline.name,
-            flightNumber: `${selectedAirline.code}${Math.floor(Math.random() * 9000) + 1000}`,
-            duration: `${Math.floor(duration)}h ${Math.round((duration % 1) * 60)}m`,
-            departure: outboundDeparture,
-            arrival: outboundArrival,
-        },
-        return: {
-            airline: selectedAirline.name,
-            flightNumber: `${selectedAirline.code}${Math.floor(Math.random() * 9000) + 1000}`,
-            duration: `${Math.floor(duration)}h ${Math.round((duration % 1) * 60)}m`,
-            departure: returnDeparture,
-            arrival: returnArrival,
-        },
-        luggage: "1 bag(s) included",
-        pricePerPerson,
-        dataSource: "ai-generated", // AI-generated realistic data
+        options: flightOptions,
+        bestPrice,
+        preferredTime: preferredFlightTime,
+        dataSource: "ai-generated",
     };
+}
+
+// Helper to convert 12-hour time to 24-hour format
+function convertTo24Hour(time12h: string): string {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+    
+    if (hours === '12') {
+        hours = modifier === 'AM' ? '00' : '12';
+    } else if (modifier === 'PM') {
+        hours = String(parseInt(hours, 10) + 12);
+    }
+    
+    return `${hours.padStart(2, '0')}:${minutes}`;
 }
 
 // Get realistic airlines that operate on a specific route
@@ -654,7 +797,7 @@ function getRealisticAirlinesForRoute(originCode: string, destCode: string): Arr
         { code: "SQ", name: "Singapore Airlines" },
         { code: "NH", name: "All Nippon Airways" },
         { code: "CX", name: "Cathay Pacific" },
-        { code: "TG", name: "Thai Airways" },
+        { code: "BKK", name: "Thai Airways" },
     ];
     
     // Determine which airlines operate this route based on origin/destination
@@ -1059,11 +1202,10 @@ async function searchViatorProductsByText(searchText: string, apiKey: string) {
     }
 }
 
-// Fallback activities - now destination-specific
+// Fallback activities - destination-specific
 function getFallbackActivities(destination: string) {
     const destLower = destination.toLowerCase();
     
-    // Destination-specific activities
     const destinationActivities: Record<string, Array<{title: string, price: string, duration: string, description: string}>> = {
         "paris": [
             { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
@@ -1109,14 +1251,12 @@ function getFallbackActivities(destination: string) {
         ],
     };
     
-    // Check if we have specific activities for this destination
     for (const [city, activities] of Object.entries(destinationActivities)) {
         if (destLower.includes(city)) {
             return activities;
         }
     }
     
-    // Generic fallback
     return [
         { title: `City Tour of ${destination}`, price: "€25", duration: "3h", description: "Explore the main attractions" },
         { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
@@ -1126,11 +1266,10 @@ function getFallbackActivities(destination: string) {
     ];
 }
 
-// Fallback restaurants - now destination-specific
+// Fallback restaurants - destination-specific
 function getFallbackRestaurants(destination: string) {
     const destLower = destination.toLowerCase();
     
-    // Destination-specific restaurants
     const destinationRestaurants: Record<string, Array<{name: string, priceRange: string, cuisine: string, rating: number}>> = {
         "paris": [
             { name: "Le Comptoir du Relais", priceRange: "€€€", cuisine: "French Bistro", rating: 4.5 },
@@ -1176,14 +1315,12 @@ function getFallbackRestaurants(destination: string) {
         ],
     };
     
-    // Check if we have specific restaurants for this destination
     for (const [city, restaurants] of Object.entries(destinationRestaurants)) {
         if (destLower.includes(city)) {
             return restaurants;
         }
     }
     
-    // Generic fallback
     return [
         { name: `Traditional ${destination} Restaurant`, priceRange: "€€", cuisine: "Local", rating: 4.5 },
         { name: "Mediterranean Bistro", priceRange: "€€€", cuisine: "Mediterranean", rating: 4.3 },
@@ -1191,6 +1328,75 @@ function getFallbackRestaurants(destination: string) {
         { name: "Fine Dining Experience", priceRange: "€€€€", cuisine: "Fusion", rating: 4.7 },
         { name: "Street Food Market", priceRange: "€", cuisine: "Various", rating: 4.2 },
     ];
+}
+
+// Fallback hotels - destination-specific
+function getFallbackHotels(destination: string) {
+    return [
+        {
+            name: `Grand Hotel ${destination}`,
+            rating: "5",
+            price: "250",
+            currency: "EUR",
+            amenities: ["WiFi", "Pool", "Spa", "Restaurant", "Gym"],
+            address: `City Center, ${destination}`,
+            description: "Luxury 5-star hotel in the heart of the city with premium amenities.",
+        },
+        {
+            name: `${destination} Boutique Hotel`,
+            rating: "4",
+            price: "150",
+            currency: "EUR",
+            amenities: ["WiFi", "Breakfast", "Bar", "Room Service"],
+            address: `Historic District, ${destination}`,
+            description: "Charming boutique hotel with personalized service and unique character.",
+        },
+        {
+            name: `${destination} City Inn`,
+            rating: "3",
+            price: "80",
+            currency: "EUR",
+            amenities: ["WiFi", "Breakfast", "24h Reception"],
+            address: `Central ${destination}`,
+            description: "Comfortable and affordable accommodation in a convenient location.",
+        },
+    ];
+}
+
+// TripAdvisor restaurant search (fallback to getFallbackRestaurants if API fails)
+async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
+    try {
+        // TripAdvisor Content API - Location Search
+        const searchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&category=restaurants&language=en`;
+        
+        const response = await fetch(searchUrl, {
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            console.error("TripAdvisor API error:", response.status);
+            throw new Error(`TripAdvisor API failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.data || data.data.length === 0) {
+            return [];
+        }
+
+        return data.data.slice(0, 5).map((restaurant: any) => ({
+            name: restaurant.name,
+            priceRange: restaurant.price_level || "€€",
+            cuisine: restaurant.cuisine?.[0]?.name || "Local",
+            rating: parseFloat(restaurant.rating) || 4.0,
+            address: restaurant.address_obj?.street1 || destination,
+        }));
+    } catch (error) {
+        console.error("❌ TripAdvisor search error:", error);
+        throw error;
+    }
 }
 
 // Generate transportation options (car rental, taxi, Uber) - DESTINATION SPECIFIC PRICING
@@ -1267,7 +1473,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             taxiFromAirport: 50, // Schiphol to city center
             uberX: { min: 40, max: 55 },
             uberComfort: { min: 55, max: 75 },
-            bolt: { min: 35, max: 50 },
+            bolt: { min: 35, max: 45 },
             carRentalEconomy: 45,
             carRentalCompact: 60,
             carRentalSUV: 95,
@@ -1286,7 +1492,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             carRentalSUV: 65,
             metroTicket: 1.20,
             dayPass: 4.10,
-            airportExpress: 2, // Metro Line 3
+            airportExpress: 2, // MetroLine 3
             premiumTransfer: 75,
         },
         "berlin": {
@@ -1597,140 +1803,6 @@ function generateTransportationOptions(destination: string, origin: string, trav
         ...taxiOptions,
         ...rideSharingOptions,
         publicTransport,
-    ];
-}
-
-// Fallback activities - now destination-specific
-function getFallbackActivities(destination: string) {
-    const destLower = destination.toLowerCase();
-    
-    // Destination-specific activities
-    const destinationActivities: Record<string, Array<{title: string, price: string, duration: string, description: string}>> = {
-        "paris": [
-            { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
-            { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
-            { title: "Seine River Cruise", price: "€15", duration: "1h", description: "Scenic boat tour along the Seine" },
-            { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
-            { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
-        ],
-        "rome": [
-            { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
-            { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "Roman Forum", price: "€16", duration: "2h", description: "Ancient Roman ruins" },
-            { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
-            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
-        ],
-        "london": [
-            { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
-            { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
-            { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
-            { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
-            { title: "Thames River Cruise", price: "€15", duration: "1h", description: "Sightseeing boat tour" },
-        ],
-        "barcelona": [
-            { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
-            { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
-            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
-            { title: "La Rambla", price: "Free", duration: "1h", description: "Famous tree-lined street" },
-            { title: "Casa Batlló", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
-        ],
-        "athens": [
-            { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
-            { title: "Acropolis Museum", price: "€10", duration: "2h", description: "Archaeological museum" },
-            { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
-            { title: "Plaka Walking Tour", price: "Free", duration: "2h", description: "Historic neighborhood" },
-            { title: "Temple of Olympian Zeus", price: "€8", duration: "1h", description: "Ancient Greek temple ruins" },
-        ],
-        "amsterdam": [
-            { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
-            { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
-            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
-            { title: "Rijksmuseum", price: "€22", duration: "3h", description: "Dutch art and history" },
-            { title: "Vondelpark", price: "Free", duration: "1-2h", description: "Large public park" },
-        ],
-    };
-    
-    // Check if we have specific activities for this destination
-    for (const [city, activities] of Object.entries(destinationActivities)) {
-        if (destLower.includes(city)) {
-            return activities;
-        }
-    }
-    
-    // Generic fallback
-    return [
-        { title: `City Tour of ${destination}`, price: "€25", duration: "3h", description: "Explore the main attractions" },
-        { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
-        { title: "Walking Tour", price: "€10", duration: "2h", description: "Guided walking tour of historic sites" },
-        { title: "Local Market", price: "Free", duration: "1-2h", description: "Experience local life and cuisine" },
-        { title: "Sunset Viewpoint", price: "Free", duration: "1h", description: "Best views of the city" },
-    ];
-}
-
-// Fallback restaurants - now destination-specific
-function getFallbackRestaurants(destination: string) {
-    const destLower = destination.toLowerCase();
-    
-    // Destination-specific restaurants
-    const destinationRestaurants: Record<string, Array<{name: string, priceRange: string, cuisine: string, rating: number}>> = {
-        "paris": [
-            { name: "Le Comptoir du Relais", priceRange: "€€€", cuisine: "French Bistro", rating: 4.5 },
-            { name: "L'As du Fallafel", priceRange: "€", cuisine: "Middle Eastern", rating: 4.6 },
-            { name: "Breizh Café", priceRange: "€€", cuisine: "Crêperie", rating: 4.4 },
-            { name: "Le Jules Verne", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.7 },
-            { name: "Marché des Enfants Rouges", priceRange: "€", cuisine: "Market Food", rating: 4.3 },
-        ],
-        "rome": [
-            { name: "Trattoria Da Enzo", priceRange: "€€", cuisine: "Traditional Roman", rating: 4.6 },
-            { name: "Pizzarium", priceRange: "€", cuisine: "Pizza al Taglio", rating: 4.5 },
-            { name: "La Pergola", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Roscioli", priceRange: "€€€", cuisine: "Italian Deli", rating: 4.7 },
-            { name: "Supplizio", priceRange: "€", cuisine: "Street Food", rating: 4.4 },
-        ],
-        "london": [
-            { name: "Dishoom", priceRange: "€€", cuisine: "Indian", rating: 4.5 },
-            { name: "Borough Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
-            { name: "The Ledbury", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Flat Iron", priceRange: "€€", cuisine: "Steakhouse", rating: 4.4 },
-            { name: "Padella", priceRange: "€€", cuisine: "Italian Pasta", rating: 4.7 },
-        ],
-        "barcelona": [
-            { name: "Cervecería Catalana", priceRange: "€€", cuisine: "Tapas", rating: 4.5 },
-            { name: "La Boqueria Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
-            { name: "Tickets Bar", priceRange: "€€€", cuisine: "Modern Tapas", rating: 4.7 },
-            { name: "Can Culleretes", priceRange: "€€", cuisine: "Traditional Catalan", rating: 4.4 },
-            { name: "El Xampanyet", priceRange: "€", cuisine: "Tapas Bar", rating: 4.5 },
-        ],
-        "athens": [
-            { name: "Taverna Tou Psyrri", priceRange: "€€", cuisine: "Traditional Greek", rating: 4.5 },
-            { name: "Kostas Souvlaki", priceRange: "€", cuisine: "Souvlaki", rating: 4.6 },
-            { name: "Spondi", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Karamanlidika", priceRange: "€€", cuisine: "Greek Meze", rating: 4.7 },
-            { name: "Varvakios Agora", priceRange: "€", cuisine: "Market Food", rating: 4.4 },
-        ],
-        "amsterdam": [
-            { name: "De Kas", priceRange: "€€€", cuisine: "Farm-to-Table", rating: 4.6 },
-            { name: "Foodhallen", priceRange: "€€", cuisine: "Food Hall", rating: 4.4 },
-            { name: "The Pantry", priceRange: "€€", cuisine: "Dutch Traditional", rating: 4.5 },
-            { name: "Café de Klos", priceRange: "€€", cuisine: "Grill House", rating: 4.6 },
-            { name: "Albert Cuyp Market", priceRange: "€", cuisine: "Street Food", rating: 4.3 },
-        ],
-    };
-    
-    // Check if we have specific restaurants for this destination
-    for (const [city, restaurants] of Object.entries(destinationRestaurants)) {
-        if (destLower.includes(city)) {
-            return restaurants;
-        }
-    }
-    
-    // Generic fallback
-    return [
-        { name: `Traditional ${destination} Restaurant`, priceRange: "€€", cuisine: "Local", rating: 4.5 },
-        { name: "Mediterranean Bistro", priceRange: "€€€", cuisine: "Mediterranean", rating: 4.3 },
-        { name: "Casual Dining Spot", priceRange: "€", cuisine: "International", rating: 4.0 },
-        { name: "Fine Dining Experience", priceRange: "€€€€", cuisine: "Fusion", rating: 4.7 },
-        { name: "Street Food Market", priceRange: "€", cuisine: "Various", rating: 4.2 },
     ];
 }
 

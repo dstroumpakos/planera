@@ -9,11 +9,13 @@ export const create = authMutation({
         origin: v.string(),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.union(v.string(), v.number()),
+        budget: v.number(),
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
+        preferredFlightTime: v.optional(v.string()),
     },
+    returns: v.id("trips"),
     handler: async (ctx, args) => {
         // Check if user can generate a trip
         const userPlan = await ctx.db
@@ -74,11 +76,12 @@ export const create = authMutation({
             interests: args.interests,
             status: "generating",
             skipFlights: args.skipFlights ?? false,
+            preferredFlightTime: args.preferredFlightTime ?? "any",
         });
 
         const flightInfo = args.skipFlights 
             ? "Note: User already has flights booked, so DO NOT include flight recommendations."
-            : `Flying from: ${args.origin}`;
+            : `Flying from: ${args.origin}. Preferred flight time: ${args.preferredFlightTime || "any"}`;
 
         const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
         ${flightInfo}
@@ -87,7 +90,12 @@ export const create = authMutation({
         Interests: ${args.interests.join(", ")}.`;
 
         // Schedule the generation action from tripsActions.ts
-        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId, prompt, skipFlights: args.skipFlights ?? false });
+        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 
+            tripId, 
+            prompt, 
+            skipFlights: args.skipFlights ?? false,
+            preferredFlightTime: args.preferredFlightTime ?? "any",
+        });
 
         return tripId;
     },
@@ -151,7 +159,7 @@ export const update = authMutation({
         origin: v.optional(v.string()),
         startDate: v.optional(v.number()),
         endDate: v.optional(v.number()),
-        budget: v.optional(v.union(v.string(), v.number())), // Accept both for migration
+        budget: v.optional(v.number()),
         travelers: v.optional(v.number()),
         interests: v.optional(v.array(v.string())),
     },

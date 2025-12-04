@@ -35,6 +35,7 @@ export default function TripDetails() {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
     const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
+    const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0);
 
     const [editForm, setEditForm] = useState({
         destination: "",
@@ -340,6 +341,129 @@ export default function TripDetails() {
     };
 
     const renderFlights = () => {
+        // Check if flights were skipped
+        if (itinerary.flights?.skipped) {
+            return (
+                <View style={styles.card}>
+                    <View style={styles.skippedFlightsContainer}>
+                        <Ionicons name="airplane" size={32} color="#5EEAD4" />
+                        <Text style={styles.skippedFlightsTitle}>Flights Not Included</Text>
+                        <Text style={styles.skippedFlightsText}>
+                            {itinerary.flights.message || "You indicated you already have flights booked."}
+                        </Text>
+                    </View>
+                </View>
+            );
+        }
+
+        // Handle new multiple options format
+        if (itinerary.flights?.options && Array.isArray(itinerary.flights.options)) {
+            const flightOptions = itinerary.flights.options;
+            const selectedFlight = flightOptions[selectedFlightIndex] || flightOptions[0];
+            const bestPrice = itinerary.flights.bestPrice;
+            
+            return (
+                <View style={styles.card}>
+                    <View style={styles.bestPriceBanner}>
+                        <Ionicons name="pricetag" size={16} color="#10B981" />
+                        <Text style={styles.bestPriceText}>Best price from €{Math.round(bestPrice)}/person</Text>
+                    </View>
+                    
+                    <Text style={styles.flightOptionsLabel}>Select your flight:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.flightOptionsScroll}>
+                        {flightOptions.map((option: any, index: number) => (
+                            <TouchableOpacity
+                                key={option.id || index}
+                                style={[
+                                    styles.flightOptionCard,
+                                    selectedFlightIndex === index && styles.flightOptionCardSelected,
+                                ]}
+                                onPress={() => setSelectedFlightIndex(index)}
+                            >
+                                {option.isBestPrice && (
+                                    <View style={styles.bestPriceBadge}>
+                                        <Text style={styles.bestPriceBadgeText}>Best Price</Text>
+                                    </View>
+                                )}
+                                <Text style={styles.flightOptionAirline}>{option.outbound.airline}</Text>
+                                <Text style={styles.flightOptionTime}>{option.outbound.departure}</Text>
+                                <Text style={styles.flightOptionPrice}>€{Math.round(option.pricePerPerson)}</Text>
+                                <Text style={styles.flightOptionStops}>
+                                    {option.outbound.stops === 0 ? 'Direct' : `${option.outbound.stops} stop`}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                    
+                    <View style={styles.selectedFlightDetails}>
+                        <View style={styles.flightHeader}>
+                            <Text style={styles.flightPrice}>€{Math.round(selectedFlight.pricePerPerson)}/person</Text>
+                            <View style={styles.luggageBadge}>
+                                <Ionicons name="briefcase-outline" size={14} color="#14B8A6" />
+                                <Text style={styles.luggageText}>{selectedFlight.luggage}</Text>
+                            </View>
+                        </View>
+                        
+                        {itinerary.flights.dataSource === "ai-generated" && (
+                            <View style={styles.dataSourceBadge}>
+                                <Ionicons name="sparkles" size={14} color="#FF9500" />
+                                <Text style={styles.dataSourceText}>AI-Generated Flight Data</Text>
+                            </View>
+                        )}
+                        
+                        <View style={styles.flightSegment}>
+                            <View style={styles.segmentHeader}>
+                                <Ionicons name="airplane" size={20} color="#14B8A6" />
+                                <Text style={styles.segmentTitle}>Outbound</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <View style={styles.flightInfo}>
+                                    <Text style={styles.cardTitle}>{selectedFlight.outbound.airline}</Text>
+                                    <Text style={styles.cardSubtitle}>{selectedFlight.outbound.flightNumber}</Text>
+                                </View>
+                                <Text style={styles.duration}>{selectedFlight.outbound.duration}</Text>
+                            </View>
+                            <View style={styles.flightTimes}>
+                                <Text style={styles.time}>{selectedFlight.outbound.departure}</Text>
+                                <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
+                                <Text style={styles.time}>{selectedFlight.outbound.arrival}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.flightSegment}>
+                            <View style={styles.segmentHeader}>
+                                <Ionicons name="airplane" size={20} color="#14B8A6" style={{ transform: [{ rotate: '180deg' }] }} />
+                                <Text style={styles.segmentTitle}>Return</Text>
+                            </View>
+                            <View style={styles.row}>
+                                <View style={styles.flightInfo}>
+                                    <Text style={styles.cardTitle}>{selectedFlight.return.airline}</Text>
+                                    <Text style={styles.cardSubtitle}>{selectedFlight.return.flightNumber}</Text>
+                                </View>
+                                <Text style={styles.duration}>{selectedFlight.return.duration}</Text>
+                            </View>
+                            <View style={styles.flightTimes}>
+                                <Text style={styles.time}>{selectedFlight.return.departure}</Text>
+                                <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
+                                <Text style={styles.time}>{selectedFlight.return.arrival}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <TouchableOpacity 
+                        style={styles.affiliateButton}
+                        onPress={() => openAffiliateLink('flight', `${trip.origin} to ${trip.destination}`)}
+                    >
+                        <Text style={styles.affiliateButtonText}>Book This Flight</Text>
+                        <Ionicons name="open-outline" size={16} color="#14B8A6" />
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
+        // Legacy array format
         if (Array.isArray(itinerary.flights)) {
             return (
                 <View style={styles.card}>
@@ -356,6 +480,7 @@ export default function TripDetails() {
             );
         }
 
+        // No flights available
         if (!itinerary.flights || !itinerary.flights.outbound) {
             return (
                 <View style={styles.card}>
@@ -364,17 +489,17 @@ export default function TripDetails() {
             );
         }
 
+        // Old single flight format
         return (
             <View style={styles.card}>
                 <View style={styles.flightHeader}>
-                    <Text style={styles.flightPrice}>${flightPricePerPerson}/person</Text>
+                    <Text style={styles.flightPrice}>€{flightPricePerPerson}/person</Text>
                     <View style={styles.luggageBadge}>
                         <Ionicons name="briefcase-outline" size={14} color="#14B8A6" />
                         <Text style={styles.luggageText}>{itinerary.flights.luggage}</Text>
                     </View>
                 </View>
                 
-                {/* Data source badge */}
                 {itinerary.flights.dataSource === "ai-generated" && (
                     <View style={styles.dataSourceBadge}>
                         <Ionicons name="sparkles" size={14} color="#FF9500" />
@@ -1425,6 +1550,7 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         fontSize: 12,
         textTransform: "uppercase",
+        letterSpacing: 1,
     },
     dayTitle: {
         fontSize: 18,
@@ -1610,8 +1736,8 @@ const styles = StyleSheet.create({
     },
     bookButtonText: {
         color: "white",
-        fontWeight: "700",
         fontSize: 16,
+        fontWeight: "700",
         textTransform: "uppercase",
         letterSpacing: 1,
     },
@@ -1642,7 +1768,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#5EEAD4",
         textAlign: "center",
-        marginBottom: 24,
         lineHeight: 22,
     },
     unlockButton: {
@@ -2463,5 +2588,111 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 10,
         fontWeight: "700",
+    },
+    // Skipped Flights Styles
+    skippedFlightsContainer: {
+        alignItems: "center",
+        padding: 24,
+        gap: 12,
+    },
+    skippedFlightsTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#0D9488",
+    },
+    skippedFlightsText: {
+        fontSize: 14,
+        color: "#5EEAD4",
+        textAlign: "center",
+        lineHeight: 20,
+    },
+    // Multiple Flight Options Styles
+    bestPriceBanner: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#D1FAE5",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        marginBottom: 16,
+        gap: 8,
+    },
+    bestPriceText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#10B981",
+    },
+    flightOptionsLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#0D9488",
+        marginBottom: 12,
+    },
+    flightOptionsScroll: {
+        marginBottom: 20,
+    },
+    flightOptionCard: {
+        width: 140,
+        backgroundColor: "#F0FFFE",
+        borderRadius: 14,
+        padding: 14,
+        marginRight: 12,
+        borderWidth: 2,
+        borderColor: "#CCFBF1",
+        alignItems: "center",
+    },
+    flightOptionCardSelected: {
+        borderColor: "#14B8A6",
+        backgroundColor: "#CCFBF1",
+    },
+    bestPriceBadge: {
+        backgroundColor: "#10B981",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginBottom: 8,
+    },
+    bestPriceBadgeText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: "white",
+        textTransform: "uppercase",
+    },
+    flightOptionAirline: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#0D9488",
+        textAlign: "center",
+        marginBottom: 4,
+    },
+    flightOptionTime: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#134E4A",
+        marginBottom: 4,
+    },
+    flightOptionPrice: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: "#14B8A6",
+        marginBottom: 4,
+    },
+    flightOptionStops: {
+        fontSize: 11,
+        color: "#5EEAD4",
+        fontWeight: "500",
+        marginTop: 4,
+    },
+    selectedFlightDetails: {
+        backgroundColor: "#F0FFFE",
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 16,
+    },
+    stopsText: {
+        fontSize: 12,
+        color: "#F59E0B",
+        fontWeight: "500",
+        marginTop: 4,
     },
 });

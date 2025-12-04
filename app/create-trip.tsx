@@ -27,6 +27,7 @@ export default function CreateTrip() {
         travelers: 1,
         interests: [] as string[],
         skipFlights: false,
+        preferredFlightTime: "any" as "any" | "morning" | "afternoon" | "evening" | "night",
     });
 
     const formatDate = (timestamp: number) => {
@@ -145,6 +146,7 @@ export default function CreateTrip() {
                 travelers: formData.travelers,
                 interests: formData.interests,
                 skipFlights: formData.skipFlights,
+                preferredFlightTime: formData.skipFlights ? undefined : formData.preferredFlightTime,
             });
             // Wait a bit to show the animation
             setTimeout(() => {
@@ -244,6 +246,40 @@ export default function CreateTrip() {
                                     />
                                 </View>
                                 <Text style={styles.helperText}>Enter your departure city or airport.</Text>
+                                
+                                {/* Flight Time Preference */}
+                                <Text style={[styles.label, { marginTop: 24 }]}>Preferred flight time</Text>
+                                <View style={styles.flightTimeContainer}>
+                                    {[
+                                        { value: "any", label: "Any Time", icon: "time-outline" },
+                                        { value: "morning", label: "Morning", icon: "sunny-outline" },
+                                        { value: "afternoon", label: "Afternoon", icon: "partly-sunny-outline" },
+                                        { value: "evening", label: "Evening", icon: "moon-outline" },
+                                        { value: "night", label: "Night", icon: "cloudy-night-outline" },
+                                    ].map((option) => (
+                                        <TouchableOpacity
+                                            key={option.value}
+                                            style={[
+                                                styles.flightTimeOption,
+                                                formData.preferredFlightTime === option.value && styles.flightTimeOptionSelected,
+                                            ]}
+                                            onPress={() => setFormData({ ...formData, preferredFlightTime: option.value as any })}
+                                        >
+                                            <Ionicons 
+                                                name={option.icon as any} 
+                                                size={20} 
+                                                color={formData.preferredFlightTime === option.value ? "#FFFFFF" : "#14B8A6"} 
+                                            />
+                                            <Text style={[
+                                                styles.flightTimeText,
+                                                formData.preferredFlightTime === option.value && styles.flightTimeTextSelected,
+                                            ]}>
+                                                {option.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <Text style={styles.helperText}>We'll show you multiple flight options with the best prices.</Text>
                             </>
                         )}
                         
@@ -779,5 +815,36 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#0D9488",
         lineHeight: 18,
+    },
+    // Flight Time Preference Styles
+    flightTimeContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+    },
+    flightTimeOption: {
+        flexDirection: "row",
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 12,
+        backgroundColor: "white",
+        borderWidth: 2,
+        borderColor: "#99F6E4",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+    },
+    flightTimeOptionSelected: {
+        backgroundColor: "#14B8A6",
+        borderColor: "#14B8A6",
+    },
+    flightTimeText: {
+        fontSize: 13,
+        color: "#0D9488",
+        fontWeight: "600",
+    },
+    flightTimeTextSelected: {
+        color: "white",
+        fontWeight: "700",
     },
 });

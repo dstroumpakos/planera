@@ -5,15 +5,16 @@ export default defineSchema({
     trips: defineTable({
         userId: v.string(),
         destination: v.string(),
-        origin: v.optional(v.string()),
+        origin: v.string(),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.union(v.string(), v.number()),
+        budget: v.number(),
         travelers: v.number(),
         interests: v.array(v.string()),
-        status: v.union(v.literal("generating"), v.literal("completed"), v.literal("failed")),
-        itinerary: v.optional(v.any()),
         skipFlights: v.optional(v.boolean()),
+        preferredFlightTime: v.optional(v.string()), // "morning", "afternoon", "evening", "night", "any"
+        status: v.string(),
+        itinerary: v.optional(v.any()),
     }).index("by_user", ["userId"]),
     userPlans: defineTable({
         userId: v.string(),
