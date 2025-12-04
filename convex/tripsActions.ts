@@ -31,9 +31,14 @@ export const generate = internalAction({
             throw new Error("Trip not found");
         }
         
+        console.log("📋 Trip details:", JSON.stringify(trip, null, 2));
+
+        // Default origin if not set (for backward compatibility with old trips)
+        const origin = trip.origin || "London";
+
         console.log("✅ Trip details loaded:");
         console.log("  - Destination:", trip.destination);
-        console.log("  - Origin:", trip.origin);
+        console.log("  - Origin:", origin);
         console.log("  - Start Date:", new Date(trip.startDate).toISOString());
         console.log("  - End Date:", new Date(trip.endDate).toISOString());
         console.log("  - Travelers:", trip.travelers);
@@ -94,7 +99,7 @@ export const generate = internalAction({
                         const amadeusToken = await getAmadeusToken();
                         flights = await searchFlights(
                             amadeusToken,
-                            trip.origin,
+                            origin,
                             trip.destination,
                             new Date(trip.startDate).toISOString().split('T')[0],
                             new Date(trip.endDate).toISOString().split('T')[0],
@@ -104,8 +109,8 @@ export const generate = internalAction({
                     } catch (error) {
                         console.error("❌ Amadeus flights failed:", error);
                         flights = await generateRealisticFlights(
-                            trip.origin,
-                            extractIATACode(trip.origin),
+                            origin,
+                            extractIATACode(origin),
                             trip.destination,
                             extractIATACode(trip.destination),
                             new Date(trip.startDate).toISOString().split('T')[0],
@@ -116,8 +121,8 @@ export const generate = internalAction({
                     }
                 } else {
                     flights = await generateRealisticFlights(
-                        trip.origin,
-                        extractIATACode(trip.origin),
+                        origin,
+                        extractIATACode(origin),
                         trip.destination,
                         extractIATACode(trip.destination),
                         new Date(trip.startDate).toISOString().split('T')[0],
@@ -166,7 +171,7 @@ export const generate = internalAction({
 
             // 5. Generate transportation options
             console.log("🚗 Generating transportation options...");
-            const transportation = generateTransportationOptions(trip.destination, trip.origin, trip.travelers);
+            const transportation = generateTransportationOptions(trip.destination, origin, trip.travelers);
             console.log(`✅ Transportation ready: ${transportation.length} options`);
 
             // 6. Generate day-by-day itinerary with OpenAI

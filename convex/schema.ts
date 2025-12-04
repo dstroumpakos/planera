@@ -5,7 +5,7 @@ export default defineSchema({
     trips: defineTable({
         userId: v.string(),
         destination: v.string(),
-        origin: v.string(),
+        origin: v.optional(v.string()), // Optional for backward compatibility with old trips
         startDate: v.number(),
         endDate: v.number(),
         budget: v.union(v.number(), v.string()), // Accept both for backward compatibility
