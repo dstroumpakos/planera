@@ -8,7 +8,7 @@ export default defineSchema({
         origin: v.string(),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.number(),
+        budget: v.union(v.number(), v.string()), // Accept both for backward compatibility
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
