@@ -36,6 +36,7 @@ export default function TripDetails() {
     const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
     const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
     const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0);
+    const [checkedBaggageSelected, setCheckedBaggageSelected] = useState<boolean>(false);
 
     const [editForm, setEditForm] = useState({
         destination: "",
@@ -242,16 +243,31 @@ export default function TripDetails() {
         ? allAccommodations[selectedHotelIndex] 
         : allAccommodations[0];
     
-    // Calculate costs
-    const flightPricePerPerson = itinerary.flights?.pricePerPerson || (itinerary.flights?.price ? itinerary.flights.price / travelers : 0);
+    // Get selected flight from options if available
+    const flightOptions = itinerary?.flights?.options;
+    const selectedFlight = flightOptions && Array.isArray(flightOptions) 
+        ? flightOptions[selectedFlightIndex] || flightOptions[0]
+        : null;
+    
+    // Calculate flight price based on selected flight
+    const flightPricePerPerson = selectedFlight 
+        ? selectedFlight.pricePerPerson 
+        : (itinerary?.flights?.pricePerPerson || (itinerary?.flights?.price ? itinerary.flights.price / travelers : 0));
+    
+    // Get baggage price from selected flight (default €30 per person for checked bag)
+    // Only charge if baggage is not already included AND user selected it
+    const checkedBaggagePrice = selectedFlight?.checkedBaggagePrice || 30;
+    const baggageIncluded = selectedFlight?.checkedBaggageIncluded || false;
+    const totalBaggageCost = (!baggageIncluded && checkedBaggageSelected) ? checkedBaggagePrice * travelers : 0;
+    
     const accommodationPricePerNight = selectedAccommodation?.pricePerNight || 0;
-    const dailyExpensesPerPerson = itinerary.estimatedDailyExpenses || 50; // Fallback
+    const dailyExpensesPerPerson = itinerary?.estimatedDailyExpenses || 50; // Fallback
 
     const totalFlightCost = flightPricePerPerson * travelers;
     const totalAccommodationCost = accommodationPricePerNight * duration;
     const totalDailyExpenses = dailyExpensesPerPerson * travelers * duration;
     
-    const grandTotal = totalFlightCost + totalAccommodationCost + totalDailyExpenses;
+    const grandTotal = totalFlightCost + totalBaggageCost + totalAccommodationCost + totalDailyExpenses;
     const pricePerPerson = grandTotal / travelers;
 
     const openMap = (query: string) => {
@@ -449,6 +465,81 @@ export default function TripDetails() {
                                 <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
                                 <Text style={styles.time}>{selectedFlight.return.arrival}</Text>
                             </View>
+                        </View>
+
+                        {/* Baggage Options */}
+                        <View style={styles.baggageSection}>
+                            <Text style={styles.baggageSectionTitle}>Baggage Options</Text>
+                            
+                            {/* Included Cabin Bag */}
+                            <View style={styles.baggageOption}>
+                                <View style={styles.baggageOptionLeft}>
+                                    <Ionicons name="briefcase-outline" size={20} color="#14B8A6" />
+                                    <View style={styles.baggageOptionInfo}>
+                                        <Text style={styles.baggageOptionTitle}>Cabin Bag (8kg)</Text>
+                                        <Text style={styles.baggageOptionDesc}>Included in fare</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.includedBadge}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                                    <Text style={styles.includedText}>Included</Text>
+                                </View>
+                            </View>
+
+                            {/* Checked Baggage - Show as included or as option */}
+                            {selectedFlight.checkedBaggageIncluded ? (
+                                <View style={styles.baggageOption}>
+                                    <View style={styles.baggageOptionLeft}>
+                                        <Ionicons name="bag-handle-outline" size={20} color="#14B8A6" />
+                                        <View style={styles.baggageOptionInfo}>
+                                            <Text style={styles.baggageOptionTitle}>Checked Bag (23kg)</Text>
+                                            <Text style={styles.baggageOptionDesc}>Included in fare</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.includedBadge}>
+                                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                                        <Text style={styles.includedText}>Included</Text>
+                                    </View>
+                                </View>
+                            ) : (
+                                <TouchableOpacity 
+                                    style={[
+                                        styles.baggageOption,
+                                        styles.baggageOptionSelectable,
+                                        checkedBaggageSelected && styles.baggageOptionSelected
+                                    ]}
+                                    onPress={() => setCheckedBaggageSelected(!checkedBaggageSelected)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.baggageOptionLeft}>
+                                        <Ionicons name="bag-handle-outline" size={20} color={checkedBaggageSelected ? "#14B8A6" : "#546E7A"} />
+                                        <View style={styles.baggageOptionInfo}>
+                                            <Text style={[styles.baggageOptionTitle, checkedBaggageSelected && styles.baggageOptionTitleSelected]}>
+                                                Checked Bag (23kg)
+                                            </Text>
+                                            <Text style={styles.baggageOptionDesc}>Per person, round trip</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.baggageOptionRight}>
+                                        <Text style={[styles.baggagePrice, checkedBaggageSelected && styles.baggagePriceSelected]}>
+                                            +€{selectedFlight.checkedBaggagePrice || 30}
+                                        </Text>
+                                        <View style={[styles.checkbox, checkedBaggageSelected && styles.checkboxSelected]}>
+                                            {checkedBaggageSelected && (
+                                                <Ionicons name="checkmark" size={16} color="white" />
+                                            )}
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            {checkedBaggageSelected && !selectedFlight.checkedBaggageIncluded && (
+                                <View style={styles.baggageSummary}>
+                                    <Text style={styles.baggageSummaryText}>
+                                        Checked baggage for {travelers} traveler{travelers > 1 ? 's' : ''}: €{(selectedFlight.checkedBaggagePrice || 30) * travelers}
+                                    </Text>
+                                </View>
+                            )}
                         </View>
                     </View>
 
@@ -1211,16 +1302,19 @@ export default function TripDetails() {
                         style={styles.priceBreakdownToggle}
                         onPress={() => {
                             if (Platform.OS !== 'web') {
+                                const baggageLine = checkedBaggageSelected 
+                                    ? `\n🧳 Checked baggage: €${Math.round(totalBaggageCost)}` 
+                                    : '';
                                 Alert.alert(
                                     "Price Breakdown",
-                                    `✈️ Flights: €${Math.round(totalFlightCost)}\n🏨 ${selectedAccommodation?.type === 'airbnb' ? 'Airbnb' : 'Hotel'} (${duration} nights): €${Math.round(totalAccommodationCost)}\n🍽️ Daily expenses: €${Math.round(totalDailyExpenses)}\n\n💰 Total: €${Math.round(grandTotal)}`,
+                                    `✈️ Flights: €${Math.round(totalFlightCost)}${baggageLine}\n🏨 ${selectedAccommodation?.type === 'airbnb' ? 'Airbnb' : 'Hotel'} (${duration} nights): €${Math.round(totalAccommodationCost)}\n🍽️ Daily expenses: €${Math.round(totalDailyExpenses)}\n\n💰 Total: €${Math.round(grandTotal)}`,
                                     [{ text: "OK" }]
                                 );
                             }
                         }}
                     >
                         <View style={styles.priceRow}>
-                            <Text style={styles.priceLabel}>Total for {travelers} travelers</Text>
+                            <Text style={styles.priceLabel}>Total for {travelers} traveler{travelers > 1 ? 's' : ''}</Text>
                             <Ionicons name="information-circle-outline" size={16} color="#78909C" />
                         </View>
                         <Text style={styles.totalPrice}>€{Math.round(grandTotal).toLocaleString()}</Text>
@@ -2694,5 +2788,97 @@ const styles = StyleSheet.create({
         color: "#F59E0B",
         fontWeight: "500",
         marginTop: 4,
+    },
+    baggageSection: {
+        marginTop: 16,
+    },
+    baggageSectionTitle: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#0D9488",
+        marginBottom: 12,
+    },
+    baggageOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#F0FFFE",
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 12,
+    },
+    baggageOptionLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    baggageOptionInfo: {
+        flexDirection: "column",
+        gap: 4,
+    },
+    baggageOptionTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#134E4A",
+    },
+    baggageOptionDesc: {
+        fontSize: 12,
+        color: "#5EEAD4",
+    },
+    baggageOptionRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    baggagePrice: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#14B8A6",
+    },
+    baggageOptionSelectable: {
+        backgroundColor: "white",
+        borderWidth: 1,
+        borderColor: "#CCFBF1",
+    },
+    baggageOptionSelected: {
+        backgroundColor: "#CCFBF1",
+    },
+    baggagePriceSelected: {
+        color: "#14B8A6",
+    },
+    baggageOptionTitleSelected: {
+        color: "#14B8A6",
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#546E7A",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    checkboxSelected: {
+        backgroundColor: "#14B8A6",
+        borderColor: "#14B8A6",
+    },
+    baggageSummary: {
+        alignItems: "center",
+        marginTop: 12,
+    },
+    baggageSummaryText: {
+        fontSize: 12,
+        color: "#5EEAD4",
+        textAlign: "center",
+    },
+    includedBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    includedText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#10B981",
     },
 });

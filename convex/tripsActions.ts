@@ -727,8 +727,10 @@ async function generateRealisticFlights(
                 stops: i === 3 ? 1 : 0,
                 departureTime: `${returnDate}T${convertTo24Hour(returnDeparture)}:00`,
             },
-            luggage: i < 2 ? "1 checked bag(s) included" : "0 checked bag(s) included",
-            cabinBaggage: "1 cabin bag included",
+            luggage: i < 2 ? "1 checked bag included" : "Cabin bag only",
+            cabinBaggage: "1 cabin bag (8kg) included",
+            checkedBaggageIncluded: i < 2, // First 2 options include checked bag
+            checkedBaggagePrice: i < 2 ? 0 : (25 + Math.floor(Math.random() * 20)), // €25-45 if not included
             pricePerPerson: price,
             totalPrice: price * adults,
             currency: "EUR",
@@ -1239,7 +1241,7 @@ function getFallbackActivities(destination: string) {
             { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
             { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
             { title: "La Rambla", price: "Free", duration: "1h", description: "Famous tree-lined street" },
-            { title: "Casa Batlló", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
+            { title: "La Pedrera", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
         ],
         "athens": [
             { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
