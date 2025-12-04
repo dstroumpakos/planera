@@ -1027,49 +1027,70 @@ async function searchRestaurants(destination: string) {
 // Viator API - Search for activities/experiences
 async function searchViatorActivities(destination: string, apiKey: string) {
     try {
-        // Step 1: Search for destination ID
+        // Use /search/freetext endpoint which is available for Basic-access Affiliate
+        console.log(`🔍 Searching Viator activities for: ${destination}`);
+        
         const searchResponse = await fetch(
-            "https://api.viator.com/partner/v1/taxonomy/destinations",
+            "https://api.viator.com/partner/search/freetext",
             {
-                method: "GET",
+                method: "POST",
                 headers: {
                     "Accept": "application/json;version=2.0",
                     "Accept-Language": "en-US",
+                    "Content-Type": "application/json",
                     "exp-api-key": apiKey,
-                }
+                },
+                body: JSON.stringify({
+                    searchTerm: `${destination} tours activities`,
+                    searchTypes: [
+                        { searchType: "PRODUCTS", pagination: { start: 1, count: 15 } }
+                    ],
+                    currency: "EUR"
+                })
             }
         );
 
         if (!searchResponse.ok) {
             const errorText = await searchResponse.text();
-            console.error("Viator destinations API error:", searchResponse.status, errorText);
-            throw new Error(`Viator destinations failed: ${searchResponse.status}`);
+            console.error("Viator freetext search API error:", searchResponse.status, errorText);
+            throw new Error(`Viator freetext search failed: ${searchResponse.status}`);
         }
 
-        const destinationsData = await searchResponse.json();
+        const searchData = await searchResponse.json();
         
-        // Find matching destination
-        const destLower = destination.toLowerCase();
-        let destinationId: number | null = null;
+        // Extract products from freetext search results
+        const products = searchData.products?.results || [];
         
-        if (destinationsData.data) {
-            for (const dest of destinationsData.data) {
-                if (dest.destinationName?.toLowerCase().includes(destLower) ||
-                    destLower.includes(dest.destinationName?.toLowerCase())) {
-                    destinationId = dest.destinationId;
-                    console.log(`✅ Found Viator destination: ${dest.destinationName} (ID: ${destinationId})`);
-                    break;
-                }
-            }
+        if (products.length === 0) {
+            console.warn("⚠️ No products found via Viator freetext search");
+            return [];
         }
 
-        if (!destinationId) {
-            // Try free-text search as fallback
-            console.log("⚠️ Destination not found in taxonomy, trying product search...");
-            return await searchViatorProductsByText(destination, apiKey);
+        console.log(`✅ Found ${products.length} activities via Viator freetext search`);
+
+        // Get detailed product info using /products/search endpoint
+        const productCodes = products.slice(0, 10).map((p: any) => p.productCode).filter(Boolean);
+        
+        if (productCodes.length === 0) {
+            // Return basic info from freetext search
+            return products.slice(0, 8).map((product: any) => ({
+                title: product.title || "Activity",
+                price: product.pricing?.summary?.fromPrice || 25,
+                currency: product.pricing?.currency || "EUR",
+                duration: "2-3h",
+                description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
+                rating: product.rating || 4.5,
+                reviewCount: product.reviewCount || 0,
+                productCode: product.productCode,
+                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
+                image: product.primaryImage?.url || product.images?.[0]?.url || null,
+                skipTheLine: product.title?.toLowerCase().includes("skip") ||
+                            product.title?.toLowerCase().includes("priority"),
+                skipTheLinePrice: null,
+            }));
         }
 
-        // Step 2: Search for products in this destination
+        // Use /products/search to get more details
         const productsResponse = await fetch(
             "https://api.viator.com/partner/products/search",
             {
@@ -1082,15 +1103,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 },
                 body: JSON.stringify({
                     filtering: {
-                        destination: destinationId.toString(),
-                    },
-                    sorting: {
-                        sort: "TRAVELER_RATING",
-                        order: "DESC"
-                    },
-                    pagination: {
-                        start: 1,
-                        count: 10
+                        productCodes: productCodes,
                     },
                     currency: "EUR"
                 })
@@ -1098,16 +1111,44 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         );
 
         if (!productsResponse.ok) {
-            const errorText = await productsResponse.text();
-            console.error("Viator products API error:", productsResponse.status, errorText);
-            throw new Error(`Viator products failed: ${productsResponse.status}`);
+            // Fall back to basic freetext results
+            console.warn("⚠️ Products search failed, using freetext results");
+            return products.slice(0, 8).map((product: any) => ({
+                title: product.title || "Activity",
+                price: product.pricing?.summary?.fromPrice || 25,
+                currency: product.pricing?.currency || "EUR",
+                duration: "2-3h",
+                description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
+                rating: product.rating || 4.5,
+                reviewCount: product.reviewCount || 0,
+                productCode: product.productCode,
+                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
+                image: product.primaryImage?.url || product.images?.[0]?.url || null,
+                skipTheLine: product.title?.toLowerCase().includes("skip") ||
+                            product.title?.toLowerCase().includes("priority"),
+                skipTheLinePrice: null,
+            }));
         }
 
         const productsData = await productsResponse.json();
         
         if (!productsData.products || productsData.products.length === 0) {
-            console.warn("⚠️ No products found for destination, trying text search...");
-            return await searchViatorProductsByText(destination, apiKey);
+            // Fall back to basic freetext results
+            return products.slice(0, 8).map((product: any) => ({
+                title: product.title || "Activity",
+                price: product.pricing?.summary?.fromPrice || 25,
+                currency: product.pricing?.currency || "EUR",
+                duration: "2-3h",
+                description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
+                rating: product.rating || 4.5,
+                reviewCount: product.reviewCount || 0,
+                productCode: product.productCode,
+                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
+                image: product.primaryImage?.url || product.images?.[0]?.url || null,
+                skipTheLine: product.title?.toLowerCase().includes("skip") ||
+                            product.title?.toLowerCase().includes("priority"),
+                skipTheLinePrice: null,
+            }));
         }
 
         return productsData.products.slice(0, 8).map((product: any) => ({
@@ -1139,7 +1180,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
     }
 }
 
-// Viator API - Search products by free text
+// Viator API - Search products by free text (backup method)
 async function searchViatorProductsByText(searchText: string, apiKey: string) {
     try {
         const response = await fetch(
@@ -1455,12 +1496,12 @@ function generateTransportationOptions(destination: string, origin: string, trav
             taxiFromAirport: 50, // FCO to city center (fixed fare)
             uberX: { min: 40, max: 55 },
             uberComfort: { min: 55, max: 75 },
-            bolt: { min: 35, max: 50 },
+            bolt: { min: 35, max: 45 },
             carRentalEconomy: 35,
             carRentalCompact: 50,
             carRentalSUV: 85,
             metroTicket: 1.50,
-            dayPass: 7,
+            dayPass: 8.40,
             airportExpress: 14, // Leonardo Express
             premiumTransfer: 100,
         },
@@ -1492,14 +1533,14 @@ function generateTransportationOptions(destination: string, origin: string, trav
         },
         "athens": {
             taxiFromAirport: 40, // ATH to city center (fixed fare)
-            uberX: { min: 30, max: 45 },
-            uberComfort: { min: 45, max: 60 },
-            bolt: { min: 25, max: 40 },
+            uberX: { min: 30, max: 40 },
+            uberComfort: { min: 40, max: 50 },
+            bolt: { min: 25, max: 35 },
             carRentalEconomy: 25,
             carRentalCompact: 40,
             carRentalSUV: 65,
             metroTicket: 1.20,
-            dayPass: 4.10,
+            dayPass: 6,
             airportExpress: 2, // MetroLine 3
             premiumTransfer: 75,
         },
@@ -1534,13 +1575,13 @@ function generateTransportationOptions(destination: string, origin: string, trav
             uberX: { min: 20, max: 35 },
             uberComfort: { min: 35, max: 50 },
             bolt: { min: 18, max: 28 },
-            carRentalEconomy: 30,
-            carRentalCompact: 45,
-            carRentalSUV: 80,
+            carRentalEconomy: 60,
+            carRentalCompact: 80,
+            carRentalSUV: 120,
             metroTicket: 2,
-            dayPass: 6,
-            airportExpress: 36, // Narita Express
-            premiumTransfer: 250,
+            dayPass: 12,
+            airportExpress: 2.50, // MRT
+            premiumTransfer: 65,
         },
         "new york": {
             taxiFromAirport: 75, // JFK to Manhattan (flat fare + tolls)
