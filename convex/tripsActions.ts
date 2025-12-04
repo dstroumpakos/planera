@@ -12,6 +12,7 @@ export const generate = internalAction({
         skipFlights: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
     },
+    returns: v.null(),
     handler: async (ctx, args) => {
         const { tripId, skipFlights, preferredFlightTime } = args;
 
