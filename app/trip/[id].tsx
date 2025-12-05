@@ -649,7 +649,8 @@ export default function TripDetails() {
         );
     };
 
-    const isPremium = trip.userPlan === "premium";
+    // User has full access if they have premium subscription OR have used trip credits
+    const isPremium = trip.hasFullAccess ?? trip.userPlan === "premium";
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>

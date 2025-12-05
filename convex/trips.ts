@@ -145,9 +145,26 @@ export const get = authQuery({
             .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
             .unique();
 
+        // Check if user has full access (premium subscription OR has/used trip credits)
+        const isSubscriptionActive = userPlan?.plan === "premium" && 
+            userPlan?.subscriptionExpiresAt && 
+            userPlan.subscriptionExpiresAt > Date.now();
+        
+        const tripCredits = userPlan?.tripCredits ?? 0;
+        const tripsGenerated = userPlan?.tripsGenerated ?? 0;
+        
+        // User has full access if:
+        // 1. They have an active premium subscription, OR
+        // 2. They have trip credits (paid for trips), OR
+        // 3. They used their free trial (tripsGenerated >= 1 means they've generated at least one trip)
+        const hasFullAccess = isSubscriptionActive || tripCredits > 0 || tripsGenerated >= 1;
+
         return {
             ...trip,
             userPlan: userPlan?.plan ?? "free",
+            hasFullAccess,
+            isSubscriptionActive,
+            tripCredits,
         };
     },
 });
