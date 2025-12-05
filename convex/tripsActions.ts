@@ -1191,14 +1191,15 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
         }
 
         // Step 3: Search for restaurants in that city using the search endpoint
-        let restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=restaurants in ${encodeURIComponent(cityLocation.name)}&category=restaurants&language=en`;
+        // Fetch more results (10) so we can sort by rating and pick the best ones
+        let restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=best restaurants in ${encodeURIComponent(cityLocation.name)}&category=restaurants&language=en`;
         
         // If we have coordinates, use nearby search instead (more accurate)
         if (latLong) {
-            restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/nearby_search?key=${apiKey}&latLong=${latLong}&category=restaurants&language=en`;
+            restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/nearby_search?key=${apiKey}&latLong=${latLong}&category=restaurants&language=en&radius=5&radiusUnit=km`;
         }
         
-        console.log(`🍽️ Searching restaurants in: ${cityLocation.name}`);
+        console.log(`🍽️ Searching top-rated restaurants in: ${cityLocation.name}`);
         
         const response = await fetch(restaurantsUrl, {
             method: "GET",
@@ -1220,9 +1221,9 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
 
         console.log(`✅ Found ${data.data.length} restaurants via TripAdvisor`);
 
-        // Step 4: Get details for top restaurants (limit to 5 to avoid rate limits)
+        // Step 4: Get details for more restaurants (up to 10) to find the best rated ones
         const restaurants = [];
-        const restaurantList = data.data.slice(0, 5);
+        const restaurantList = data.data.slice(0, 10); // Fetch up to 10 to sort by rating
         
         for (const restaurant of restaurantList) {
             try {
@@ -1242,16 +1243,21 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
                                       priceLevel === "$$" || priceLevel === "$$ - $$$" ? "€€" :
                                       priceLevel === "$$$" || priceLevel === "$$$ - $$$$" ? "€€€" : "€€€€";
                     
+                    const rating = parseFloat(details.rating) || 0;
+                    const reviewCount = parseInt(details.num_reviews) || 0;
+                    
                     restaurants.push({
                         name: details.name || restaurant.name,
                         priceRange: priceRange,
                         cuisine: details.cuisine?.[0]?.localized_name || details.subcategory?.[0]?.localized_name || "Local Cuisine",
-                        rating: parseFloat(details.rating) || 4.0,
+                        rating: rating,
                         address: details.address_obj?.street1 || details.address_obj?.address_string || cityLocation.name,
-                        reviewCount: parseInt(details.num_reviews) || 0,
+                        reviewCount: reviewCount,
                         tripAdvisorUrl: details.web_url || null,
                         phone: details.phone || null,
                         description: details.description || null,
+                        // Calculate a score based on rating and review count for better sorting
+                        _score: rating * Math.log10(Math.max(reviewCount, 1) + 1),
                     });
                 } else {
                     // Use basic info from search results
@@ -1259,12 +1265,13 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
                         name: restaurant.name,
                         priceRange: "€€",
                         cuisine: "Local Cuisine",
-                        rating: 4.0,
+                        rating: 0,
                         address: restaurant.address_obj?.address_string || cityLocation.name,
                         reviewCount: 0,
                         tripAdvisorUrl: null,
                         phone: null,
                         description: null,
+                        _score: 0,
                     });
                 }
                 
@@ -1275,8 +1282,18 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
             }
         }
 
-        console.log(`✅ Processed ${restaurants.length} restaurants with details`);
-        return restaurants;
+        // Sort by score (combination of rating and review count) - highest first
+        restaurants.sort((a, b) => b._score - a._score);
+        
+        // Return top 5 highest-rated restaurants, removing the internal _score field
+        const topRestaurants = restaurants.slice(0, 5).map(({ _score, ...rest }) => rest);
+
+        console.log(`✅ Returning top ${topRestaurants.length} highest-rated restaurants`);
+        if (topRestaurants.length > 0) {
+            console.log(`🏆 Top restaurant: ${topRestaurants[0].name} (Rating: ${topRestaurants[0].rating}, Reviews: ${topRestaurants[0].reviewCount})`);
+        }
+        
+        return topRestaurants;
     } catch (error) {
         console.error("❌ TripAdvisor restaurants search error:", error);
         return [];
