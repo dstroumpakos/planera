@@ -22,6 +22,7 @@ export default defineSchema({
         tripsGenerated: v.number(),
         tripCredits: v.optional(v.number()),
         subscriptionExpiresAt: v.optional(v.number()),
+        subscriptionType: v.optional(v.union(v.literal("monthly"), v.literal("yearly"))),
     }).index("by_user", ["userId"]),
     bookings: defineTable({
         userId: v.string(),

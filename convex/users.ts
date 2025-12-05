@@ -32,20 +32,25 @@ export const getPlan = authQuery({
 });
 
 export const upgradeToPremium = authMutation({
-    args: {},
-    handler: async (ctx) => {
+    args: {
+        planType: v.optional(v.union(v.literal("monthly"), v.literal("yearly"))),
+    },
+    handler: async (ctx, args) => {
         const userPlan = await ctx.db
             .query("userPlans")
             .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
             .unique();
 
-        // Set subscription to expire in 30 days
-        const subscriptionExpiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
+        // Set subscription duration based on plan type
+        const planType = args.planType ?? "monthly";
+        const durationDays = planType === "yearly" ? 365 : 30;
+        const subscriptionExpiresAt = Date.now() + (durationDays * 24 * 60 * 60 * 1000);
 
         if (userPlan) {
             await ctx.db.patch(userPlan._id, { 
                 plan: "premium",
                 subscriptionExpiresAt,
+                subscriptionType: planType,
             });
         } else {
             await ctx.db.insert("userPlans", {
@@ -54,6 +59,7 @@ export const upgradeToPremium = authMutation({
                 tripsGenerated: 0,
                 tripCredits: 0,
                 subscriptionExpiresAt,
+                subscriptionType: planType,
             });
         }
     },

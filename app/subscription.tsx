@@ -11,13 +11,15 @@ export default function SubscriptionScreen() {
     const purchaseTripPack = useMutation(api.users.purchaseTripPack);
     const userPlan = useQuery(api.users.getPlan);
     const [loading, setLoading] = useState<string | null>(null);
+    const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
 
-    const handleUpgrade = async () => {
-        setLoading("premium");
+    const handleUpgrade = async (planType: "monthly" | "yearly") => {
+        setLoading(planType);
         try {
-            await upgradeToPremium();
+            await upgradeToPremium({ planType });
             if (Platform.OS !== "web") {
-                Alert.alert("Success", "You are now a Premium member! Enjoy unlimited trips for 30 days.");
+                const duration = planType === "yearly" ? "1 year" : "30 days";
+                Alert.alert("Success", `You are now a Premium member! Enjoy unlimited trips for ${duration}.`);
             }
             router.back();
         } catch (error) {
@@ -69,7 +71,7 @@ export default function SubscriptionScreen() {
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color="#000" />
+                <Ionicons name="arrow-back" size={24} color="#0D9488" />
             </TouchableOpacity>
 
             <View style={styles.header}>
@@ -80,13 +82,13 @@ export default function SubscriptionScreen() {
             {/* Current Status */}
             <View style={styles.statusCard}>
                 <View style={styles.statusRow}>
-                    <Ionicons name="ticket-outline" size={24} color="#007AFF" />
+                    <Ionicons name="ticket-outline" size={24} color="#14B8A6" />
                     <Text style={styles.statusText}>
                         Trip Credits: <Text style={styles.statusValue}>{tripCredits}</Text>
                     </Text>
                 </View>
                 <View style={styles.statusRow}>
-                    <Ionicons name="star-outline" size={24} color={isSubscriptionActive ? "#FFD700" : "#999"} />
+                    <Ionicons name="star-outline" size={24} color={isSubscriptionActive ? "#F59E0B" : "#999"} />
                     <Text style={styles.statusText}>
                         Status: <Text style={[styles.statusValue, isSubscriptionActive ? styles.premiumStatus : undefined]}>
                             {isSubscriptionActive ? "Premium Active" : "Free Plan"}
@@ -95,51 +97,121 @@ export default function SubscriptionScreen() {
                 </View>
             </View>
 
-            {/* Premium Subscription */}
-            <View style={styles.premiumCard}>
-                <View style={styles.premiumBadge}>
-                    <Ionicons name="diamond" size={16} color="#FFF" />
-                    <Text style={styles.premiumBadgeText}>BEST VALUE</Text>
-                </View>
-                
-                <View style={styles.planHeader}>
-                    <Text style={styles.planName}>Premium Subscription</Text>
-                    <View style={styles.priceRow}>
-                        <Text style={styles.price}>€3.99</Text>
-                        <Text style={styles.period}>/month</Text>
-                    </View>
-                </View>
+            {/* Premium Plans Section */}
+            <Text style={styles.sectionTitle}>Premium Subscription</Text>
+            <Text style={styles.sectionSubtitle}>Choose your billing cycle</Text>
 
-                <View style={styles.featuresList}>
-                    {premiumFeatures.map((feature, index) => (
-                        <View key={index} style={styles.featureItem}>
-                            <Ionicons name={feature.icon as any} size={20} color="#007AFF" />
-                            <Text style={styles.featureText}>{feature.text}</Text>
-                        </View>
-                    ))}
-                </View>
-
-                {isSubscriptionActive ? (
-                    <View style={styles.currentPlanButton}>
-                        <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-                        <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
+            {/* Plan Toggle */}
+            <View style={styles.planToggle}>
+                <TouchableOpacity 
+                    style={[styles.toggleOption, selectedPlan === "monthly" && styles.toggleOptionActive]}
+                    onPress={() => setSelectedPlan("monthly")}
+                >
+                    <Text style={[styles.toggleText, selectedPlan === "monthly" && styles.toggleTextActive]}>Monthly</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.toggleOption, selectedPlan === "yearly" && styles.toggleOptionActive]}
+                    onPress={() => setSelectedPlan("yearly")}
+                >
+                    <Text style={[styles.toggleText, selectedPlan === "yearly" && styles.toggleTextActive]}>Yearly</Text>
+                    <View style={styles.saveBadge}>
+                        <Text style={styles.saveBadgeText}>SAVE 39%</Text>
                     </View>
-                ) : (
-                    <TouchableOpacity 
-                        style={[styles.upgradeButton, loading === "premium" && styles.loadingButton]} 
-                        onPress={handleUpgrade}
-                        disabled={loading !== null}
-                    >
-                        <Text style={styles.upgradeButtonText}>
-                            {loading === "premium" ? "Processing..." : "Subscribe Now"}
-                        </Text>
-                    </TouchableOpacity>
-                )}
+                </TouchableOpacity>
             </View>
 
+            {/* Yearly Plan Card */}
+            {selectedPlan === "yearly" && (
+                <View style={styles.premiumCard}>
+                    <View style={styles.bestValueBadge}>
+                        <Ionicons name="diamond" size={14} color="#FFF" />
+                        <Text style={styles.bestValueText}>BEST VALUE</Text>
+                    </View>
+                    
+                    <View style={styles.planHeader}>
+                        <Text style={styles.planName}>Yearly Premium</Text>
+                        <View style={styles.priceContainer}>
+                            <View style={styles.priceRow}>
+                                <Text style={styles.price}>€2.91</Text>
+                                <Text style={styles.period}>/month</Text>
+                            </View>
+                            <Text style={styles.billedText}>Billed €34.99/year</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.featuresList}>
+                        {premiumFeatures.map((feature, index) => (
+                            <View key={index} style={styles.featureItem}>
+                                <Ionicons name={feature.icon as any} size={20} color="#14B8A6" />
+                                <Text style={styles.featureText}>{feature.text}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {isSubscriptionActive ? (
+                        <View style={styles.currentPlanButton}>
+                            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                            <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
+                        </View>
+                    ) : (
+                        <TouchableOpacity 
+                            style={[styles.upgradeButton, loading === "yearly" && styles.loadingButton]} 
+                            onPress={() => handleUpgrade("yearly")}
+                            disabled={loading !== null}
+                        >
+                            <Text style={styles.upgradeButtonText}>
+                                {loading === "yearly" ? "Processing..." : "Subscribe Yearly - €34.99"}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+
+            {/* Monthly Plan Card */}
+            {selectedPlan === "monthly" && (
+                <View style={styles.monthlyCard}>
+                    <View style={styles.planHeader}>
+                        <Text style={styles.planName}>Monthly Premium</Text>
+                        <View style={styles.priceContainer}>
+                            <View style={styles.priceRow}>
+                                <Text style={styles.price}>€3.99</Text>
+                                <Text style={styles.period}>/month</Text>
+                            </View>
+                            <Text style={styles.billedText}>Billed monthly</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.featuresList}>
+                        {premiumFeatures.map((feature, index) => (
+                            <View key={index} style={styles.featureItem}>
+                                <Ionicons name={feature.icon as any} size={20} color="#14B8A6" />
+                                <Text style={styles.featureText}>{feature.text}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {isSubscriptionActive ? (
+                        <View style={styles.currentPlanButton}>
+                            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                            <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
+                        </View>
+                    ) : (
+                        <TouchableOpacity 
+                            style={[styles.upgradeButton, loading === "monthly" && styles.loadingButton]} 
+                            onPress={() => handleUpgrade("monthly")}
+                            disabled={loading !== null}
+                        >
+                            <Text style={styles.upgradeButtonText}>
+                                {loading === "monthly" ? "Processing..." : "Subscribe Monthly - €3.99"}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+
             {/* Trip Packs */}
-            <Text style={styles.sectionTitle}>Or Buy Trip Packs</Text>
-            <Text style={styles.sectionSubtitle}>Pay per trip, no subscription needed</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Or Buy Trip Packs</Text>
+            <Text style={styles.sectionSubtitle}>Pay per trip, use your credits anytime</Text>
 
             <View style={styles.packsContainer}>
                 {tripPacks.map((pack) => (
@@ -167,9 +239,20 @@ export default function SubscriptionScreen() {
                 ))}
             </View>
 
+            {/* Credits Info */}
+            {tripCredits > 0 && (
+                <View style={styles.creditsInfo}>
+                    <Ionicons name="information-circle" size={20} color="#14B8A6" />
+                    <Text style={styles.creditsInfoText}>
+                        You have <Text style={styles.creditsHighlight}>{tripCredits} trip credit{tripCredits > 1 ? "s" : ""}</Text> available. 
+                        Each trip generation uses 1 credit.
+                    </Text>
+                </View>
+            )}
+
             {/* Free Plan Info */}
             <View style={styles.freePlan}>
-                <Ionicons name="gift-outline" size={24} color="#666" />
+                <Ionicons name="gift-outline" size={24} color="#14B8A6" />
                 <Text style={styles.freePlanTitle}>Free Trial</Text>
                 <Text style={styles.freePlanText}>
                     New users get 1 free trip to try our AI travel planner!
@@ -191,6 +274,17 @@ const styles = StyleSheet.create({
     },
     backButton: {
         marginBottom: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#0D9488",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     header: {
         marginBottom: 24,
@@ -236,6 +330,59 @@ const styles = StyleSheet.create({
     premiumStatus: {
         color: "#F59E0B",
     },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#0D9488",
+        marginBottom: 4,
+    },
+    sectionSubtitle: {
+        fontSize: 14,
+        color: "#5EEAD4",
+        marginBottom: 16,
+        fontWeight: "500",
+    },
+    planToggle: {
+        flexDirection: "row",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        padding: 4,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: "#CCFBF1",
+    },
+    toggleOption: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: 8,
+    },
+    toggleOptionActive: {
+        backgroundColor: "#14B8A6",
+    },
+    toggleText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#5EEAD4",
+    },
+    toggleTextActive: {
+        color: "#FFFFFF",
+    },
+    saveBadge: {
+        backgroundColor: "#F59E0B",
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    saveBadgeText: {
+        fontSize: 10,
+        fontWeight: "bold",
+        color: "#FFFFFF",
+    },
     premiumCard: {
         backgroundColor: "#FFFFFF",
         borderRadius: 20,
@@ -245,27 +392,40 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 16,
         elevation: 6,
-        marginBottom: 32,
+        marginBottom: 8,
         borderWidth: 2,
-        borderColor: "#14B8A6",
+        borderColor: "#F59E0B",
         position: "relative",
         overflow: "hidden",
     },
-    premiumBadge: {
+    monthlyCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        padding: 24,
+        shadowColor: "#14B8A6",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 4,
+        marginBottom: 8,
+        borderWidth: 2,
+        borderColor: "#CCFBF1",
+    },
+    bestValueBadge: {
         position: "absolute",
         top: 16,
-        right: -30,
-        backgroundColor: "#14B8A6",
-        paddingVertical: 4,
-        paddingHorizontal: 40,
+        right: -35,
+        backgroundColor: "#F59E0B",
+        paddingVertical: 6,
+        paddingHorizontal: 45,
         transform: [{ rotate: "45deg" }],
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
     },
-    premiumBadgeText: {
+    bestValueText: {
         color: "#FFF",
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: "bold",
     },
     planHeader: {
@@ -276,6 +436,9 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         color: "#0D9488",
         marginBottom: 8,
+    },
+    priceContainer: {
+        gap: 4,
     },
     priceRow: {
         flexDirection: "row",
@@ -290,6 +453,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#5EEAD4",
         marginLeft: 4,
+        fontWeight: "500",
+    },
+    billedText: {
+        fontSize: 14,
+        color: "#99F6E4",
         fontWeight: "500",
     },
     featuresList: {
@@ -339,22 +507,10 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
     },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: "800",
-        color: "#0D9488",
-        marginBottom: 4,
-    },
-    sectionSubtitle: {
-        fontSize: 14,
-        color: "#5EEAD4",
-        marginBottom: 16,
-        fontWeight: "500",
-    },
     packsContainer: {
         flexDirection: "row",
         gap: 12,
-        marginBottom: 32,
+        marginBottom: 20,
     },
     packCard: {
         flex: 1,
@@ -418,6 +574,25 @@ const styles = StyleSheet.create({
         color: "#FFF",
         fontSize: 14,
         fontWeight: "bold",
+    },
+    creditsInfo: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        backgroundColor: "#CCFBF1",
+        padding: 16,
+        borderRadius: 16,
+        gap: 12,
+        marginBottom: 20,
+    },
+    creditsInfoText: {
+        flex: 1,
+        fontSize: 14,
+        color: "#134E4A",
+        lineHeight: 20,
+    },
+    creditsHighlight: {
+        fontWeight: "bold",
+        color: "#0D9488",
     },
     freePlan: {
         alignItems: "center",
