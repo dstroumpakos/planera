@@ -310,9 +310,9 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
             tips: morningActivity?.tips || null,
         });
         
-        // Lunch
+        // Lunch - include TripAdvisor data if available
         const lunchRestaurant = restaurants[i % restaurants.length];
-        dayActivities.push({
+        const lunchActivity: any = {
             time: "1:00 PM",
             title: lunchRestaurant?.name || "Lunch",
             description: `${lunchRestaurant?.cuisine || "Local"} cuisine - ${lunchRestaurant?.priceRange || "€€"}`,
@@ -324,7 +324,20 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
             duration: "1-1.5 hours",
             bookingUrl: null,
             tips: "Reservations recommended",
-        });
+        };
+        
+        // Add TripAdvisor data if available
+        if (lunchRestaurant?.tripAdvisorUrl || lunchRestaurant?.rating) {
+            lunchActivity.fromTripAdvisor = true;
+            lunchActivity.tripAdvisorUrl = lunchRestaurant.tripAdvisorUrl || null;
+            lunchActivity.tripAdvisorRating = lunchRestaurant.rating || null;
+            lunchActivity.tripAdvisorReviewCount = lunchRestaurant.reviewCount || null;
+            lunchActivity.cuisine = lunchRestaurant.cuisine || null;
+            lunchActivity.priceRange = lunchRestaurant.priceRange || null;
+            lunchActivity.address = lunchRestaurant.address || null;
+        }
+        
+        dayActivities.push(lunchActivity);
         
         // Afternoon activity
         const afternoonActivity = destActivities[(i + 1) % destActivities.length];
@@ -342,9 +355,9 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
             tips: afternoonActivity?.tips || null,
         });
         
-        // Dinner
+        // Dinner - include TripAdvisor data if available
         const dinnerRestaurant = restaurants[(i + 1) % restaurants.length];
-        dayActivities.push({
+        const dinnerActivity: any = {
             time: "7:00 PM",
             title: dinnerRestaurant?.name || "Dinner",
             description: `${dinnerRestaurant?.cuisine || "Local"} cuisine - ${dinnerRestaurant?.priceRange || "€€"}`,
@@ -356,7 +369,20 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
             duration: "2 hours",
             bookingUrl: null,
             tips: "Try local specialties",
-        });
+        };
+        
+        // Add TripAdvisor data if available
+        if (dinnerRestaurant?.tripAdvisorUrl || dinnerRestaurant?.rating) {
+            dinnerActivity.fromTripAdvisor = true;
+            dinnerActivity.tripAdvisorUrl = dinnerRestaurant.tripAdvisorUrl || null;
+            dinnerActivity.tripAdvisorRating = dinnerRestaurant.rating || null;
+            dinnerActivity.tripAdvisorReviewCount = dinnerRestaurant.reviewCount || null;
+            dinnerActivity.cuisine = dinnerRestaurant.cuisine || null;
+            dinnerActivity.priceRange = dinnerRestaurant.priceRange || null;
+            dinnerActivity.address = dinnerRestaurant.address || null;
+        }
+        
+        dayActivities.push(dinnerActivity);
         
         dailyPlan.push({
             day: i + 1,
@@ -1241,8 +1267,8 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 currency: product.pricing?.currency || "EUR",
                 duration: "2-3h",
                 description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
-                rating: product.rating || 4.5,
-                reviewCount: product.reviewCount || 0,
+                rating: product.reviews?.combinedAverageRating || 4.5,
+                reviewCount: product.reviews?.totalReviews || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
                 image: product.primaryImage?.url || product.images?.[0]?.url || null,

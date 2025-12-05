@@ -1127,6 +1127,49 @@ export default function TripDetails() {
                                                 </View>
                                             )}
                                         </View>
+                                        
+                                        {/* TripAdvisor Badge for Restaurants */}
+                                        {activity.type === "restaurant" && activity.fromTripAdvisor && (
+                                            <View style={styles.tripAdvisorActivityBadge}>
+                                                <Image 
+                                                    source={{ uri: "https://static.tacdn.com/img2/brand_refresh/Tripadvisor_lockup_horizontal_secondary_registered.svg" }}
+                                                    style={styles.tripAdvisorActivityLogo}
+                                                    resizeMode="contain"
+                                                />
+                                                {activity.tripAdvisorRating && (
+                                                    <View style={styles.tripAdvisorRatingBadge}>
+                                                        <Ionicons name="star" size={14} color="#00AA6C" />
+                                                        <Text style={styles.tripAdvisorRatingText}>{activity.tripAdvisorRating}</Text>
+                                                        {activity.tripAdvisorReviewCount && (
+                                                            <Text style={styles.tripAdvisorReviewText}>({activity.tripAdvisorReviewCount})</Text>
+                                                        )}
+                                                    </View>
+                                                )}
+                                            </View>
+                                        )}
+                                        
+                                        {/* Restaurant Meta Info */}
+                                        {activity.type === "restaurant" && activity.fromTripAdvisor && (activity.cuisine || activity.priceRange) && (
+                                            <View style={styles.restaurantMetaRow}>
+                                                {activity.cuisine && (
+                                                    <View style={styles.cuisineActivityBadge}>
+                                                        <Text style={styles.cuisineActivityText}>{activity.cuisine}</Text>
+                                                    </View>
+                                                )}
+                                                {activity.priceRange && (
+                                                    <Text style={styles.priceRangeActivityText}>{activity.priceRange}</Text>
+                                                )}
+                                            </View>
+                                        )}
+                                        
+                                        {/* Restaurant Address */}
+                                        {activity.type === "restaurant" && activity.fromTripAdvisor && activity.address && (
+                                            <View style={styles.restaurantAddressActivityRow}>
+                                                <Ionicons name="location-outline" size={12} color="#78909C" />
+                                                <Text style={styles.restaurantAddressActivityText} numberOfLines={1}>{activity.address}</Text>
+                                            </View>
+                                        )}
+                                        
                                         <Text style={styles.activityDesc}>{activity.description}</Text>
                                         
                                         {/* Duration */}
@@ -1250,6 +1293,25 @@ export default function TripDetails() {
                                                     >
                                                         <Ionicons name="open-outline" size={16} color="white" />
                                                         <Text style={styles.bookActivityButtonText}>Book</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                                
+                                                {/* TripAdvisor Link Button */}
+                                                {activity.type === "restaurant" && activity.tripAdvisorUrl && (
+                                                    <TouchableOpacity 
+                                                        style={styles.tripAdvisorLinkButton}
+                                                        onPress={() => {
+                                                            trackClick({
+                                                                tripId: id as Id<"trips">,
+                                                                type: "restaurant",
+                                                                item: activity.title,
+                                                                url: activity.tripAdvisorUrl
+                                                            }).catch(console.error);
+                                                            Linking.openURL(activity.tripAdvisorUrl);
+                                                        }}
+                                                    >
+                                                        <Ionicons name="restaurant-outline" size={14} color="#00AA6C" />
+                                                        <Text style={styles.tripAdvisorLinkButtonText}>TripAdvisor</Text>
                                                     </TouchableOpacity>
                                                 )}
                                             </View>
@@ -2880,5 +2942,79 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "600",
         color: "#10B981",
+    },
+    // TripAdvisor Activity Badge Styles
+    tripAdvisorActivityBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 8,
+    },
+    tripAdvisorActivityLogo: {
+        width: 100,
+        height: 20,
+    },
+    tripAdvisorRatingBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+    },
+    tripAdvisorRatingText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#00AA6C",
+    },
+    tripAdvisorReviewText: {
+        fontSize: 12,
+        color: "#5EEAD4",
+    },
+    // Restaurant Meta Info Styles
+    restaurantMetaRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 8,
+    },
+    cuisineActivityBadge: {
+        backgroundColor: "#CCFBF1",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    cuisineActivityText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#134E4A",
+    },
+    priceRangeActivityText: {
+        fontSize: 12,
+        color: "#5EEAD4",
+    },
+    // Restaurant Address Styles
+    restaurantAddressActivityRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginTop: 8,
+    },
+    restaurantAddressActivityText: {
+        fontSize: 12,
+        color: "#78909C",
+    },
+    tripAdvisorLinkButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#E8F5E9",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: "#00AA6C",
+    },
+    tripAdvisorLinkButtonText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#00AA6C",
     },
 });
