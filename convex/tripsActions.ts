@@ -1000,12 +1000,13 @@ async function searchActivities(destination: string) {
     }
 }
 
-// TripAdvisor Content API - Search for location ID
-async function searchTripAdvisorLocation(query: string, apiKey: string, category: string = "geos"): Promise<string | null> {
+// TripAdvisor Content API - Search for city/destination location ID
+async function searchTripAdvisorLocation(destination: string, apiKey: string): Promise<{ locationId: string; name: string } | null> {
     try {
-        const searchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(query)}&category=${category}&language=en`;
+        // Use "geos" category to find cities/destinations, not restaurants
+        const searchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&category=geos&language=en`;
         
-        console.log(`🔍 TripAdvisor location search for: ${query}`);
+        console.log(`🔍 TripAdvisor searching for city: ${destination}`);
         
         const response = await fetch(searchUrl, {
             method: "GET",
@@ -1023,8 +1024,14 @@ async function searchTripAdvisorLocation(query: string, apiKey: string, category
         const data = await response.json();
         
         if (data.data && data.data.length > 0) {
-            console.log(`✅ Found TripAdvisor location: ${data.data[0].name} (ID: ${data.data[0].location_id})`);
-            return data.data[0].location_id;
+            // Find the best match - prefer cities over regions
+            const cityMatch = data.data.find((loc: any) => 
+                loc.name.toLowerCase().includes(destination.toLowerCase()) ||
+                destination.toLowerCase().includes(loc.name.toLowerCase())
+            ) || data.data[0];
+            
+            console.log(`✅ Found TripAdvisor city: ${cityMatch.name} (ID: ${cityMatch.location_id})`);
+            return { locationId: cityMatch.location_id, name: cityMatch.name };
         }
         
         return null;
@@ -1034,27 +1041,47 @@ async function searchTripAdvisorLocation(query: string, apiKey: string, category
     }
 }
 
-// TripAdvisor Content API - Search for restaurants
+// TripAdvisor Content API - Search for restaurants using location/search with restaurants category
 async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
     try {
-        // First, get the location ID for the destination
-        const locationId = await searchTripAdvisorLocation(destination, apiKey, "restaurants");
+        // Step 1: Get the city location to find its coordinates
+        const cityLocation = await searchTripAdvisorLocation(destination, apiKey);
         
-        if (!locationId) {
-            console.warn("⚠️ Could not find TripAdvisor location ID for:", destination);
+        if (!cityLocation) {
+            console.warn("⚠️ Could not find TripAdvisor city for:", destination);
             return [];
         }
 
-        // Search for restaurants near this location
-        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/details?key=${apiKey}&language=en&currency=EUR`;
+        // Step 2: Get city details to get lat/long
+        const cityDetailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${cityLocation.locationId}/details?key=${apiKey}&language=en&currency=EUR`;
         
-        console.log(`🍽️ Searching TripAdvisor restaurants in: ${destination}`);
+        const cityDetailsResponse = await fetch(cityDetailsUrl, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        let latLong = "";
+        if (cityDetailsResponse.ok) {
+            const cityDetails = await cityDetailsResponse.json();
+            if (cityDetails.latitude && cityDetails.longitude) {
+                latLong = `${cityDetails.latitude},${cityDetails.longitude}`;
+                console.log(`📍 City coordinates: ${latLong}`);
+            }
+        }
+
+        // Step 3: Search for restaurants in that city using the search endpoint
+        let restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=restaurants in ${encodeURIComponent(cityLocation.name)}&category=restaurants&language=en`;
+        
+        // If we have coordinates, use nearby search instead (more accurate)
+        if (latLong) {
+            restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/nearby_search?key=${apiKey}&latLong=${latLong}&category=restaurants&language=en`;
+        }
+        
+        console.log(`🍽️ Searching restaurants in: ${cityLocation.name}`);
         
         const response = await fetch(restaurantsUrl, {
             method: "GET",
-            headers: {
-                "Accept": "application/json",
-            }
+            headers: { "Accept": "application/json" }
         });
 
         if (!response.ok) {
@@ -1066,24 +1093,23 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
         const data = await response.json();
         
         if (!data.data || data.data.length === 0) {
-            console.warn("⚠️ No restaurants found via TripAdvisor");
+            console.warn("⚠️ No restaurants found via TripAdvisor nearby search");
             return [];
         }
 
-        // Get details for each restaurant (up to 5 to avoid rate limits)
+        console.log(`✅ Found ${data.data.length} restaurants via TripAdvisor`);
+
+        // Step 4: Get details for top restaurants (limit to 5 to avoid rate limits)
         const restaurants = [];
-        const restaurantLocations = data.data.slice(0, 5);
+        const restaurantList = data.data.slice(0, 5);
         
-        for (const restaurant of restaurantLocations) {
+        for (const restaurant of restaurantList) {
             try {
-                // Get restaurant details
                 const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${restaurant.location_id}/details?key=${apiKey}&language=en&currency=EUR`;
                 
                 const detailsResponse = await fetch(detailsUrl, {
                     method: "GET",
-                    headers: {
-                        "Accept": "application/json",
-                    }
+                    headers: { "Accept": "application/json" }
                 });
 
                 if (detailsResponse.ok) {
@@ -1098,38 +1124,40 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
                     restaurants.push({
                         name: details.name || restaurant.name,
                         priceRange: priceRange,
-                        cuisine: details.cuisine?.[0]?.localized_name || "International",
+                        cuisine: details.cuisine?.[0]?.localized_name || details.subcategory?.[0]?.localized_name || "Local Cuisine",
                         rating: parseFloat(details.rating) || 4.0,
-                        reviewCount: details.num_reviews || 0,
-                        address: details.address_obj?.address_string || details.address_obj?.street1 || "",
-                        phone: details.phone || null,
-                        website: details.website || null,
+                        address: details.address_obj?.street1 || details.address_obj?.address_string || cityLocation.name,
+                        reviewCount: parseInt(details.num_reviews) || 0,
                         tripAdvisorUrl: details.web_url || null,
+                        phone: details.phone || null,
                         description: details.description || null,
-                        hours: details.hours?.weekday_text || null,
-                        rankingString: details.ranking_data?.ranking_string || null,
+                    });
+                } else {
+                    // Use basic info from search results
+                    restaurants.push({
+                        name: restaurant.name,
+                        priceRange: "€€",
+                        cuisine: "Local Cuisine",
+                        rating: 4.0,
+                        address: restaurant.address_obj?.address_string || cityLocation.name,
+                        reviewCount: 0,
+                        tripAdvisorUrl: null,
+                        phone: null,
+                        description: null,
                     });
                 }
                 
                 // Small delay to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, 100));
             } catch (detailError) {
-                console.warn(`⚠️ Could not get details for restaurant ${restaurant.name}:`, detailError);
-                // Still add basic info
-                restaurants.push({
-                    name: restaurant.name,
-                    priceRange: "€€",
-                    cuisine: "Local",
-                    rating: 4.0,
-                    address: restaurant.address_obj?.address_string || "",
-                });
+                console.error("Error fetching restaurant details:", detailError);
             }
         }
 
-        console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
+        console.log(`✅ Processed ${restaurants.length} restaurants with details`);
         return restaurants;
     } catch (error) {
-        console.error("❌ TripAdvisor restaurants error:", error);
+        console.error("❌ TripAdvisor restaurants search error:", error);
         return [];
     }
 }
@@ -1613,7 +1641,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             taxiFromAirport: 42, // BCN to city center
             uberX: { min: 30, max: 45 },
             uberComfort: { min: 45, max: 65 },
-            bolt: { min: 25, max: 40 },
+            bolt: { min: 25, max: 35 },
             carRentalEconomy: 30,
             carRentalCompact: 45,
             carRentalSUV: 75,
