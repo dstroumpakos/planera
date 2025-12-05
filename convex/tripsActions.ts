@@ -234,6 +234,9 @@ Make sure prices are realistic for ${trip.destination}. Museums typically cost �
                         const itineraryData = JSON.parse(itineraryContent);
                         dayByDayItinerary = itineraryData.dailyPlan || [];
                         console.log(`✅ OpenAI generated ${dayByDayItinerary.length} days of itinerary`);
+                        
+                        // Merge TripAdvisor data into restaurant activities
+                        dayByDayItinerary = mergeRestaurantDataIntoItinerary(dayByDayItinerary, restaurants);
                     } else {
                         console.warn("⚠️ OpenAI returned empty content, using fallback");
                         dayByDayItinerary = generateBasicItinerary(trip, activities, restaurants);
@@ -282,6 +285,98 @@ Make sure prices are realistic for ${trip.destination}. Museums typically cost �
         }
     },
 });
+
+// Merge TripAdvisor restaurant data into itinerary activities
+function mergeRestaurantDataIntoItinerary(dayByDayItinerary: any[], restaurants: any[]): any[] {
+    if (!restaurants || restaurants.length === 0) {
+        return dayByDayItinerary;
+    }
+    
+    console.log(`🔄 Merging TripAdvisor data for ${restaurants.length} restaurants into itinerary`);
+    
+    // Create a map of restaurant names (lowercase) to their TripAdvisor data
+    const restaurantMap = new Map<string, any>();
+    for (const restaurant of restaurants) {
+        if (restaurant.name) {
+            restaurantMap.set(restaurant.name.toLowerCase(), restaurant);
+        }
+    }
+    
+    let mergedCount = 0;
+    
+    // Go through each day and each activity
+    for (const day of dayByDayItinerary) {
+        if (!day.activities) continue;
+        
+        for (let i = 0; i < day.activities.length; i++) {
+            const activity = day.activities[i];
+            
+            // Check if this is a restaurant activity
+            if (activity.type === "restaurant" || activity.type === "meal" || 
+                activity.title?.toLowerCase().includes("lunch") || 
+                activity.title?.toLowerCase().includes("dinner") ||
+                activity.title?.toLowerCase().includes("breakfast") ||
+                activity.title?.toLowerCase().includes("restaurant")) {
+                
+                // Try to find a matching restaurant from TripAdvisor data
+                const activityNameLower = activity.title?.toLowerCase() || "";
+                
+                // First try exact match
+                let matchedRestaurant = restaurantMap.get(activityNameLower);
+                
+                // If no exact match, try to find a partial match or assign by index
+                if (!matchedRestaurant) {
+                    // Try partial match
+                    for (const [name, restaurant] of restaurantMap) {
+                        if (activityNameLower.includes(name) || name.includes(activityNameLower)) {
+                            matchedRestaurant = restaurant;
+                            break;
+                        }
+                    }
+                }
+                
+                // If still no match, assign a restaurant based on meal type
+                if (!matchedRestaurant && restaurants.length > 0) {
+                    const dayIndex = day.day - 1;
+                    const isLunch = activityNameLower.includes("lunch");
+                    const isDinner = activityNameLower.includes("dinner");
+                    
+                    // Assign different restaurants for lunch and dinner
+                    const restaurantIndex = isLunch 
+                        ? (dayIndex * 2) % restaurants.length 
+                        : isDinner 
+                            ? (dayIndex * 2 + 1) % restaurants.length 
+                            : dayIndex % restaurants.length;
+                    
+                    matchedRestaurant = restaurants[restaurantIndex];
+                }
+                
+                // Merge TripAdvisor data if we found a match
+                if (matchedRestaurant && (matchedRestaurant.tripAdvisorUrl || matchedRestaurant.rating)) {
+                    day.activities[i] = {
+                        ...activity,
+                        type: "restaurant",
+                        fromTripAdvisor: true,
+                        tripAdvisorUrl: matchedRestaurant.tripAdvisorUrl || null,
+                        tripAdvisorRating: matchedRestaurant.rating || null,
+                        tripAdvisorReviewCount: matchedRestaurant.reviewCount || null,
+                        cuisine: matchedRestaurant.cuisine || activity.cuisine || null,
+                        priceRange: matchedRestaurant.priceRange || activity.priceRange || null,
+                        address: matchedRestaurant.address || activity.address || null,
+                        // Update title to use actual restaurant name if available
+                        title: matchedRestaurant.name || activity.title,
+                        // Update description to include cuisine info
+                        description: activity.description || `${matchedRestaurant.cuisine || "Local"} cuisine - ${matchedRestaurant.priceRange || "€€"}`,
+                    };
+                    mergedCount++;
+                }
+            }
+        }
+    }
+    
+    console.log(`✅ Merged TripAdvisor data into ${mergedCount} restaurant activities`);
+    return dayByDayItinerary;
+}
 
 // Generate a basic itinerary without OpenAI
 function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]) {
@@ -412,7 +507,7 @@ function getActivitiesWithPrices(destination: string) {
         "paris": [
             { title: "Eiffel Tower Summit", description: "Visit all 3 levels including the summit", type: "attraction", price: 26, skipTheLine: true, skipTheLinePrice: 42, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/eiffel-tower-summit-access-t395601/", tips: "Book at least 2 weeks in advance" },
             { title: "Louvre Museum", description: "World's largest art museum with Mona Lisa", type: "museum", price: 17, skipTheLine: true, skipTheLinePrice: 32, duration: "3-4 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/louvre-museum-timed-entrance-ticket-t395439/", tips: "Enter via Carrousel entrance to avoid crowds" },
-            { title: "Musée d'Orsay", description: "Impressionist masterpieces in a former train station", type: "museum", price: 16, skipTheLine: true, skipTheLinePrice: 29, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/musee-d-orsay-skip-the-line-ticket-t68592/", tips: "Visit on Thursday evening for late opening" },
+            { title: "Musée d'Orsay", description: "Impressionist masterpieces in a former train station", type: "museum", price: 16, skipTheLine: true, skipTheLinePrice: 29, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/musee-d-orsay-skip-the-line-t39592/", tips: "Visit on Thursday evening for late opening" },
             { title: "Versailles Palace", description: "Royal château with stunning gardens", type: "attraction", price: 20, skipTheLine: true, skipTheLinePrice: 45, duration: "4-5 hours", bookingUrl: "https://www.getyourguide.com/versailles-l217/versailles-palace-skip-the-line-ticket-t395440/", tips: "Arrive early to see the gardens" },
             { title: "Seine River Cruise", description: "Scenic boat tour along the Seine", type: "tour", price: 15, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: "https://www.getyourguide.com/paris-l16/seine-river-cruise-t395602/", tips: "Sunset cruises are most romantic" },
         ],
@@ -426,7 +521,7 @@ function getActivitiesWithPrices(destination: string) {
         "barcelona": [
             { title: "Sagrada Familia", description: "Gaudí's unfinished masterpiece basilica", type: "attraction", price: 26, skipTheLine: true, skipTheLinePrice: 40, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/sagrada-familia-skip-the-line-t395445/", tips: "Book tower access for amazing views" },
             { title: "Park Güell", description: "Colorful mosaic park by Gaudí", type: "attraction", price: 10, skipTheLine: true, skipTheLinePrice: 22, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/park-guell-skip-the-line-t395446/", tips: "Morning light is best for photos" },
-            { title: "Casa Batlló", description: "Gaudí's stunning modernist building", type: "museum", price: 35, skipTheLine: true, skipTheLinePrice: 45, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/casa-batllo-skip-the-line-t395447/", tips: "Night experience includes rooftop concert" },
+            { title: "Casa Batlló", description: "Gaudí's stunning modernist building", type: "museum", price: 35, skipTheLine: true, skipTheLinePrice: 45, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/casa-batllo-skip-the-line-t395447/", tips: "Night experience includes light show" },
             { title: "La Pedrera (Casa Milà)", description: "Another Gaudí masterpiece with rooftop warriors", type: "museum", price: 25, skipTheLine: true, skipTheLinePrice: 35, duration: "1.5 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/la-pedrera-skip-the-line-t395448/", tips: "Evening visits include light show" },
             { title: "Gothic Quarter Walking Tour", description: "Medieval streets and hidden squares", type: "tour", price: 15, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/barcelona-l45/gothic-quarter-tour-t395449/", tips: "Free tours available with tips" },
         ],
@@ -1311,7 +1406,8 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 reviewCount: product.reviews?.totalReviews || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.primaryImage?.url || product.images?.[0]?.url || null,
+                image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
+                   product.images?.[0]?.variants?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
                         product.title?.toLowerCase().includes("skip") ||
                         product.title?.toLowerCase().includes("priority"),
@@ -1686,7 +1782,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             carRentalSUV: 95,
             metroTicket: 3.40,
             dayPass: 9,
-            airportExpress: 5.70, // Train to Centraal
+            airportExpress: 5.70, // AirTrain + Subway
             premiumTransfer: 110,
         },
         "athens": {
@@ -1711,7 +1807,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             carRentalCompact: 50,
             carRentalSUV: 80,
             metroTicket: 3.20,
-            dayPass: 9.50,
+            dayPass: 8.50,
             airportExpress: 4, // S-Bahn
             premiumTransfer: 95,
         },
