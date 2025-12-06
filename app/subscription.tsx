@@ -9,6 +9,7 @@ export default function SubscriptionScreen() {
     const router = useRouter();
     const upgradeToPremium = useMutation(api.users.upgradeToPremium);
     const purchaseTripPack = useMutation(api.users.purchaseTripPack);
+    const cancelSubscription = useMutation(api.users.cancelSubscription);
     const userPlan = useQuery(api.users.getPlan);
     const [loading, setLoading] = useState<string | null>(null);
     const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
@@ -29,6 +30,43 @@ export default function SubscriptionScreen() {
             }
         } finally {
             setLoading(null);
+        }
+    };
+
+    const handleCancelSubscription = async () => {
+        if (Platform.OS !== "web") {
+            Alert.alert(
+                "Cancel Subscription",
+                "Are you sure you want to cancel your subscription? You will still have access until your current billing period ends.",
+                [
+                    { text: "Keep Subscription", style: "cancel" },
+                    { 
+                        text: "Cancel Subscription", 
+                        style: "destructive",
+                        onPress: async () => {
+                            setLoading("cancel");
+                            try {
+                                await cancelSubscription({});
+                                Alert.alert("Subscription Cancelled", "Your subscription has been cancelled. You can resubscribe anytime.");
+                            } catch (error) {
+                                console.error("Cancel failed:", error);
+                                Alert.alert("Error", "Failed to cancel subscription");
+                            } finally {
+                                setLoading(null);
+                            }
+                        }
+                    },
+                ]
+            );
+        } else {
+            setLoading("cancel");
+            try {
+                await cancelSubscription({});
+            } catch (error) {
+                console.error("Cancel failed:", error);
+            } finally {
+                setLoading(null);
+            }
         }
     };
 
@@ -149,9 +187,22 @@ export default function SubscriptionScreen() {
                     </View>
 
                     {isSubscriptionActive ? (
-                        <View style={styles.currentPlanButton}>
-                            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-                            <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
+                        <View style={styles.subscribedActions}>
+                            <View style={styles.currentPlanButton}>
+                                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                                <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
+                            </View>
+                            <TouchableOpacity 
+                                style={[styles.cancelButton, loading === "cancel" && styles.loadingButton]}
+                                onPress={handleCancelSubscription}
+                                disabled={loading !== null}
+                            >
+                                <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+                                <Text style={styles.cancelButtonText}>
+                                    {loading === "cancel" ? "Cancelling..." : "Cancel Subscription"}
+                                </Text>
+                            </TouchableOpacity>
+                            <Text style={styles.flexibleNote}>Flexible - Cancel anytime</Text>
                         </View>
                     ) : (
                         <TouchableOpacity 
@@ -191,27 +242,33 @@ export default function SubscriptionScreen() {
                     </View>
 
                     {isSubscriptionActive ? (
-                        <View style={styles.currentPlanButton}>
-                            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-                            <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
-                        </View>
-                    ) : (
-                        <>
+                        <View style={styles.subscribedActions}>
+                            <View style={styles.currentPlanButton}>
+                                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                                <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
+                            </View>
                             <TouchableOpacity 
-                                style={[styles.upgradeButton, loading === "monthly" && styles.loadingButton]} 
-                                onPress={() => handleUpgrade("monthly")}
+                                style={[styles.cancelButton, loading === "cancel" && styles.loadingButton]}
+                                onPress={handleCancelSubscription}
                                 disabled={loading !== null}
                             >
-                                <Text style={styles.upgradeButtonText}>
-                                    {loading === "monthly" ? "Processing..." : "Subscribe Monthly - €3.99"}
+                                <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+                                <Text style={styles.cancelButtonText}>
+                                    {loading === "cancel" ? "Cancelling..." : "Cancel Subscription"}
                                 </Text>
                             </TouchableOpacity>
-                            
-                            <TouchableOpacity style={styles.flexibleButton}>
-                                <Ionicons name="refresh-circle" size={18} color="#14B8A6" />
-                                <Text style={styles.flexibleButtonText}>Flexible - Cancel anytime</Text>
-                            </TouchableOpacity>
-                        </>
+                            <Text style={styles.flexibleNote}>Flexible - Cancel anytime</Text>
+                        </View>
+                    ) : (
+                        <TouchableOpacity 
+                            style={[styles.upgradeButton, loading === "monthly" && styles.loadingButton]} 
+                            onPress={() => handleUpgrade("monthly")}
+                            disabled={loading !== null}
+                        >
+                            <Text style={styles.upgradeButtonText}>
+                                {loading === "monthly" ? "Processing..." : "Subscribe Monthly - €3.99"}
+                            </Text>
+                        </TouchableOpacity>
                     )}
                 </View>
             )}
@@ -420,23 +477,31 @@ const styles = StyleSheet.create({
         position: "relative",
         overflow: "hidden",
     },
-    flexibleButton: {
+    subscribedActions: {
+        gap: 12,
+    },
+    cancelButton: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#F0FFFE",
+        backgroundColor: "#FEF2F2",
         paddingVertical: 14,
         paddingHorizontal: 20,
         borderRadius: 14,
         gap: 8,
-        marginTop: 12,
         borderWidth: 2,
-        borderColor: "#14B8A6",
+        borderColor: "#FECACA",
     },
-    flexibleButtonText: {
-        color: "#14B8A6",
+    cancelButtonText: {
+        color: "#EF4444",
         fontSize: 16,
-        fontWeight: "700",
+        fontWeight: "600",
+    },
+    flexibleNote: {
+        textAlign: "center",
+        color: "#14B8A6",
+        fontSize: 13,
+        fontWeight: "500",
     },
     bestValueBadge: {
         position: "absolute",

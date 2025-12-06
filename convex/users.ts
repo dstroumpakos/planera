@@ -331,3 +331,30 @@ export const updateNotifications = authMutation({
         return null;
     },
 });
+
+export const cancelSubscription = authMutation({
+    args: {},
+    returns: v.object({ success: v.boolean() }),
+    handler: async (ctx) => {
+        const userPlan = await ctx.db
+            .query("userPlans")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        if (!userPlan) {
+            throw new Error("No subscription found");
+        }
+
+        if (userPlan.plan !== "premium") {
+            throw new Error("No active subscription to cancel");
+        }
+
+        await ctx.db.patch(userPlan._id, {
+            plan: "free",
+            subscriptionExpiresAt: undefined,
+            subscriptionType: undefined,
+        });
+
+        return { success: true };
+    },
+});
