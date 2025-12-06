@@ -733,196 +733,210 @@ export default function TripDetails() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                <Section title="Flights">
-                    {renderFlights()}
-                </Section>
-
-                <Section title="Accommodation Options">
-                    {/* Accommodation Type Filter */}
-                    <View style={styles.accommodationFilter}>
-                        <TouchableOpacity 
-                            style={[styles.filterTab, accommodationType === 'all' && styles.filterTabActive]}
-                            onPress={() => setAccommodationType('all')}
-                        >
-                            <Text style={[styles.filterTabText, accommodationType === 'all' && styles.filterTabTextActive]}>
-                                All ({allAccommodations.length})
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.filterTab, accommodationType === 'hotel' && styles.filterTabActive]}
-                            onPress={() => setAccommodationType('hotel')}
-                        >
-                            <Ionicons name="business" size={16} color={accommodationType === 'hotel' ? '#fff' : '#546E7A'} />
-                            <Text style={[styles.filterTabText, accommodationType === 'hotel' && styles.filterTabTextActive]}>
-                                Hotels ({hotelsCount})
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.filterTab, accommodationType === 'airbnb' && styles.filterTabActive, accommodationType === 'airbnb' && styles.airbnbTabActive]}
-                            onPress={() => setAccommodationType('airbnb')}
-                        >
-                            <Ionicons name="home" size={16} color={accommodationType === 'airbnb' ? '#fff' : '#FF5A5F'} />
-                            <Text style={[styles.filterTabText, accommodationType === 'airbnb' && styles.filterTabTextActive]}>
-                                Airbnb ({airbnbsCount})
-                            </Text>
-                        </TouchableOpacity>
+                {!trip.skipFlights ? (
+                    <Section title="Flights">
+                        {renderFlights()}
+                    </Section>
+                ) : (
+                    <View style={styles.skippedSection}>
+                        <Ionicons name="airplane-outline" size={24} color="#90A4AE" />
+                        <Text style={styles.skippedText}>Flights skipped - you already have flights</Text>
                     </View>
+                )}
 
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotelList}>
-                        {filteredAccommodations.map((accommodation: any, index: number) => {
-                            const isAirbnb = accommodation.type === 'airbnb';
-                            const actualIndex = allAccommodations.indexOf(accommodation);
-                            
-                            return (
-                                <TouchableOpacity 
-                                    key={index} 
-                                    onPress={() => setSelectedHotelIndex(actualIndex)}
-                                    activeOpacity={0.9}
-                                    style={[
-                                        styles.hotelCard,
-                                        selectedHotelIndex === actualIndex && styles.selectedHotelCard,
-                                        isAirbnb && styles.airbnbCard
-                                    ]}
-                                >
-                                    {/* Type Badge */}
-                                    <View style={[styles.accommodationTypeBadge, isAirbnb && styles.airbnbBadge]}>
-                                        <Ionicons 
-                                            name={isAirbnb ? "home" : "business"} 
-                                            size={12} 
-                                            color={isAirbnb ? "#FF5A5F" : "#14B8A6"} 
-                                        />
-                                        <Text style={[styles.accommodationTypeText, isAirbnb && styles.airbnbTypeText]}>
-                                            {isAirbnb ? "Airbnb" : "Hotel"}
-                                        </Text>
-                                    </View>
-
-                                    {/* Superhost Badge for Airbnb */}
-                                    {isAirbnb && accommodation.superhost && (
-                                        <View style={styles.superhostBadge}>
-                                            <Ionicons name="shield-checkmark" size={12} color="#FF5A5F" />
-                                            <Text style={styles.superhostText}>Superhost</Text>
-                                        </View>
-                                    )}
-
-                                    <View style={styles.hotelHeader}>
-                                        <Text style={styles.cardTitle} numberOfLines={1}>{accommodation.name}</Text>
-                                        {!isAirbnb && (
-                                            <View style={styles.stars}>
-                                                {[...Array(accommodation.stars || 0)].map((_, i) => (
-                                                    <Ionicons key={i} name="star" size={12} color="#FFB300" />
-                                                ))}
-                                            </View>
-                                        )}
-                                        {isAirbnb && (
-                                            <View style={styles.ratingBadge}>
-                                                <Ionicons name="star" size={12} color="#FFB300" />
-                                                <Text style={styles.ratingText}>{accommodation.rating}</Text>
-                                            </View>
-                                        )}
-                                    </View>
-
-                                    {/* Airbnb Property Details */}
-                                    {isAirbnb && (
-                                        <View style={styles.propertyDetails}>
-                                            <Text style={styles.propertyType}>{accommodation.propertyType}</Text>
-                                            <View style={styles.propertyStats}>
-                                                {accommodation.bedrooms > 0 && (
-                                                    <View style={styles.statItem}>
-                                                        <Ionicons name="bed-outline" size={14} color="#546E7A" />
-                                                        <Text style={styles.statText}>{accommodation.bedrooms} bed{accommodation.bedrooms > 1 ? 's' : ''}</Text>
-                                                    </View>
-                                                )}
-                                                <View style={styles.statItem}>
-                                                    <Ionicons name="people-outline" size={14} color="#546E7A" />
-                                                    <Text style={styles.statText}>{accommodation.maxGuests} guests</Text>
-                                                </View>
-                                                <View style={styles.statItem}>
-                                                    <Ionicons name="water-outline" size={14} color="#546E7A" />
-                                                    <Text style={styles.statText}>{accommodation.bathrooms} bath</Text>
-                                                </View>
-                                            </View>
-                                        </View>
-                                    )}
-
-                                    <Text style={styles.hotelDesc} numberOfLines={2}>{accommodation.description}</Text>
-                                    
-                                    {/* Amenities */}
-                                    <View style={styles.amenitiesRow}>
-                                        {(accommodation.amenities || []).slice(0, 4).map((amenity: string, i: number) => (
-                                            <View key={i} style={[styles.amenityBadge, isAirbnb && styles.airbnbAmenityBadge]}>
-                                                <Text style={[styles.amenityText, isAirbnb && styles.airbnbAmenityText]}>{amenity}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-
-                                    {/* Price */}
-                                    <View style={styles.accommodationPriceRow}>
-                                        <Text style={[styles.price, isAirbnb && styles.airbnbPrice]}>
-                                            €{accommodation.pricePerNight}
-                                        </Text>
-                                        <Text style={styles.priceNight}>/night</Text>
-                                    </View>
-                                    
-                                    {/* Total for stay */}
-                                    <Text style={styles.totalStayPrice}>
-                                        €{accommodation.pricePerNight * duration} total for {duration} nights
-                                    </Text>
-
-                                    <TouchableOpacity onPress={() => openMap(accommodation.address)}>
-                                        <Text style={styles.address} numberOfLines={1}>
-                                            {accommodation.address} <Ionicons name="map" size={12} color="#14B8A6" />
-                                        </Text>
-                                    </TouchableOpacity>
-                                    
-                                    <TouchableOpacity 
-                                        style={[styles.miniBookButton, isAirbnb && styles.airbnbBookButton]}
-                                        onPress={() => {
-                                            const url = accommodation.bookingUrl || (isAirbnb 
-                                                ? `https://www.airbnb.com/s/${encodeURIComponent(trip.destination)}/homes`
-                                                : `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(accommodation.name + " " + trip.destination)}`
-                                            );
-                                            openAffiliateLink('hotel', accommodation.name + " " + trip.destination);
-                                        }}
-                                    >
-                                        <Text style={styles.miniBookButtonText}>
-                                            {isAirbnb ? "View on Airbnb" : "Book Hotel"}
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    {selectedHotelIndex === actualIndex && (
-                                        <View style={styles.selectedBadge}>
-                                            <Ionicons name="checkmark-circle" size={20} color={isAirbnb ? "#FF5A5F" : "#14B8A6"} />
-                                        </View>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
-                    
-                    {/* Price Summary based on selection */}
-                    {selectedAccommodation && (
-                        <View style={styles.accommodationSummary}>
-                            <View style={styles.summaryHeader}>
-                                <Ionicons 
-                                    name={selectedAccommodation.type === 'airbnb' ? "home" : "business"} 
-                                    size={20} 
-                                    color={selectedAccommodation.type === 'airbnb' ? "#FF5A5F" : "#14B8A6"} 
-                                />
-                                <Text style={styles.summaryTitle}>Selected: {selectedAccommodation.name}</Text>
-                            </View>
-                            <View style={styles.summaryDetails}>
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>Per night</Text>
-                                    <Text style={styles.summaryValue}>€{accommodationPricePerNight}</Text>
-                                </View>
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>{duration} nights</Text>
-                                    <Text style={styles.summaryValue}>€{totalAccommodationCost}</Text>
-                                </View>
-                            </View>
+                {!trip.skipHotel ? (
+                    <Section title="Accommodation Options">
+                        {/* Accommodation Type Filter */}
+                        <View style={styles.accommodationFilter}>
+                            <TouchableOpacity 
+                                style={[styles.filterTab, accommodationType === 'all' && styles.filterTabActive]}
+                                onPress={() => setAccommodationType('all')}
+                            >
+                                <Text style={[styles.filterTabText, accommodationType === 'all' && styles.filterTabTextActive]}>
+                                    All ({allAccommodations.length})
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[styles.filterTab, accommodationType === 'hotel' && styles.filterTabActive]}
+                                onPress={() => setAccommodationType('hotel')}
+                            >
+                                <Ionicons name="business" size={16} color={accommodationType === 'hotel' ? '#fff' : '#546E7A'} />
+                                <Text style={[styles.filterTabText, accommodationType === 'hotel' && styles.filterTabTextActive]}>
+                                    Hotels ({hotelsCount})
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[styles.filterTab, accommodationType === 'airbnb' && styles.filterTabActive, accommodationType === 'airbnb' && styles.airbnbTabActive]}
+                                onPress={() => setAccommodationType('airbnb')}
+                            >
+                                <Ionicons name="home" size={16} color={accommodationType === 'airbnb' ? '#fff' : '#FF5A5F'} />
+                                <Text style={[styles.filterTabText, accommodationType === 'airbnb' && styles.filterTabTextActive]}>
+                                    Airbnb ({airbnbsCount})
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                    )}
-                </Section>
+
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotelList}>
+                            {filteredAccommodations.map((accommodation: any, index: number) => {
+                                const isAirbnb = accommodation.type === 'airbnb';
+                                const actualIndex = allAccommodations.indexOf(accommodation);
+                                
+                                return (
+                                    <TouchableOpacity 
+                                        key={index} 
+                                        onPress={() => setSelectedHotelIndex(actualIndex)}
+                                        activeOpacity={0.9}
+                                        style={[
+                                            styles.hotelCard,
+                                            selectedHotelIndex === actualIndex && styles.selectedHotelCard,
+                                            isAirbnb && styles.airbnbCard
+                                        ]}
+                                    >
+                                        {/* Type Badge */}
+                                        <View style={[styles.accommodationTypeBadge, isAirbnb && styles.airbnbBadge]}>
+                                            <Ionicons 
+                                                name={isAirbnb ? "home" : "business"} 
+                                                size={12} 
+                                                color={isAirbnb ? "#FF5A5F" : "#14B8A6"} 
+                                            />
+                                            <Text style={[styles.accommodationTypeText, isAirbnb && styles.airbnbTypeText]}>
+                                                {isAirbnb ? "Airbnb" : "Hotel"}
+                                            </Text>
+                                        </View>
+
+                                        {/* Superhost Badge for Airbnb */}
+                                        {isAirbnb && accommodation.superhost && (
+                                            <View style={styles.superhostBadge}>
+                                                <Ionicons name="shield-checkmark" size={12} color="#FF5A5F" />
+                                                <Text style={styles.superhostText}>Superhost</Text>
+                                            </View>
+                                        )}
+
+                                        <View style={styles.hotelHeader}>
+                                            <Text style={styles.cardTitle} numberOfLines={1}>{accommodation.name}</Text>
+                                            {!isAirbnb && (
+                                                <View style={styles.stars}>
+                                                    {[...Array(accommodation.stars || 0)].map((_, i) => (
+                                                        <Ionicons key={i} name="star" size={12} color="#FFB300" />
+                                                    ))}
+                                                </View>
+                                            )}
+                                            {isAirbnb && (
+                                                <View style={styles.ratingBadge}>
+                                                    <Ionicons name="star" size={12} color="#FFB300" />
+                                                    <Text style={styles.ratingText}>{accommodation.rating}</Text>
+                                                </View>
+                                            )}
+                                        </View>
+
+                                        {/* Airbnb Property Details */}
+                                        {isAirbnb && (
+                                            <View style={styles.propertyDetails}>
+                                                <Text style={styles.propertyType}>{accommodation.propertyType}</Text>
+                                                <View style={styles.propertyStats}>
+                                                    {accommodation.bedrooms > 0 && (
+                                                        <View style={styles.statItem}>
+                                                            <Ionicons name="bed-outline" size={14} color="#546E7A" />
+                                                            <Text style={styles.statText}>{accommodation.bedrooms} bed{accommodation.bedrooms > 1 ? 's' : ''}</Text>
+                                                        </View>
+                                                    )}
+                                                    <View style={styles.statItem}>
+                                                        <Ionicons name="people-outline" size={14} color="#546E7A" />
+                                                        <Text style={styles.statText}>{accommodation.maxGuests} guests</Text>
+                                                    </View>
+                                                    <View style={styles.statItem}>
+                                                        <Ionicons name="water-outline" size={14} color="#546E7A" />
+                                                        <Text style={styles.statText}>{accommodation.bathrooms} bath</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        <Text style={styles.hotelDesc} numberOfLines={2}>{accommodation.description}</Text>
+                                        
+                                        {/* Amenities */}
+                                        <View style={styles.amenitiesRow}>
+                                            {(accommodation.amenities || []).slice(0, 4).map((amenity: string, i: number) => (
+                                                <View key={i} style={[styles.amenityBadge, isAirbnb && styles.airbnbAmenityBadge]}>
+                                                    <Text style={[styles.amenityText, isAirbnb && styles.airbnbAmenityText]}>{amenity}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+
+                                        {/* Price */}
+                                        <View style={styles.accommodationPriceRow}>
+                                            <Text style={[styles.price, isAirbnb && styles.airbnbPrice]}>
+                                                €{accommodation.pricePerNight}
+                                            </Text>
+                                            <Text style={styles.priceNight}>/night</Text>
+                                        </View>
+                                        
+                                        {/* Total for stay */}
+                                        <Text style={styles.totalStayPrice}>
+                                            €{accommodation.pricePerNight * duration} total for {duration} nights
+                                        </Text>
+
+                                        <TouchableOpacity onPress={() => openMap(accommodation.address)}>
+                                            <Text style={styles.address} numberOfLines={1}>
+                                                {accommodation.address} <Ionicons name="map" size={12} color="#14B8A6" />
+                                            </Text>
+                                        </TouchableOpacity>
+                                        
+                                        <TouchableOpacity 
+                                            style={[styles.miniBookButton, isAirbnb && styles.airbnbBookButton]}
+                                            onPress={() => {
+                                                const url = accommodation.bookingUrl || (isAirbnb 
+                                                    ? `https://www.airbnb.com/s/${encodeURIComponent(trip.destination)}/homes`
+                                                    : `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(accommodation.name + " " + trip.destination)}`
+                                                );
+                                                openAffiliateLink('hotel', accommodation.name + " " + trip.destination);
+                                            }}
+                                        >
+                                            <Text style={styles.miniBookButtonText}>
+                                                {isAirbnb ? "View on Airbnb" : "Book Hotel"}
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        {selectedHotelIndex === actualIndex && (
+                                            <View style={styles.selectedBadge}>
+                                                <Ionicons name="checkmark-circle" size={20} color={isAirbnb ? "#FF5A5F" : "#14B8A6"} />
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                        
+                        {/* Price Summary based on selection */}
+                        {selectedAccommodation && (
+                            <View style={styles.accommodationSummary}>
+                                <View style={styles.summaryHeader}>
+                                    <Ionicons 
+                                        name={selectedAccommodation.type === 'airbnb' ? "home" : "business"} 
+                                        size={20} 
+                                        color={selectedAccommodation.type === 'airbnb' ? "#FF5A5F" : "#14B8A6"} 
+                                    />
+                                    <Text style={styles.summaryTitle}>Selected: {selectedAccommodation.name}</Text>
+                                </View>
+                                <View style={styles.summaryDetails}>
+                                    <View style={styles.summaryRow}>
+                                        <Text style={styles.summaryLabel}>Per night</Text>
+                                        <Text style={styles.summaryValue}>€{accommodationPricePerNight}</Text>
+                                    </View>
+                                    <View style={styles.summaryRow}>
+                                        <Text style={styles.summaryLabel}>{duration} nights</Text>
+                                        <Text style={styles.summaryValue}>€{totalAccommodationCost}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+                    </Section>
+                ) : (
+                    <View style={styles.skippedSection}>
+                        <Ionicons name="home-outline" size={24} color="#90A4AE" />
+                        <Text style={styles.skippedText}>Accommodation skipped - you already have accommodation</Text>
+                    </View>
+                )}
 
                 {/* Transportation Section - Always show */}
                 <Section title="Transportation Options">
@@ -1569,6 +1583,21 @@ const styles = StyleSheet.create({
         marginTop: 16,
         fontSize: 18,
         color: "#EF4444",
+    },
+    skippedSection: {
+        backgroundColor: "#F5F5F5",
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "row",
+        gap: 12,
+    },
+    skippedText: {
+        fontSize: 14,
+        color: "#90A4AE",
+        flex: 1,
     },
     header: {
         height: 200,
