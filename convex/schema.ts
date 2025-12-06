@@ -12,6 +12,7 @@ export default defineSchema({
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
+        skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()), // "morning", "afternoon", "evening", "night", "any"
         status: v.string(),
         itinerary: v.optional(v.any()),

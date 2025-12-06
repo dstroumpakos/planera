@@ -28,6 +28,7 @@ export default function CreateTrip() {
         travelers: 1,
         interests: [] as string[],
         skipFlights: false,
+        skipHotel: false,
         preferredFlightTime: "any" as "any" | "morning" | "afternoon" | "evening" | "night",
     });
 
@@ -170,6 +171,7 @@ export default function CreateTrip() {
                 travelers: formData.travelers,
                 interests: formData.interests,
                 skipFlights: formData.skipFlights,
+                skipHotel: formData.skipHotel,
                 preferredFlightTime: formData.skipFlights ? undefined : formData.preferredFlightTime,
             });
             // Wait a bit to show the animation
@@ -461,6 +463,30 @@ export default function CreateTrip() {
                                 <Ionicons name="add" size={24} color="#00BFA6" />
                             </TouchableOpacity>
                         </View>
+
+                        {/* Skip Hotel Toggle */}
+                        <View style={[styles.skipFlightsContainer, { marginTop: 24 }]}>
+                            <View style={styles.skipFlightsTextContainer}>
+                                <Ionicons name="bed" size={20} color="#14B8A6" />
+                                <Text style={styles.skipFlightsText}>I already have accommodation</Text>
+                            </View>
+                            <Switch
+                                value={formData.skipHotel}
+                                onValueChange={(value) => setFormData({ ...formData, skipHotel: value })}
+                                trackColor={{ false: "#E0F2F1", true: "#5EEAD4" }}
+                                thumbColor={formData.skipHotel ? "#14B8A6" : "#B2DFDB"}
+                                ios_backgroundColor="#E0F2F1"
+                            />
+                        </View>
+                        
+                        {formData.skipHotel && (
+                            <View style={styles.skipFlightsInfo}>
+                                <Ionicons name="information-circle-outline" size={18} color="#5EEAD4" />
+                                <Text style={styles.skipFlightsInfoText}>
+                                    We'll skip hotel recommendations and focus on activities and restaurants for your trip.
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 )}
 

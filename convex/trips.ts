@@ -13,6 +13,7 @@ export const create = authMutation({
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
+        skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
     },
     returns: v.id("trips"),
@@ -76,6 +77,7 @@ export const create = authMutation({
             interests: args.interests,
             status: "generating",
             skipFlights: args.skipFlights ?? false,
+            skipHotel: args.skipHotel ?? false,
             preferredFlightTime: args.preferredFlightTime ?? "any",
         });
 
