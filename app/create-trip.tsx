@@ -478,30 +478,36 @@ export default function CreateTrip() {
                                 </View>
                                 
                                 {/* Airport Suggestions Dropdown */}
-                                {showAirportSuggestions && (
+                                {showAirportSuggestions && airportSuggestions.length > 0 && (
                                     <View style={styles.suggestionsContainer}>
-                                        {airportSuggestions.map((airport, index) => (
-                                            <TouchableOpacity
-                                                key={`${airport.code}-${index}`}
-                                                style={[
-                                                    styles.suggestionItem,
-                                                    index === airportSuggestions.length - 1 && styles.suggestionItemLast
-                                                ]}
-                                                onPress={() => selectAirport(airport)}
-                                            >
-                                                <View style={styles.suggestionIcon}>
-                                                    <Ionicons name="airplane" size={16} color="#14B8A6" />
-                                                </View>
-                                                <View style={styles.suggestionTextContainer}>
-                                                    <Text style={styles.suggestionCity}>
-                                                        {airport.city} ({airport.code})
-                                                    </Text>
-                                                    <Text style={styles.suggestionDetails}>
-                                                        {airport.name} • {airport.country}
-                                                    </Text>
-                                                </View>
-                                            </TouchableOpacity>
-                                        ))}
+                                        <ScrollView 
+                                            nestedScrollEnabled={true}
+                                            keyboardShouldPersistTaps="handled"
+                                            showsVerticalScrollIndicator={true}
+                                        >
+                                            {airportSuggestions.map((airport, index) => (
+                                                <TouchableOpacity
+                                                    key={`${airport.code}-${index}`}
+                                                    style={[
+                                                        styles.suggestionItem,
+                                                        index === airportSuggestions.length - 1 && styles.suggestionItemLast
+                                                    ]}
+                                                    onPress={() => selectAirport(airport)}
+                                                >
+                                                    <View style={styles.suggestionIcon}>
+                                                        <Ionicons name="airplane" size={16} color="#14B8A6" />
+                                                    </View>
+                                                    <View style={styles.suggestionTextContainer}>
+                                                        <Text style={styles.suggestionCity}>
+                                                            {airport.city} ({airport.code})
+                                                        </Text>
+                                                        <Text style={styles.suggestionDetails}>
+                                                            {airport.name} • {airport.country}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
                                     </View>
                                 )}
                                 
@@ -1148,6 +1154,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 12,
         elevation: 5,
+        zIndex: 1000,
+        position: "relative",
     },
     suggestionItem: {
         flexDirection: "row",
