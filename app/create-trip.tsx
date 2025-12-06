@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image, Switch } from "react-native";
 import { useRouter } from "expo-router";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,6 +12,7 @@ import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
 export default function CreateTrip() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
+    const userPlan = useQuery(api.users.getPlan);
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
@@ -135,6 +136,29 @@ export default function CreateTrip() {
     };
 
     const handleSubmit = async () => {
+        // Check if user has credits or subscription
+        const isSubscriptionActive = userPlan?.isSubscriptionActive;
+        const tripCredits = userPlan?.tripCredits ?? 0;
+        const tripsGenerated = userPlan?.tripsGenerated ?? 0;
+        const hasFreeTrial = tripsGenerated < 1;
+
+        if (!isSubscriptionActive && tripCredits <= 0 && !hasFreeTrial) {
+            // Redirect to subscription page with message
+            if (Platform.OS !== "web") {
+                Alert.alert(
+                    "No Trip Credits",
+                    "You need Trip Credits or a Premium subscription to generate trips. Would you like to purchase?",
+                    [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "View Plans", onPress: () => router.push("/subscription") }
+                    ]
+                );
+            } else {
+                router.push("/subscription");
+            }
+            return;
+        }
+
         setShowLoadingScreen(true);
         try {
             const tripId = await createTrip({
@@ -444,7 +468,7 @@ export default function CreateTrip() {
                     <View>
                         <Text style={styles.question}>What are you interested in?</Text>
                         <View style={styles.tagsContainer}>
-                            {["Food", "History", "Art", "Nature", "Adventure", "Relaxation", "Nightlife", "Shopping", "Culture"].map((interest) => (
+                            {["Food", "History", "Art", "Nature", "Adventure", "Relaxation", "Nightlife", "Shopping", "Culture", "Sports"].map((interest) => (
                                 <TouchableOpacity
                                     key={interest}
                                     style={[styles.tag, formData.interests.includes(interest) && styles.tagSelected]}

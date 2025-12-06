@@ -170,6 +170,11 @@ export default function SubscriptionScreen() {
             {/* Monthly Plan Card */}
             {selectedPlan === "monthly" && (
                 <View style={styles.monthlyCard}>
+                    <View style={styles.flexibleBadge}>
+                        <Ionicons name="refresh-circle" size={14} color="#14B8A6" />
+                        <Text style={styles.flexibleBadgeText}>Flexible - Cancel anytime</Text>
+                    </View>
+                    
                     <View style={styles.planHeader}>
                         <Text style={styles.planName}>Monthly Premium</Text>
                         <View style={styles.priceContainer}>
@@ -402,6 +407,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFFFFF",
         borderRadius: 20,
         padding: 24,
+        paddingTop: 40,
         shadowColor: "#14B8A6",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
@@ -410,6 +416,25 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         borderWidth: 2,
         borderColor: "#CCFBF1",
+        position: "relative",
+        overflow: "hidden",
+    },
+    flexibleBadge: {
+        position: "absolute",
+        top: 12,
+        left: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#CCFBF1",
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        gap: 6,
+    },
+    flexibleBadgeText: {
+        color: "#0D9488",
+        fontSize: 12,
+        fontWeight: "600",
     },
     bestValueBadge: {
         position: "absolute",

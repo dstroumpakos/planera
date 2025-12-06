@@ -412,6 +412,23 @@ export default function TripDetails() {
                     </ScrollView>
                     
                     <View style={styles.selectedFlightDetails}>
+                        {/* Route Display */}
+                        <View style={styles.routeDisplay}>
+                            <View style={styles.routePoint}>
+                                <Ionicons name="location" size={18} color="#14B8A6" />
+                                <Text style={styles.routeAirport}>{trip.origin || "Departure"}</Text>
+                            </View>
+                            <View style={styles.routeLine}>
+                                <View style={styles.routeDash} />
+                                <Ionicons name="airplane" size={16} color="#5EEAD4" />
+                                <View style={styles.routeDash} />
+                            </View>
+                            <View style={styles.routePoint}>
+                                <Ionicons name="location" size={18} color="#F59E0B" />
+                                <Text style={styles.routeAirport}>{selectedFlight.arrivalAirport || trip.destination}</Text>
+                            </View>
+                        </View>
+
                         <View style={styles.flightHeader}>
                             <Text style={styles.flightPrice}>€{Math.round(selectedFlight.pricePerPerson)}/person</Text>
                             <View style={styles.luggageBadge}>
@@ -1755,6 +1772,40 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 20,
+    },
+    routeDisplay: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#F0FFFE",
+        padding: 16,
+        borderRadius: 14,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#CCFBF1",
+    },
+    routePoint: {
+        alignItems: "center",
+        gap: 4,
+        flex: 1,
+    },
+    routeLine: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+        justifyContent: "center",
+    },
+    routeDash: {
+        height: 2,
+        backgroundColor: "#99F6E4",
+        flex: 1,
+        marginHorizontal: 4,
+    },
+    routeAirport: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#134E4A",
+        textAlign: "center",
     },
     flightPrice: {
         fontSize: 24,
