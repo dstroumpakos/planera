@@ -16,6 +16,115 @@ interface CartItem {
     skipTheLine?: boolean;
 }
 
+// Airport code to full name mapping
+const AIRPORT_NAMES: Record<string, string> = {
+    // Greece
+    "ATH": "Athens International Airport (ATH)",
+    "SKG": "Thessaloniki Airport (SKG)",
+    "HER": "Heraklion Airport (HER)",
+    "RHO": "Rhodes Airport (RHO)",
+    "CFU": "Corfu Airport (CFU)",
+    "CHQ": "Chania Airport (CHQ)",
+    "JMK": "Mykonos Airport (JMK)",
+    "JTR": "Santorini Airport (JTR)",
+    "KGS": "Kos Airport (KGS)",
+    "ZTH": "Zakynthos Airport (ZTH)",
+    // UK
+    "LHR": "London Heathrow (LHR)",
+    "LGW": "London Gatwick (LGW)",
+    "STN": "London Stansted (STN)",
+    "LTN": "London Luton (LTN)",
+    "MAN": "Manchester Airport (MAN)",
+    "BHX": "Birmingham Airport (BHX)",
+    "EDI": "Edinburgh Airport (EDI)",
+    // France
+    "CDG": "Paris Charles de Gaulle (CDG)",
+    "ORY": "Paris Orly (ORY)",
+    "NCE": "Nice Côte d'Azur (NCE)",
+    "LYS": "Lyon Airport (LYS)",
+    "MRS": "Marseille Airport (MRS)",
+    // Germany
+    "FRA": "Frankfurt Airport (FRA)",
+    "MUC": "Munich Airport (MUC)",
+    "BER": "Berlin Brandenburg (BER)",
+    "DUS": "Düsseldorf Airport (DUS)",
+    "HAM": "Hamburg Airport (HAM)",
+    // Italy
+    "FCO": "Rome Fiumicino (FCO)",
+    "MXP": "Milan Malpensa (MXP)",
+    "VCE": "Venice Marco Polo (VCE)",
+    "NAP": "Naples Airport (NAP)",
+    "BGY": "Milan Bergamo (BGY)",
+    // Spain
+    "MAD": "Madrid Barajas (MAD)",
+    "BCN": "Barcelona El Prat (BCN)",
+    "PMI": "Palma de Mallorca (PMI)",
+    "AGP": "Málaga Airport (AGP)",
+    "ALC": "Alicante Airport (ALC)",
+    "IBZ": "Ibiza Airport (IBZ)",
+    // Netherlands
+    "AMS": "Amsterdam Schiphol (AMS)",
+    // Belgium
+    "BRU": "Brussels Airport (BRU)",
+    // Portugal
+    "LIS": "Lisbon Airport (LIS)",
+    "OPO": "Porto Airport (OPO)",
+    "FAO": "Faro Airport (FAO)",
+    // Turkey
+    "IST": "Istanbul Airport (IST)",
+    "SAW": "Istanbul Sabiha Gökçen (SAW)",
+    "AYT": "Antalya Airport (AYT)",
+    // UAE
+    "DXB": "Dubai International (DXB)",
+    "AUH": "Abu Dhabi Airport (AUH)",
+    // USA
+    "JFK": "New York JFK (JFK)",
+    "LAX": "Los Angeles LAX (LAX)",
+    "ORD": "Chicago O'Hare (ORD)",
+    "MIA": "Miami International (MIA)",
+    "SFO": "San Francisco (SFO)",
+    "ATL": "Atlanta Hartsfield (ATL)",
+    // Other popular
+    "DUB": "Dublin Airport (DUB)",
+    "ZRH": "Zurich Airport (ZRH)",
+    "VIE": "Vienna Airport (VIE)",
+    "PRG": "Prague Airport (PRG)",
+    "BUD": "Budapest Airport (BUD)",
+    "WAW": "Warsaw Chopin (WAW)",
+    "CPH": "Copenhagen Airport (CPH)",
+    "ARN": "Stockholm Arlanda (ARN)",
+    "OSL": "Oslo Gardermoen (OSL)",
+    "HEL": "Helsinki Airport (HEL)",
+    "SIN": "Singapore Changi (SIN)",
+    "HKG": "Hong Kong International (HKG)",
+    "NRT": "Tokyo Narita (NRT)",
+    "ICN": "Seoul Incheon (ICN)",
+    "SYD": "Sydney Airport (SYD)",
+    "MEL": "Melbourne Airport (MEL)",
+    "YYZ": "Toronto Pearson (YYZ)",
+    "YVR": "Vancouver Airport (YVR)",
+};
+
+// Helper function to get full airport name
+const getAirportName = (codeOrCity: string | undefined): string => {
+    if (!codeOrCity) return "Unknown";
+    
+    // Check if it's a known airport code
+    const upperCode = codeOrCity.toUpperCase();
+    if (AIRPORT_NAMES[upperCode]) {
+        return AIRPORT_NAMES[upperCode];
+    }
+    
+    // Check if the string contains an airport code in parentheses
+    const codeMatch = codeOrCity.match(/\(([A-Z]{3})\)/);
+    if (codeMatch && AIRPORT_NAMES[codeMatch[1]]) {
+        return AIRPORT_NAMES[codeMatch[1]];
+    }
+    
+    // Return the original value if no mapping found
+    return codeOrCity;
+};
+
 export default function TripDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
@@ -416,7 +525,7 @@ export default function TripDetails() {
                         <View style={styles.routeDisplay}>
                             <View style={styles.routePoint}>
                                 <Ionicons name="location" size={18} color="#14B8A6" />
-                                <Text style={styles.routeAirport}>{trip.origin || "Departure"}</Text>
+                                <Text style={styles.routeAirport}>{getAirportName(trip.origin)}</Text>
                             </View>
                             <View style={styles.routeLine}>
                                 <View style={styles.routeDash} />
@@ -425,7 +534,7 @@ export default function TripDetails() {
                             </View>
                             <View style={styles.routePoint}>
                                 <Ionicons name="location" size={18} color="#F59E0B" />
-                                <Text style={styles.routeAirport}>{selectedFlight.arrivalAirport || trip.destination}</Text>
+                                <Text style={styles.routeAirport}>{getAirportName(selectedFlight.arrivalAirport || trip.destination)}</Text>
                             </View>
                         </View>
 
