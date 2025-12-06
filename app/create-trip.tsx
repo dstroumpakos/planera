@@ -411,7 +411,7 @@ export default function CreateTrip() {
                 <View style={[styles.progressFill, { width: `${(step / 4) * 100}%` }]} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 {step === 1 && (
                     <View>
                         <Text style={styles.question}>Where is your adventure?</Text>
@@ -446,72 +446,74 @@ export default function CreateTrip() {
                         
                         {!formData.skipFlights && (
                             <>
-                                <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
-                                <View style={styles.inputContainer}>
-                                    <Ionicons name="airplane-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Search city, country or airport..."
-                                        placeholderTextColor="#90A4AE"
-                                        value={formData.origin}
-                                        onChangeText={(text) => {
-                                            setFormData({ ...formData, origin: text });
-                                            searchAirports(text);
-                                        }}
-                                        onFocus={() => {
-                                            if (formData.origin.length >= 2) {
-                                                searchAirports(formData.origin);
-                                            }
-                                        }}
-                                    />
-                                    {formData.origin.length > 0 && (
-                                        <TouchableOpacity 
-                                            onPress={() => {
-                                                setFormData({ ...formData, origin: "" });
-                                                setShowAirportSuggestions(false);
+                                <View style={{ zIndex: 100 }}>
+                                    <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
+                                    <View style={styles.inputContainer}>
+                                        <Ionicons name="airplane-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Search city, country or airport..."
+                                            placeholderTextColor="#90A4AE"
+                                            value={formData.origin}
+                                            onChangeText={(text) => {
+                                                setFormData({ ...formData, origin: text });
+                                                searchAirports(text);
                                             }}
-                                            style={styles.clearButton}
-                                        >
-                                            <Ionicons name="close-circle" size={20} color="#90A4AE" />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                                
-                                {/* Airport Suggestions Dropdown */}
-                                {showAirportSuggestions && airportSuggestions.length > 0 && (
-                                    <View style={styles.suggestionsContainer}>
-                                        <ScrollView 
-                                            nestedScrollEnabled={true}
-                                            keyboardShouldPersistTaps="handled"
-                                            showsVerticalScrollIndicator={true}
-                                        >
-                                            {airportSuggestions.map((airport, index) => (
-                                                <TouchableOpacity
-                                                    key={`${airport.code}-${index}`}
-                                                    style={[
-                                                        styles.suggestionItem,
-                                                        index === airportSuggestions.length - 1 && styles.suggestionItemLast
-                                                    ]}
-                                                    onPress={() => selectAirport(airport)}
-                                                >
-                                                    <View style={styles.suggestionIcon}>
-                                                        <Ionicons name="airplane" size={16} color="#14B8A6" />
-                                                    </View>
-                                                    <View style={styles.suggestionTextContainer}>
-                                                        <Text style={styles.suggestionCity}>
-                                                            {airport.city} ({airport.code})
-                                                        </Text>
-                                                        <Text style={styles.suggestionDetails}>
-                                                            {airport.name} • {airport.country}
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </ScrollView>
+                                            onFocus={() => {
+                                                if (formData.origin.length >= 2) {
+                                                    searchAirports(formData.origin);
+                                                }
+                                            }}
+                                        />
+                                        {formData.origin.length > 0 && (
+                                            <TouchableOpacity 
+                                                onPress={() => {
+                                                    setFormData({ ...formData, origin: "" });
+                                                    setShowAirportSuggestions(false);
+                                                }}
+                                                style={styles.clearButton}
+                                            >
+                                                <Ionicons name="close-circle" size={20} color="#90A4AE" />
+                                            </TouchableOpacity>
+                                        )}
                                     </View>
-                                )}
-                                
-                                <Text style={styles.helperText}>Type to search airports by city, country, or code.</Text>
+                                    
+                                    {/* Airport Suggestions Dropdown */}
+                                    {showAirportSuggestions && airportSuggestions.length > 0 && (
+                                        <View style={styles.suggestionsContainer}>
+                                            <ScrollView 
+                                                nestedScrollEnabled={true}
+                                                keyboardShouldPersistTaps="handled"
+                                                showsVerticalScrollIndicator={true}
+                                            >
+                                                {airportSuggestions.map((airport, index) => (
+                                                    <TouchableOpacity
+                                                        key={`${airport.code}-${index}`}
+                                                        style={[
+                                                            styles.suggestionItem,
+                                                            index === airportSuggestions.length - 1 && styles.suggestionItemLast
+                                                        ]}
+                                                        onPress={() => selectAirport(airport)}
+                                                    >
+                                                        <View style={styles.suggestionIcon}>
+                                                            <Ionicons name="airplane" size={16} color="#14B8A6" />
+                                                        </View>
+                                                        <View style={styles.suggestionTextContainer}>
+                                                            <Text style={styles.suggestionCity}>
+                                                                {airport.city} ({airport.code})
+                                                            </Text>
+                                                            <Text style={styles.suggestionDetails}>
+                                                                {airport.name} • {airport.country}
+                                                            </Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                    
+                                    <Text style={styles.helperText}>Type to search airports by city, country, or code.</Text>
+                                </View>
                                 
                                 {/* Flight Time Preference */}
                                 <Text style={[styles.label, { marginTop: 24 }]}>Preferred flight time</Text>
