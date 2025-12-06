@@ -105,12 +105,98 @@ const AIRPORT_NAMES: Record<string, string> = {
     "YVR": "Vancouver Airport (YVR)",
 };
 
+// City name to airport code mapping (for reverse lookup)
+const CITY_TO_AIRPORT: Record<string, string> = {
+    // Greece
+    "athens": "ATH",
+    "thessaloniki": "SKG",
+    "heraklion": "HER",
+    "rhodes": "RHO",
+    "corfu": "CFU",
+    "chania": "CHQ",
+    "mykonos": "JMK",
+    "santorini": "JTR",
+    "kos": "KGS",
+    "zakynthos": "ZTH",
+    // UK
+    "london": "LHR",
+    "manchester": "MAN",
+    "birmingham": "BHX",
+    "edinburgh": "EDI",
+    // France
+    "paris": "CDG",
+    "nice": "NCE",
+    "lyon": "LYS",
+    "marseille": "MRS",
+    // Germany
+    "frankfurt": "FRA",
+    "munich": "MUC",
+    "berlin": "BER",
+    "dusseldorf": "DUS",
+    "düsseldorf": "DUS",
+    "hamburg": "HAM",
+    // Italy
+    "rome": "FCO",
+    "milan": "MXP",
+    "venice": "VCE",
+    "naples": "NAP",
+    // Spain
+    "madrid": "MAD",
+    "barcelona": "BCN",
+    "palma": "PMI",
+    "mallorca": "PMI",
+    "malaga": "AGP",
+    "málaga": "AGP",
+    "alicante": "ALC",
+    "ibiza": "IBZ",
+    // Netherlands
+    "amsterdam": "AMS",
+    // Belgium
+    "brussels": "BRU",
+    // Portugal
+    "lisbon": "LIS",
+    "porto": "OPO",
+    "faro": "FAO",
+    // Turkey
+    "istanbul": "IST",
+    "antalya": "AYT",
+    // UAE
+    "dubai": "DXB",
+    "abu dhabi": "AUH",
+    // USA
+    "new york": "JFK",
+    "los angeles": "LAX",
+    "chicago": "ORD",
+    "miami": "MIA",
+    "san francisco": "SFO",
+    "atlanta": "ATL",
+    // Other
+    "dublin": "DUB",
+    "zurich": "ZRH",
+    "vienna": "VIE",
+    "prague": "PRG",
+    "budapest": "BUD",
+    "warsaw": "WAW",
+    "copenhagen": "CPH",
+    "stockholm": "ARN",
+    "oslo": "OSL",
+    "helsinki": "HEL",
+    "singapore": "SIN",
+    "hong kong": "HKG",
+    "tokyo": "NRT",
+    "seoul": "ICN",
+    "sydney": "SYD",
+    "melbourne": "MEL",
+    "toronto": "YYZ",
+    "vancouver": "YVR",
+};
+
 // Helper function to get full airport name
 const getAirportName = (codeOrCity: string | undefined): string => {
     if (!codeOrCity) return "Unknown";
     
-    // Check if it's a known airport code
-    const upperCode = codeOrCity.toUpperCase();
+    // Check if it's a known airport code (exact match)
+    const upperCode = codeOrCity.toUpperCase().trim();
     if (AIRPORT_NAMES[upperCode]) {
         return AIRPORT_NAMES[upperCode];
     }
@@ -119,6 +205,21 @@ const getAirportName = (codeOrCity: string | undefined): string => {
     const codeMatch = codeOrCity.match(/\(([A-Z]{3})\)/);
     if (codeMatch && AIRPORT_NAMES[codeMatch[1]]) {
         return AIRPORT_NAMES[codeMatch[1]];
+    }
+    
+    // Try to find a city name match
+    const lowerInput = codeOrCity.toLowerCase().trim();
+    
+    // Direct city match
+    if (CITY_TO_AIRPORT[lowerInput]) {
+        return AIRPORT_NAMES[CITY_TO_AIRPORT[lowerInput]];
+    }
+    
+    // Check if input contains a known city name
+    for (const [city, code] of Object.entries(CITY_TO_AIRPORT)) {
+        if (lowerInput.includes(city)) {
+            return AIRPORT_NAMES[code];
+        }
     }
     
     // Return the original value if no mapping found
