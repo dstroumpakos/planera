@@ -167,6 +167,84 @@ const AIRPORTS = [
     { code: "PFO", name: "Paphos Airport", city: "Paphos", country: "Cyprus" },
 ];
 
+// Popular destinations list
+const DESTINATIONS = [
+    // Europe
+    { city: "Paris", country: "France", emoji: "🇫🇷" },
+    { city: "London", country: "United Kingdom", emoji: "🇬🇧" },
+    { city: "Rome", country: "Italy", emoji: "🇮🇹" },
+    { city: "Barcelona", country: "Spain", emoji: "🇪🇸" },
+    { city: "Amsterdam", country: "Netherlands", emoji: "🇳🇱" },
+    { city: "Berlin", country: "Germany", emoji: "🇩🇪" },
+    { city: "Prague", country: "Czech Republic", emoji: "🇨🇿" },
+    { city: "Vienna", country: "Austria", emoji: "🇦🇹" },
+    { city: "Lisbon", country: "Portugal", emoji: "🇵🇹" },
+    { city: "Athens", country: "Greece", emoji: "🇬🇷" },
+    { city: "Santorini", country: "Greece", emoji: "🇬🇷" },
+    { city: "Mykonos", country: "Greece", emoji: "🇬🇷" },
+    { city: "Dublin", country: "Ireland", emoji: "🇮🇪" },
+    { city: "Edinburgh", country: "Scotland", emoji: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+    { city: "Zurich", country: "Switzerland", emoji: "🇨🇭" },
+    { city: "Copenhagen", country: "Denmark", emoji: "🇩🇰" },
+    { city: "Stockholm", country: "Sweden", emoji: "🇸🇪" },
+    { city: "Oslo", country: "Norway", emoji: "🇳🇴" },
+    { city: "Helsinki", country: "Finland", emoji: "🇫🇮" },
+    { city: "Budapest", country: "Hungary", emoji: "🇭🇺" },
+    { city: "Warsaw", country: "Poland", emoji: "🇵🇱" },
+    { city: "Krakow", country: "Poland", emoji: "🇵🇱" },
+    { city: "Brussels", country: "Belgium", emoji: "🇧🇪" },
+    { city: "Milan", country: "Italy", emoji: "🇮🇹" },
+    { city: "Venice", country: "Italy", emoji: "🇮🇹" },
+    { city: "Florence", country: "Italy", emoji: "🇮🇹" },
+    { city: "Madrid", country: "Spain", emoji: "🇪🇸" },
+    { city: "Seville", country: "Spain", emoji: "🇪🇸" },
+    { city: "Nice", country: "France", emoji: "🇫🇷" },
+    { city: "Monaco", country: "Monaco", emoji: "🇲🇨" },
+    // Asia
+    { city: "Tokyo", country: "Japan", emoji: "🇯🇵" },
+    { city: "Kyoto", country: "Japan", emoji: "🇯🇵" },
+    { city: "Osaka", country: "Japan", emoji: "🇯🇵" },
+    { city: "Seoul", country: "South Korea", emoji: "🇰🇷" },
+    { city: "Bangkok", country: "Thailand", emoji: "🇹🇭" },
+    { city: "Phuket", country: "Thailand", emoji: "🇹🇭" },
+    { city: "Singapore", country: "Singapore", emoji: "🇸🇬" },
+    { city: "Hong Kong", country: "China", emoji: "🇭🇰" },
+    { city: "Bali", country: "Indonesia", emoji: "🇮🇩" },
+    { city: "Hanoi", country: "Vietnam", emoji: "🇻🇳" },
+    { city: "Ho Chi Minh City", country: "Vietnam", emoji: "🇻🇳" },
+    { city: "Kuala Lumpur", country: "Malaysia", emoji: "🇲🇾" },
+    { city: "Mumbai", country: "India", emoji: "🇮🇳" },
+    { city: "Delhi", country: "India", emoji: "🇮🇳" },
+    { city: "Dubai", country: "UAE", emoji: "🇦🇪" },
+    { city: "Abu Dhabi", country: "UAE", emoji: "🇦🇪" },
+    { city: "Maldives", country: "Maldives", emoji: "🇲🇻" },
+    // Americas
+    { city: "New York", country: "USA", emoji: "🇺🇸" },
+    { city: "Los Angeles", country: "USA", emoji: "🇺🇸" },
+    { city: "Miami", country: "USA", emoji: "🇺🇸" },
+    { city: "San Francisco", country: "USA", emoji: "🇺🇸" },
+    { city: "Las Vegas", country: "USA", emoji: "🇺🇸" },
+    { city: "Chicago", country: "USA", emoji: "🇺🇸" },
+    { city: "Hawaii", country: "USA", emoji: "🇺🇸" },
+    { city: "Cancun", country: "Mexico", emoji: "🇲🇽" },
+    { city: "Mexico City", country: "Mexico", emoji: "🇲🇽" },
+    { city: "Rio de Janeiro", country: "Brazil", emoji: "🇧🇷" },
+    { city: "Buenos Aires", country: "Argentina", emoji: "🇦🇷" },
+    { city: "Toronto", country: "Canada", emoji: "🇨🇦" },
+    { city: "Vancouver", country: "Canada", emoji: "🇨🇦" },
+    // Africa & Middle East
+    { city: "Cape Town", country: "South Africa", emoji: "🇿🇦" },
+    { city: "Marrakech", country: "Morocco", emoji: "🇲🇦" },
+    { city: "Cairo", country: "Egypt", emoji: "🇪🇬" },
+    { city: "Tel Aviv", country: "Israel", emoji: "🇮🇱" },
+    // Oceania
+    { city: "Sydney", country: "Australia", emoji: "🇦🇺" },
+    { city: "Melbourne", country: "Australia", emoji: "🇦🇺" },
+    { city: "Auckland", country: "New Zealand", emoji: "🇳🇿" },
+    { city: "Queenstown", country: "New Zealand", emoji: "🇳🇿" },
+    { city: "Fiji", country: "Fiji", emoji: "🇫🇯" },
+];
+
 export default function CreateTrip() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
@@ -178,6 +256,8 @@ export default function CreateTrip() {
     const [showLoadingScreen, setShowLoadingScreen] = useState(false);
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
+    const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
+    const [destinationSuggestions, setDestinationSuggestions] = useState<typeof DESTINATIONS>([]);
 
     const [formData, setFormData] = useState({
         destination: "",
@@ -226,6 +306,31 @@ export default function CreateTrip() {
         setFormData({ ...formData, origin: `${airport.city} (${airport.code})` });
         setShowAirportSuggestions(false);
         setAirportSuggestions([]);
+    };
+
+    // Search destinations by query
+    const searchDestinations = (query: string) => {
+        if (query.length < 2) {
+            setShowDestinationSuggestions(false);
+            setDestinationSuggestions([]);
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        const filtered = DESTINATIONS.filter(dest => 
+            dest.city.toLowerCase().includes(lowerQuery) ||
+            dest.country.toLowerCase().includes(lowerQuery)
+        ).slice(0, 8);
+
+        setDestinationSuggestions(filtered);
+        setShowDestinationSuggestions(filtered.length > 0);
+    };
+
+    // Select a destination from suggestions
+    const selectDestination = (destination: typeof DESTINATIONS[0]) => {
+        setFormData({ ...formData, destination: `${destination.city}, ${destination.country}` });
+        setShowDestinationSuggestions(false);
+        setDestinationSuggestions([]);
     };
 
     const formatDateForCalendar = (timestamp: number) => {
@@ -416,17 +521,74 @@ export default function CreateTrip() {
                     <View>
                         <Text style={styles.question}>Where is your adventure?</Text>
                         
-                        <Text style={styles.label}>Destination</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="location-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g. Paris, Tokyo, New York"
-                                placeholderTextColor="#90A4AE"
-                                value={formData.destination}
-                                onChangeText={(text) => setFormData({ ...formData, destination: text })}
-                                autoFocus
-                            />
+                        <View style={{ zIndex: 200 }}>
+                            <Text style={styles.label}>Destination</Text>
+                            <View style={styles.inputContainer}>
+                                <Ionicons name="location-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Search city or country..."
+                                    placeholderTextColor="#90A4AE"
+                                    value={formData.destination}
+                                    onChangeText={(text) => {
+                                        setFormData({ ...formData, destination: text });
+                                        searchDestinations(text);
+                                    }}
+                                    onFocus={() => {
+                                        if (formData.destination.length >= 2) {
+                                            searchDestinations(formData.destination);
+                                        }
+                                    }}
+                                    autoFocus
+                                />
+                                {formData.destination.length > 0 && (
+                                    <TouchableOpacity 
+                                        onPress={() => {
+                                            setFormData({ ...formData, destination: "" });
+                                            setShowDestinationSuggestions(false);
+                                        }}
+                                        style={styles.clearButton}
+                                    >
+                                        <Ionicons name="close-circle" size={20} color="#90A4AE" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                            
+                            {/* Destination Suggestions Dropdown */}
+                            {showDestinationSuggestions && destinationSuggestions.length > 0 && (
+                                <View style={styles.suggestionsContainer}>
+                                    <ScrollView 
+                                        nestedScrollEnabled={true}
+                                        keyboardShouldPersistTaps="handled"
+                                        showsVerticalScrollIndicator={true}
+                                    >
+                                        {destinationSuggestions.map((dest, index) => (
+                                            <TouchableOpacity
+                                                key={`${dest.city}-${dest.country}-${index}`}
+                                                style={[
+                                                    styles.suggestionItem,
+                                                    index === destinationSuggestions.length - 1 && styles.suggestionItemLast
+                                                ]}
+                                                onPress={() => selectDestination(dest)}
+                                            >
+                                                <View style={styles.suggestionIcon}>
+                                                    <Text style={{ fontSize: 18 }}>{dest.emoji}</Text>
+                                                </View>
+                                                <View style={styles.suggestionTextContainer}>
+                                                    <Text style={styles.suggestionCity}>
+                                                        {dest.city}
+                                                    </Text>
+                                                    <Text style={styles.suggestionDetails}>
+                                                        {dest.country}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+                            
+                            <Text style={styles.helperText}>Type to search popular destinations.</Text>
                         </View>
                         
                         {/* Skip Flights Toggle */}
