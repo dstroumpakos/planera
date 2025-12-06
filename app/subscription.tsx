@@ -170,11 +170,6 @@ export default function SubscriptionScreen() {
             {/* Monthly Plan Card */}
             {selectedPlan === "monthly" && (
                 <View style={styles.monthlyCard}>
-                    <View style={styles.flexibleBadge}>
-                        <Ionicons name="refresh-circle" size={14} color="#14B8A6" />
-                        <Text style={styles.flexibleBadgeText}>Flexible - Cancel anytime</Text>
-                    </View>
-                    
                     <View style={styles.planHeader}>
                         <Text style={styles.planName}>Monthly Premium</Text>
                         <View style={styles.priceContainer}>
@@ -201,15 +196,22 @@ export default function SubscriptionScreen() {
                             <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
                         </View>
                     ) : (
-                        <TouchableOpacity 
-                            style={[styles.upgradeButton, loading === "monthly" && styles.loadingButton]} 
-                            onPress={() => handleUpgrade("monthly")}
-                            disabled={loading !== null}
-                        >
-                            <Text style={styles.upgradeButtonText}>
-                                {loading === "monthly" ? "Processing..." : "Subscribe Monthly - €3.99"}
-                            </Text>
-                        </TouchableOpacity>
+                        <>
+                            <TouchableOpacity 
+                                style={[styles.upgradeButton, loading === "monthly" && styles.loadingButton]} 
+                                onPress={() => handleUpgrade("monthly")}
+                                disabled={loading !== null}
+                            >
+                                <Text style={styles.upgradeButtonText}>
+                                    {loading === "monthly" ? "Processing..." : "Subscribe Monthly - €3.99"}
+                                </Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity style={styles.flexibleButton}>
+                                <Ionicons name="refresh-circle" size={18} color="#14B8A6" />
+                                <Text style={styles.flexibleButtonText}>Flexible - Cancel anytime</Text>
+                            </TouchableOpacity>
+                        </>
                     )}
                 </View>
             )}
@@ -407,7 +409,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFFFFF",
         borderRadius: 20,
         padding: 24,
-        paddingTop: 40,
         shadowColor: "#14B8A6",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
@@ -419,22 +420,23 @@ const styles = StyleSheet.create({
         position: "relative",
         overflow: "hidden",
     },
-    flexibleBadge: {
-        position: "absolute",
-        top: 12,
-        left: 12,
+    flexibleButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#CCFBF1",
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        gap: 6,
+        justifyContent: "center",
+        backgroundColor: "#F0FFFE",
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 14,
+        gap: 8,
+        marginTop: 12,
+        borderWidth: 2,
+        borderColor: "#14B8A6",
     },
-    flexibleBadgeText: {
-        color: "#0D9488",
-        fontSize: 12,
-        fontWeight: "600",
+    flexibleButtonText: {
+        color: "#14B8A6",
+        fontSize: 16,
+        fontWeight: "700",
     },
     bestValueBadge: {
         position: "absolute",
