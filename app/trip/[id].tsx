@@ -1770,24 +1770,24 @@ function Section({ title, children }: { title: string, children: React.ReactNode
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F0FFFE",
+        backgroundColor: "#F8FAFC",
     },
     center: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F0FFFE",
+        backgroundColor: "#F8FAFC",
     },
     generatingText: {
         marginTop: 16,
         fontSize: 18,
         fontWeight: "600",
-        color: "#0D9488",
+        color: "#4F6DF5",
     },
     generatingSubtext: {
         marginTop: 8,
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     errorText: {
         marginTop: 16,
@@ -1795,7 +1795,7 @@ const styles = StyleSheet.create({
         color: "#EF4444",
     },
     skippedSection: {
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#F0F4F8",
         borderRadius: 16,
         padding: 20,
         marginBottom: 16,
@@ -1806,7 +1806,7 @@ const styles = StyleSheet.create({
     },
     skippedText: {
         fontSize: 14,
-        color: "#90A4AE",
+        color: "#A1AEC6",
         flex: 1,
     },
     header: {
@@ -1819,7 +1819,7 @@ const styles = StyleSheet.create({
     },
     headerOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(13, 148, 136, 0.4)",
+        backgroundColor: "rgba(79, 109, 245, 0.3)",
     },
     headerContent: {
         position: "absolute",
@@ -1870,7 +1870,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#0D9488",
+        color: "#1A2433",
         marginBottom: 16,
         letterSpacing: 0.5,
     },
@@ -1879,13 +1879,13 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 20,
         marginBottom: 12,
-        shadowColor: "#0D9488",
+        shadowColor: "#1A2433",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 3,
         borderWidth: 1,
-        borderColor: "#CCFBF1",
+        borderColor: "#E2E8F0",
     },
     row: {
         flexDirection: "row",
@@ -1898,16 +1898,16 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#134E4A",
+        color: "#1A2433",
     },
     cardSubtitle: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     price: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#14B8A6",
+        color: "#4F6DF5",
     },
     flightTimes: {
         flexDirection: "row",
@@ -1916,12 +1916,12 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: "#CCFBF1",
+        borderTopColor: "#E2E8F0",
     },
     time: {
         fontSize: 16,
         fontWeight: "500",
-        color: "#134E4A",
+        color: "#1A2433",
     },
     stars: {
         flexDirection: "row",
@@ -1930,7 +1930,7 @@ const styles = StyleSheet.create({
     },
     address: {
         fontSize: 13,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginTop: 8,
     },
     dayCard: {
@@ -1939,12 +1939,12 @@ const styles = StyleSheet.create({
         padding: 20,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: "#CCFBF1",
-        shadowColor: "#0D9488",
+        borderColor: "#E2E8F0",
+        shadowColor: "#14B8A6",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
-        elevation: 10,
+        elevation: 3,
     },
     dayHeader: {
         flexDirection: "row",
@@ -1953,13 +1953,13 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     dayBadge: {
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 10,
     },
     dayBadgeText: {
-        color: "#0D9488",
+        color: "#4F6DF5",
         fontWeight: "700",
         fontSize: 12,
         textTransform: "uppercase",
@@ -1968,7 +1968,7 @@ const styles = StyleSheet.create({
     dayTitle: {
         fontSize: 18,
         fontWeight: "bold",
-        color: "#0D9488",
+        color: "#1A2433",
     },
     activityItem: {
         flexDirection: "row",
@@ -1978,24 +1978,24 @@ const styles = StyleSheet.create({
         width: 70,
         fontSize: 14,
         fontWeight: "600",
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     activityContent: {
         flex: 1,
         paddingLeft: 16,
         borderLeftWidth: 2,
-        borderLeftColor: "#CCFBF1",
+        borderLeftColor: "#E2E8F0",
         paddingBottom: 4,
     },
     activityTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#134E4A",
+        color: "#1A2433",
         marginBottom: 4,
     },
     activityDesc: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         lineHeight: 20,
     },
     mapLink: {
@@ -2003,7 +2003,7 @@ const styles = StyleSheet.create({
     },
     mapLinkText: {
         fontSize: 12,
-        color: "#14B8A6",
+        color: "#4F6DF5",
         fontWeight: "500",
     },
     flightHeader: {
@@ -2016,12 +2016,12 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "#F0FFFE",
+        backgroundColor: "#F8FAFC",
         padding: 16,
         borderRadius: 14,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: "#CCFBF1",
+        borderColor: "#E2E8F0",
     },
     routePoint: {
         alignItems: "center",
@@ -2036,25 +2036,25 @@ const styles = StyleSheet.create({
     },
     routeDash: {
         height: 2,
-        backgroundColor: "#99F6E4",
+        backgroundColor: "#6CE4FF",
         flex: 1,
         marginHorizontal: 4,
     },
     routeAirport: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#134E4A",
+        color: "#1A2433",
         textAlign: "center",
     },
     flightPrice: {
         fontSize: 24,
         fontWeight: "700",
-        color: "#14B8A6",
+        color: "#4F6DF5",
     },
     luggageBadge: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -2062,7 +2062,7 @@ const styles = StyleSheet.create({
     },
     luggageText: {
         fontSize: 12,
-        color: "#0D9488",
+        color: "#4F6DF5",
         fontWeight: "600",
     },
     flightSegment: {
@@ -2077,17 +2077,17 @@ const styles = StyleSheet.create({
     segmentTitle: {
         fontSize: 12,
         fontWeight: "700",
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         textTransform: "uppercase",
         letterSpacing: 1,
     },
     duration: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     divider: {
         height: 1,
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E2E8F0",
         marginVertical: 20,
     },
     hotelList: {
@@ -2099,7 +2099,7 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         borderRadius: 16,
         padding: 16,
-        shadowColor: "#0D9488",
+        shadowColor: "#14B8A6",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
@@ -2108,8 +2108,8 @@ const styles = StyleSheet.create({
         borderColor: "transparent",
     },
     selectedHotelCard: {
-        borderColor: "#14B8A6",
-        backgroundColor: "#F0FFFE",
+        borderColor: "#4F6DF5",
+        backgroundColor: "#E0E7FF",
     },
     selectedBadge: {
         position: "absolute",
@@ -2124,7 +2124,7 @@ const styles = StyleSheet.create({
     },
     hotelDesc: {
         fontSize: 13,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginBottom: 12,
         lineHeight: 20,
     },
@@ -2140,7 +2140,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        shadowColor: "#14B8A6",
+        shadowColor: "#4F6DF5",
         shadowOffset: { width: 0, height: -4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
@@ -2156,28 +2156,28 @@ const styles = StyleSheet.create({
     },
     priceLabel: {
         fontSize: 12,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         textTransform: "uppercase",
     },
     totalPrice: {
         fontSize: 24,
         fontWeight: "700",
-        color: "#14B8A6",
+        color: "#4F6DF5",
     },
     perPersonPrice: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         fontWeight: "500",
     },
     bookButton: {
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         paddingHorizontal: 24,
         paddingVertical: 14,
         borderRadius: 14,
         marginLeft: 16,
-        shadowColor: "#14B8A6",
+        shadowColor: "#4F6DF5",
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 6,
     },
@@ -2194,7 +2194,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(240, 255, 254, 0.95)",
+        backgroundColor: "rgba(248, 250, 252, 0.95)",
         justifyContent: "center",
         alignItems: "center",
         borderRadius: 16,
@@ -2207,25 +2207,25 @@ const styles = StyleSheet.create({
     lockTitle: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#0D9488",
+        color: "#1A2433",
         marginTop: 16,
         marginBottom: 8,
     },
     lockText: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         textAlign: "center",
         lineHeight: 22,
     },
     unlockButton: {
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         paddingHorizontal: 32,
         paddingVertical: 12,
         borderRadius: 14,
         marginBottom: 12,
-        shadowColor: "#14B8A6",
+        shadowColor: "#4F6DF5",
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 6,
     },
@@ -2239,7 +2239,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     notNowButtonText: {
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         fontSize: 14,
         fontWeight: "500",
     },
@@ -2249,19 +2249,19 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         padding: 14,
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         borderRadius: 12,
         gap: 8,
     },
     affiliateButtonText: {
-        color: "#0D9488",
+        color: "#4F6DF5",
         fontWeight: "700",
         fontSize: 14,
         textTransform: "uppercase",
     },
     miniBookButton: {
         marginTop: 16,
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         paddingVertical: 10,
         borderRadius: 10,
         alignItems: "center",
@@ -2274,7 +2274,7 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         flex: 1,
-        backgroundColor: "#F0FFFE",
+        backgroundColor: "#F8FAFC",
     },
     modalHeader: {
         flexDirection: "row",
@@ -2283,7 +2283,7 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: "white",
         borderBottomWidth: 0,
-        shadowColor: "#14B8A6",
+        shadowColor: "#4F6DF5",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -2292,7 +2292,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#0D9488",
+        color: "#1A2433",
     },
     modalContent: {
         padding: 20,
@@ -2304,7 +2304,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "700",
         marginBottom: 8,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         textTransform: "uppercase",
         letterSpacing: 0.5,
     },
@@ -2314,8 +2314,8 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         fontSize: 16,
         borderWidth: 2,
-        borderColor: "#99F6E4",
-        color: "#134E4A",
+        borderColor: "#E2E8F0",
+        color: "#1A2433",
     },
     textArea: {
         height: 100,
@@ -2332,16 +2332,16 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         alignItems: "center",
         borderWidth: 2,
-        borderColor: "#99F6E4",
+        borderColor: "#E2E8F0",
     },
     budgetOptionSelected: {
-        backgroundColor: "#14B8A6",
-        borderColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
+        borderColor: "#4F6DF5",
     },
     budgetOptionText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     budgetOptionTextSelected: {
         color: "white",
@@ -2357,28 +2357,28 @@ const styles = StyleSheet.create({
         padding: 14,
         borderRadius: 14,
         borderWidth: 2,
-        borderColor: "#99F6E4",
+        borderColor: "#E2E8F0",
     },
     dateLabel: {
         fontSize: 12,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginBottom: 4,
         textTransform: "uppercase",
     },
     dateValue: {
         fontSize: 16,
-        color: "#134E4A",
+        color: "#1A2433",
         fontWeight: "500",
     },
     saveButton: {
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         padding: 16,
         borderRadius: 14,
         alignItems: "center",
         marginTop: 24,
-        shadowColor: "#14B8A6",
+        shadowColor: "#4F6DF5",
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 6,
     },
@@ -2390,7 +2390,7 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
     upgradeButton: {
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         paddingVertical: 16,
         paddingHorizontal: 24,
         borderRadius: 14,
@@ -2420,7 +2420,7 @@ const styles = StyleSheet.create({
     transportSubtitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#0D9488",
+        color: "#1A2433",
         marginBottom: 12,
         textTransform: "uppercase",
         letterSpacing: 0.5,
@@ -2434,7 +2434,7 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         borderRadius: 16,
         padding: 16,
-        shadowColor: "#0D9488",
+        shadowColor: "#1A2433",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
@@ -2451,10 +2451,10 @@ const styles = StyleSheet.create({
     transportProvider: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     transportCategoryBadge: {
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -2462,23 +2462,23 @@ const styles = StyleSheet.create({
     },
     transportCategoryText: {
         fontSize: 12,
-        color: "#0D9488",
+        color: "#4F6DF5",
         fontWeight: "600",
     },
     transportVehicle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#134E4A",
+        color: "#1A2433",
         marginBottom: 8,
     },
     transportService: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginBottom: 8,
     },
     transportDesc: {
         fontSize: 13,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginBottom: 12,
         lineHeight: 20,
     },
@@ -2488,7 +2488,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     featureBadge: {
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -2496,7 +2496,7 @@ const styles = StyleSheet.create({
     },
     featureText: {
         fontSize: 12,
-        color: "#0D9488",
+        color: "#4F6DF5",
         fontWeight: "600",
     },
     transportPriceRow: {
@@ -2507,20 +2507,20 @@ const styles = StyleSheet.create({
     transportPrice: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#14B8A6",
+        color: "#4F6DF5",
     },
     transportPriceUnit: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         fontWeight: "500",
     },
     transportNote: {
         fontSize: 12,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginBottom: 12,
     },
     transportBookButton: {
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         paddingVertical: 10,
         borderRadius: 10,
         alignItems: "center",
@@ -2538,13 +2538,13 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         borderRadius: 16,
         padding: 16,
-        shadowColor: "#0D9488",
+        shadowColor: "#14B8A6",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
         elevation: 3,
         borderWidth: 1,
-        borderColor: "#CCFBF1",
+        borderColor: "#E2E8F0",
     },
     publicTransportOption: {
         marginBottom: 12,
@@ -2558,13 +2558,13 @@ const styles = StyleSheet.create({
     publicTransportMode: {
         fontSize: 12,
         fontWeight: "700",
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         textTransform: "uppercase",
         letterSpacing: 1,
     },
     publicTransportDesc: {
         fontSize: 13,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginBottom: 12,
         lineHeight: 20,
     },
@@ -2574,7 +2574,7 @@ const styles = StyleSheet.create({
     },
     publicTransportPrice: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         fontWeight: "500",
     },
     emptyTransportCard: {
@@ -2584,16 +2584,16 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 8,
         borderWidth: 1,
-        borderColor: "#CCFBF1",
+        borderColor: "#E2E8F0",
     },
     emptyTransportText: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#0D9488",
+        color: "#1A2433",
     },
     emptyTransportSubtext: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginTop: 8,
         textAlign: "center",
     },
@@ -2608,16 +2608,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
     },
     museumBadge: {
-        backgroundColor: "#D1FAE5",
+        backgroundColor: "#E0E7FF",
     },
     attractionBadge: {
         backgroundColor: "#FEF3C7",
     },
     tourBadge: {
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
     },
     restaurantBadge: {
         backgroundColor: "#FCE7F3",
@@ -2639,7 +2639,7 @@ const styles = StyleSheet.create({
         marginTop: 12,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: "#CCFBF1",
+        borderTopColor: "#E2E8F0",
     },
     activityPriceRow: {
         flexDirection: "row",
@@ -2656,7 +2656,7 @@ const styles = StyleSheet.create({
         color: "#14B8A6",
     },
     freeBadge: {
-        backgroundColor: "#D1FAE5",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 8,
@@ -2665,7 +2665,7 @@ const styles = StyleSheet.create({
     freeText: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#059669",
+        color: "#4F6DF5",
     },
     skipLineContainer: {
         marginTop: 8,
@@ -2692,7 +2692,7 @@ const styles = StyleSheet.create({
     },
     skipLineSave: {
         fontSize: 11,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
         marginTop: 4,
         marginLeft: 2,
     },
@@ -2721,12 +2721,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
         gap: 4,
-        minWidth: 70,
+        borderWidth: 1,
+        borderColor: "#4F6DF5",
     },
     bookActivityButtonText: {
         color: "white",
@@ -2765,12 +2766,12 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         backgroundColor: "#FFFFFF",
         borderWidth: 2,
-        borderColor: "#CCFBF1",
+        borderColor: "#E2E8F0",
         gap: 6,
     },
     filterTabActive: {
-        backgroundColor: "#14B8A6",
-        borderColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
+        borderColor: "#4F6DF5",
     },
     airbnbTabActive: {
         backgroundColor: "#FF5A5F",
@@ -2795,7 +2796,7 @@ const styles = StyleSheet.create({
         left: 8,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -2808,7 +2809,7 @@ const styles = StyleSheet.create({
     accommodationTypeText: {
         fontSize: 10,
         fontWeight: "700",
-        color: "#0D9488",
+        color: "#4F6DF5",
         textTransform: "uppercase",
     },
     airbnbTypeText: {
@@ -2842,7 +2843,7 @@ const styles = StyleSheet.create({
     ratingText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#134E4A",
+        color: "#1A2433",
     },
     propertyDetails: {
         marginBottom: 8,
@@ -2865,7 +2866,7 @@ const styles = StyleSheet.create({
     },
     statText: {
         fontSize: 12,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     amenitiesRow: {
         flexDirection: "row",
@@ -2874,7 +2875,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     amenityBadge: {
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -2885,7 +2886,7 @@ const styles = StyleSheet.create({
     amenityText: {
         fontSize: 10,
         fontWeight: "600",
-        color: "#0D9488",
+        color: "#4F6DF5",
     },
     airbnbAmenityText: {
         color: "#FF5A5F",
@@ -2900,11 +2901,11 @@ const styles = StyleSheet.create({
     },
     priceNight: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     totalStayPrice: {
         fontSize: 12,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     airbnbBookButton: {
         backgroundColor: "#FF5A5F",
@@ -2917,7 +2918,7 @@ const styles = StyleSheet.create({
         padding: 16,
         marginTop: 16,
         borderWidth: 1,
-        borderColor: "#CCFBF1",
+        borderColor: "#E2E8F0",
     },
     summaryHeader: {
         flexDirection: "row",
@@ -2926,12 +2927,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: "#CCFBF1",
+        borderBottomColor: "#E2E8F0",
     },
     summaryTitle: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#134E4A",
+        color: "#1A2433",
         flex: 1,
     },
     summaryDetails: {
@@ -2944,12 +2945,12 @@ const styles = StyleSheet.create({
     },
     summaryLabel: {
         fontSize: 14,
-        color: "#5EEAD4",
+        color: "#A1AEC6",
     },
     summaryValue: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#14B8A6",
+        color: "#4F6DF5",
     },
     priceBreakdownToggle: {
         flex: 1,
@@ -2959,16 +2960,16 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#E0E7FF",
         paddingHorizontal: 10,
         paddingVertical: 8,
         borderRadius: 8,
         gap: 4,
         borderWidth: 1,
-        borderColor: "#14B8A6",
+        borderColor: "#4F6DF5",
     },
     addToCartButtonText: {
-        color: "#0D9488",
+        color: "#4F6DF5",
         fontSize: 11,
         fontWeight: "600",
     },
@@ -2976,7 +2977,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#14B8A6",
+        backgroundColor: "#4F6DF5",
         paddingHorizontal: 10,
         paddingVertical: 8,
         borderRadius: 8,
@@ -3264,7 +3265,7 @@ const styles = StyleSheet.create({
     restaurantMetaRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
+        gap: 4,
         marginTop: 8,
     },
     cuisineActivityBadge: {
