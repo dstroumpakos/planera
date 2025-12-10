@@ -56,7 +56,7 @@ export default function Index() {
         <View style={styles.container}>
             <AuthLoading>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#00BFA6" />
+                    <ActivityIndicator size="large" color="#4F6DF5" />
                 </View>
             </AuthLoading>
 
@@ -78,7 +78,7 @@ export default function Index() {
                                 <View style={styles.formContainer}>
                                     {isSignUp && (
                                         <View style={styles.inputContainer}>
-                                            <Ionicons name="person-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                            <Ionicons name="person-outline" size={20} color="#4F6DF5" style={styles.inputIcon} />
                                             <TextInput
                                                 style={styles.input}
                                                 placeholder="Full Name"
@@ -90,7 +90,7 @@ export default function Index() {
                                         </View>
                                     )}
                                     <View style={styles.inputContainer}>
-                                        <Ionicons name="mail-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                        <Ionicons name="mail-outline" size={20} color="#4F6DF5" style={styles.inputIcon} />
                                         <TextInput
                                             style={styles.input}
                                             placeholder="Email"
@@ -102,7 +102,7 @@ export default function Index() {
                                         />
                                     </View>
                                     <View style={styles.inputContainer}>
-                                        <Ionicons name="lock-closed-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                        <Ionicons name="lock-closed-outline" size={20} color="#4F6DF5" style={styles.inputIcon} />
                                         <TextInput
                                             style={styles.input}
                                             placeholder="Password"
@@ -175,7 +175,7 @@ export default function Index() {
                                         style={styles.guestButton} 
                                         onPress={() => authClient.signIn.anonymous()}
                                     >
-                                        <Ionicons name="compass-outline" size={20} color="#00BFA6" style={styles.buttonIcon} />
+                                        <Ionicons name="compass-outline" size={20} color="#4F6DF5" style={styles.buttonIcon} />
                                         <Text style={styles.guestButtonText}>Explore as Guest</Text>
                                     </TouchableOpacity>
                                 </View>
