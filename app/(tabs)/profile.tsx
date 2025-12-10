@@ -75,7 +75,7 @@ export default function Profile() {
                             <Ionicons 
                                 name={isPremium ? "diamond" : "compass"} 
                                 size={12} 
-                                color={isPremium ? "#FFD700" : "#00BFA6"} 
+                                color={isPremium ? "#FFD700" : "#4F6DF5"} 
                             />
                             <Text style={[styles.planText, isPremium && styles.premiumText]}>
                                 {isPremium ? "PREMIUM" : "FREE PLAN"}
@@ -112,7 +112,7 @@ export default function Profile() {
                             onPress={item.action}
                         >
                             <View style={styles.menuIconContainer}>
-                                <Ionicons name={item.icon as any} size={22} color="#00BFA6" />
+                                <Ionicons name={item.icon as any} size={22} color="#4F6DF5" />
                             </View>
                             <Text style={styles.menuText}>{item.title}</Text>
                             <Ionicons name="chevron-forward" size={20} color="#CFD8DC" />
@@ -125,7 +125,7 @@ export default function Profile() {
                         onPress={() => router.push("/settings/notifications")}
                     >
                         <View style={styles.menuIconContainer}>
-                            <Ionicons name="notifications-outline" size={22} color="#00BFA6" />
+                            <Ionicons name="notifications-outline" size={22} color="#4F6DF5" />
                         </View>
                         <Text style={styles.menuText}>Notifications</Text>
                         <Ionicons name="chevron-forward" size={20} color="#CFD8DC" />

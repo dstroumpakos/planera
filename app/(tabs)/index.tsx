@@ -32,7 +32,7 @@ export default function TripListScreen() {
     if (trips === undefined) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#14B8A6" />
+                <ActivityIndicator size="large" color="#4F6DF5" />
             </View>
         );
     }
@@ -58,7 +58,7 @@ export default function TripListScreen() {
             {trips.length === 0 ? (
                 <View style={styles.emptyState}>
                     <View style={styles.emptyIconContainer}>
-                        <Ionicons name="airplane-outline" size={48} color="#00BFA6" />
+                        <Ionicons name="airplane-outline" size={48} color="#4F6DF5" />
                     </View>
                     <Text style={styles.emptyText}>No trips yet</Text>
                     <Text style={styles.emptySubtext}>Tap the + button to plan your first adventure!</Text>
@@ -121,13 +121,15 @@ export default function TripListScreen() {
 function StatusBadge({ status }: { status: string }) {
     const colors: Record<string, string> = {
         generating: "#F59E0B",
-        completed: "#14B8A6",
+        completed: "#4F6DF5",
+
         failed: "#EF4444",
     };
     
     return (
         <View style={[styles.badge, { backgroundColor: colors[status] || "#94A3B8" }]}>
             <Text style={styles.badgeText}>{status.toUpperCase()}</Text>
+
         </View>
     );
 }
