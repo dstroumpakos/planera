@@ -24,6 +24,7 @@ export default function TabLayout() {
                 tabBarLabelStyle: {
                     fontSize: 12,
                     fontWeight: "600",
+                    color: "#1A2433",
                 },
             }}
         >
