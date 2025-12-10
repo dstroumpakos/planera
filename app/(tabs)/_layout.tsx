@@ -12,9 +12,9 @@ export default function TabLayout() {
                     borderTopWidth: 0,
                     borderTopColor: "#E2E8F0",
                     backgroundColor: "#FFFFFF",
-                    paddingTop: 12,
-                    paddingBottom: 20,
-                    height: 70,
+                    paddingTop: 8,
+                    paddingBottom: 4,
+                    height: 60,
                     shadowColor: "#1A2433",
                     shadowOffset: { width: 0, height: -4 },
                     shadowOpacity: 0.08,
@@ -24,8 +24,7 @@ export default function TabLayout() {
                 tabBarLabelStyle: {
                     fontSize: 12,
                     fontWeight: "600",
-                    marginTop: -8,
-                    marginBottom: 8,
+                    color: "#1A2433",
                 },
             }}
         >

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Planora",
-    "slug": "planora",
+    "name": "Voyage Buddy",
+    "slug": "voyage-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -40,6 +40,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "displayName": "Planora"
+    "displayName": "Voyage Buddy"
   }
 }
