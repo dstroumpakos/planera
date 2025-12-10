@@ -9,7 +9,7 @@ export const create = authMutation({
         origin: v.string(),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.union(v.number(), v.string()),
+        budget: v.union(v.number(), v.string()), // Accept both for backward compatibility
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
@@ -85,13 +85,11 @@ export const create = authMutation({
             ? "Note: User already has flights booked, so DO NOT include flight recommendations."
             : `Flying from: ${args.origin}. Preferred flight time: ${args.preferredFlightTime || "any"}`;
 
-        // Build prompt based on trip type
-        let prompt: string;
-        prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
-            ${flightInfo}
-            Budget: ${args.budget}.
-            Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
-            Interests: ${args.interests.join(", ")}.`;
+        const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
+        ${flightInfo}
+        Budget: ${args.budget}.
+        Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
+        Interests: ${args.interests.join(", ")}.`;
 
         // Schedule the generation action from tripsActions.ts
         await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 

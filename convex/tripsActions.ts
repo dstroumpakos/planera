@@ -560,7 +560,7 @@ function getActivitiesWithPrices(destination: string) {
         { title: `City Highlights Tour`, description: "Guided tour of main attractions", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
         { title: "Main Museum", description: "Discover local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
         { title: "Walking Tour", description: "Explore the old town", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
-        { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "2-3 hours", bookingUrl: null, tips: "Best in the morning" },
+        { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1-2 hours", bookingUrl: null, tips: "Best in the morning" },
         { title: "Sunset Viewpoint", description: "Best views of the city", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: null, tips: "Arrive 30 min before sunset" },
     ];
 }
@@ -1494,14 +1494,10 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 title: product.title || "Activity",
                 price: product.pricing?.summary?.fromPrice || 25,
                 currency: product.pricing?.currency || "EUR",
-                duration: product.duration?.fixedDurationInMinutes 
-                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
-                : product.duration?.variableDurationFromMinutes
-                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
-                    : "2-3h",
+                duration: "2-3h",
                 description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
-                rating: product.rating || 4.5,
-                reviewCount: product.reviewCount || 0,
+                rating: product.reviews?.combinedAverageRating || 4.5,
+                reviewCount: product.reviews?.totalReviews || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
                 image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
@@ -1523,18 +1519,13 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 title: product.title || "Activity",
                 price: product.pricing?.summary?.fromPrice || 25,
                 currency: product.pricing?.currency || "EUR",
-                duration: product.duration?.fixedDurationInMinutes 
-                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
-                : product.duration?.variableDurationFromMinutes
-                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
-                    : "2-3h",
+                duration: "2-3h",
                 description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
                 rating: product.rating || 4.5,
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
-                   product.images?.[0]?.variants?.[0]?.url || null,
+                image: product.primaryImage?.url || product.images?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
                         product.title?.toLowerCase().includes("skip") ||
                         product.title?.toLowerCase().includes("priority"),
@@ -1553,7 +1544,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 : product.duration?.variableDurationFromMinutes
                     ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
                     : "2-3h",
-            description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
+            description: product.description?.substring(0, 200) || "Popular activity",
             rating: product.reviews?.combinedAverageRating || 4.5,
             reviewCount: product.reviews?.totalReviews || 0,
             productCode: product.productCode,
@@ -1624,7 +1615,7 @@ async function searchViatorProductsByText(searchText: string, apiKey: string) {
                 : product.duration?.variableDurationFromMinutes
                     ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
                     : "2-3h",
-            description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
+            description: product.description?.substring(0, 200) || "Popular activity",
             rating: product.reviews?.combinedAverageRating || 4.5,
             reviewCount: product.reviews?.totalReviews || 0,
             productCode: product.productCode,
@@ -1659,9 +1650,9 @@ function getFallbackActivities(destination: string) {
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
             { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "St. Peter's Basilica Dome", price: "€10", duration: "1.5h", description: "Climb to the top for panoramic views" },
-            { title: "Borghese Gallery", price: "€15", duration: "2h", description: "Stunning art collection in beautiful villa" },
+            { title: "Roman Forum", price: "€16", duration: "2h", description: "Ancient Roman ruins" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
+            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
         ],
         "london": [
             { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
@@ -1673,16 +1664,16 @@ function getFallbackActivities(destination: string) {
         "barcelona": [
             { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
             { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
-            { title: "Casa Batlló", price: "€35", duration: "1.5h", description: "Gaudí's stunning modernist building" },
-            { title: "La Pedrera", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
             { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
+            { title: "La Rambla", price: "Free", duration: "1h", description: "Famous tree-lined street" },
+            { title: "La Pedrera", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
         ],
         "athens": [
             { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
             { title: "Acropolis Museum", price: "€10", duration: "2h", description: "Archaeological museum" },
             { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
-            { title: "National Archaeological Museum", price: "€12", duration: "2h", description: "Greece's largest archaeological museum" },
-            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2-3h", description: "Historic neighborhoods" },
+            { title: "Plaka Walking Tour", price: "Free", duration: "2h", description: "Historic neighborhood" },
+            { title: "Temple of Olympian Zeus", price: "€8", duration: "1h", description: "Ancient Greek temple ruins" },
         ],
         "amsterdam": [
             { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
@@ -2425,6 +2416,7 @@ function getAirlineName(carrierCode: string): string {
         "LH": "Lufthansa",
         "EK": "Emirates",
         "QR": "Qatar Airways",
+        "TK": "Turkish Airlines",
         "KL": "KLM Royal Dutch Airlines",
         "IB": "Iberia",
         "AZ": "ITA Airways",

@@ -5,15 +5,15 @@ export default defineSchema({
     trips: defineTable({
         userId: v.string(),
         destination: v.string(),
-        origin: v.optional(v.string()),
+        origin: v.optional(v.string()), // Optional for backward compatibility with old trips
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.union(v.number(), v.string()),
+        budget: v.union(v.number(), v.string()), // Accept both for backward compatibility
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
-        preferredFlightTime: v.optional(v.string()),
+        preferredFlightTime: v.optional(v.string()), // "morning", "afternoon", "evening", "night", "any"
         status: v.string(),
         itinerary: v.optional(v.any()),
     }).index("by_user", ["userId"]),
