@@ -943,81 +943,22 @@ export default function TripDetails() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                {/* Multi-City Route Overview */}
-                {trip.isMultiCity && trip.optimizedRoute?.segments && trip.optimizedRoute.segments.length > 0 && (
-                    <Section title="Your Route">
-                        <View style={styles.multiCityRouteContainer}>
-                            {/* Route visualization */}
-                            <View style={styles.routeVisualization}>
-                                {trip.optimizedRoute.segments.map((segment: any, index: number) => (
-                                    <View key={index} style={styles.routeSegmentContainer}>
-                                        {/* City marker */}
-                                        <View style={styles.cityMarker}>
-                                            <View style={styles.cityMarkerDot}>
-                                                <Text style={styles.cityMarkerNumber}>{index + 1}</Text>
-                                            </View>
-                                            <View style={styles.cityMarkerInfo}>
-                                                <Text style={styles.cityMarkerName}>{segment.from}</Text>
-                                                <Text style={styles.cityMarkerDays}>{segment.duration}</Text>
-                                            </View>
-                                        </View>
-                                        
-                                        {/* Transport connector */}
-                                        <View style={styles.transportConnector}>
-                                            <View style={styles.transportLine} />
-                                            <View style={styles.transportBadge}>
-                                                <Ionicons 
-                                                    name={
-                                                        segment.transportMethod === 'flight' ? 'airplane' :
-                                                        segment.transportMethod === 'train' ? 'train' :
-                                                        segment.transportMethod === 'ferry' ? 'boat' : 'car'
-                                                    } 
-                                                    size={14} 
-                                                    color="#14B8A6" 
-                                                />
-                                                <Text style={styles.transportBadgeText}>
-                                                    {segment.transportMethod} • {segment.duration}
-                                                </Text>
-                                            </View>
-                                            <View style={styles.transportLine} />
-                                        </View>
-                                    </View>
-                                ))}
-                                
-                                {/* Final destination marker */}
-                                {trip.optimizedRoute.segments.length > 0 && (
-                                    <View style={styles.cityMarker}>
-                                        <View style={[styles.cityMarkerDot, styles.finalCityMarkerDot]}>
-                                            <Ionicons name="flag" size={14} color="#fff" />
-                                        </View>
-                                        <View style={styles.cityMarkerInfo}>
-                                            <Text style={styles.cityMarkerName}>
-                                                {trip.optimizedRoute.segments[trip.optimizedRoute.segments.length - 1].to}
-                                            </Text>
-                                            <Text style={styles.cityMarkerDays}>Final stop</Text>
-                                        </View>
-                                    </View>
-                                )}
-                            </View>
-                            
-                            {/* Route summary */}
-                            <View style={styles.routeSummary}>
-                                <View style={styles.routeSummaryItem}>
-                                    <Ionicons name="location" size={18} color="#14B8A6" />
-                                    <Text style={styles.routeSummaryText}>
-                                        {trip.destinations?.length || trip.optimizedRoute.segments.length + 1} cities
-                                    </Text>
-                                </View>
-                                <View style={styles.routeSummaryItem}>
-                                    <Ionicons name="time" size={18} color="#14B8A6" />
-                                    <Text style={styles.routeSummaryText}>
-                                        {Math.round((trip.endDate - trip.startDate) / (24 * 60 * 60 * 1000))} days total
-                                    </Text>
-                                </View>
-                            </View>
+                {/* Multi-City Coming Soon - Feature in development
+                {trip?.isMultiCity && (
+                    <Section title="Multi-City Trips">
+                        <View style={styles.comingSoonContainer}>
+                            <Ionicons name="rocket-outline" size={48} color="#14B8A6" />
+                            <Text style={styles.comingSoonTitle}>Multi-City Trips Coming Soon</Text>
+                            <Text style={styles.comingSoonText}>
+                                We're working hard to bring multi-city trip planning to Voyage Buddy. This feature will allow you to explore multiple destinations in one epic journey!
+                            </Text>
+                            <Text style={styles.comingSoonSubtext}>
+                                Stay tuned for updates.
+                            </Text>
                         </View>
                     </Section>
                 )}
+                */}
 
                 {!trip.skipFlights ? (
                     <Section title="Flights">
@@ -1876,13 +1817,44 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         alignItems: "center",
         justifyContent: "center",
-        flexDirection: "row",
-        gap: 12,
+        borderWidth: 1,
+        borderColor: "#B2DFDB",
     },
     skippedText: {
         fontSize: 14,
         color: "#90A4AE",
         flex: 1,
+    },
+    comingSoonContainer: {
+        backgroundColor: "#F0FFFE",
+        borderRadius: 16,
+        padding: 32,
+        marginBottom: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "#B2DFDB",
+    },
+    comingSoonTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#0D9488",
+        marginTop: 16,
+        marginBottom: 12,
+        textAlign: "center",
+    },
+    comingSoonText: {
+        fontSize: 14,
+        color: "#546E7A",
+        textAlign: "center",
+        marginBottom: 8,
+        lineHeight: 20,
+    },
+    comingSoonSubtext: {
+        fontSize: 12,
+        color: "#90A4AE",
+        textAlign: "center",
+        fontStyle: "italic",
     },
     header: {
         height: 200,
@@ -3029,453 +3001,5 @@ const styles = StyleSheet.create({
     },
     priceBreakdownToggle: {
         flex: 1,
-    },
-    // Cart Button Styles
-    addToCartButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#CCFBF1",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#14B8A6",
-    },
-    addToCartButtonText: {
-        color: "#0D9488",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    inCartButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#14B8A6",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-    },
-    inCartButtonText: {
-        color: "white",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    addToCartSkipLineButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#FEF3C7",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#F59E0B",
-    },
-    addToCartSkipLineButtonText: {
-        color: "#B45309",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    inCartSkipLineButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#F59E0B",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-    },
-    inCartSkipLineButtonText: {
-        color: "white",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    cartBadge: {
-        position: "absolute",
-        top: -4,
-        right: -4,
-        backgroundColor: "#FF5A5F",
-        minWidth: 18,
-        height: 18,
-        paddingHorizontal: 4,
-        borderRadius: 9,
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10,
-    },
-    cartBadgeText: {
-        color: "white",
-        fontSize: 10,
-        fontWeight: "700",
-    },
-    // Skipped Flights Styles
-    skippedFlightsContainer: {
-        alignItems: "center",
-        padding: 24,
-        gap: 12,
-    },
-    skippedFlightsTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#0D9488",
-    },
-    skippedFlightsText: {
-        fontSize: 14,
-        color: "#5EEAD4",
-        textAlign: "center",
-        lineHeight: 20,
-    },
-    // Multiple Flight Options Styles
-    bestPriceBanner: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#D1FAE5",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 10,
-        marginBottom: 16,
-        gap: 8,
-    },
-    bestPriceText: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#10B981",
-    },
-    flightOptionsLabel: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#0D9488",
-        marginBottom: 12,
-    },
-    flightOptionsScroll: {
-        marginBottom: 20,
-    },
-    flightOptionCard: {
-        width: 140,
-        backgroundColor: "#F0FFFE",
-        borderRadius: 14,
-        padding: 14,
-        marginRight: 12,
-        borderWidth: 2,
-        borderColor: "#CCFBF1",
-        alignItems: "center",
-    },
-    flightOptionCardSelected: {
-        borderColor: "#14B8A6",
-        backgroundColor: "#CCFBF1",
-    },
-    bestPriceBadge: {
-        backgroundColor: "#10B981",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-        marginBottom: 8,
-    },
-    bestPriceBadgeText: {
-        fontSize: 10,
-        fontWeight: "700",
-        color: "white",
-        textTransform: "uppercase",
-    },
-    flightOptionAirline: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#0D9488",
-        textAlign: "center",
-        marginBottom: 4,
-    },
-    flightOptionTime: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#134E4A",
-        marginBottom: 4,
-    },
-    flightOptionPrice: {
-        fontSize: 18,
-        fontWeight: "800",
-        color: "#14B8A6",
-        marginBottom: 4,
-    },
-    flightOptionStops: {
-        fontSize: 11,
-        color: "#5EEAD4",
-        fontWeight: "500",
-        marginTop: 4,
-    },
-    selectedFlightDetails: {
-        backgroundColor: "#F0FFFE",
-        borderRadius: 14,
-        padding: 16,
-        marginBottom: 16,
-    },
-    stopsText: {
-        fontSize: 12,
-        color: "#F59E0B",
-        fontWeight: "500",
-        marginTop: 4,
-    },
-    baggageSection: {
-        marginTop: 16,
-    },
-    baggageSectionTitle: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#0D9488",
-        marginBottom: 12,
-    },
-    baggageOption: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#F0FFFE",
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 12,
-    },
-    baggageOptionLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    baggageOptionInfo: {
-        flexDirection: "column",
-        gap: 4,
-    },
-    baggageOptionTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#134E4A",
-    },
-    baggageOptionDesc: {
-        fontSize: 12,
-        color: "#5EEAD4",
-    },
-    baggageOptionRight: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    baggagePrice: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#14B8A6",
-    },
-    baggageOptionSelectable: {
-        backgroundColor: "white",
-        borderWidth: 1,
-        borderColor: "#CCFBF1",
-    },
-    baggageOptionSelected: {
-        backgroundColor: "#CCFBF1",
-    },
-    baggagePriceSelected: {
-        color: "#14B8A6",
-    },
-    baggageOptionTitleSelected: {
-        color: "#14B8A6",
-    },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#546E7A",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    checkboxSelected: {
-        backgroundColor: "#14B8A6",
-        borderColor: "#14B8A6",
-    },
-    baggageSummary: {
-        alignItems: "center",
-        marginTop: 12,
-    },
-    baggageSummaryText: {
-        fontSize: 12,
-        color: "#5EEAD4",
-        textAlign: "center",
-    },
-    includedBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-    },
-    includedText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#10B981",
-    },
-    // TripAdvisor Activity Badge Styles
-    tripAdvisorActivityBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        marginTop: 8,
-    },
-    tripAdvisorActivityLogo: {
-        width: 100,
-        height: 20,
-    },
-    tripAdvisorRatingBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    tripAdvisorRatingText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#00AA6C",
-    },
-    tripAdvisorReviewText: {
-        fontSize: 12,
-        color: "#5EEAD4",
-    },
-    // Restaurant Meta Info Styles
-    restaurantMetaRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginTop: 8,
-    },
-    cuisineActivityBadge: {
-        backgroundColor: "#CCFBF1",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    cuisineActivityText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#134E4A",
-    },
-    priceRangeActivityText: {
-        fontSize: 12,
-        color: "#5EEAD4",
-    },
-    // Restaurant Address Styles
-    restaurantAddressActivityRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginTop: 8,
-    },
-    restaurantAddressActivityText: {
-        fontSize: 12,
-        color: "#78909C",
-    },
-    tripAdvisorLinkButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#E8F5E9",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#00AA6C",
-    },
-    tripAdvisorLinkButtonText: {
-        fontSize: 11,
-        fontWeight: "600",
-        color: "#00AA6C",
-    },
-    // Multi-City Route Styles
-    multiCityRouteContainer: {
-        backgroundColor: "#F0FFFE",
-        borderRadius: 16,
-        padding: 16,
-    },
-    routeVisualization: {
-        marginBottom: 16,
-    },
-    routeSegmentContainer: {
-        marginBottom: 0,
-    },
-    cityMarker: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 8,
-    },
-    cityMarkerDot: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: "#14B8A6",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    finalCityMarkerDot: {
-        backgroundColor: "#0D9488",
-    },
-    cityMarkerNumber: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "white",
-    },
-    cityMarkerInfo: {
-        flex: 1,
-    },
-    cityMarkerName: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: "#134E4A",
-    },
-    cityMarkerDays: {
-        fontSize: 13,
-        color: "#5EEAD4",
-        marginTop: 2,
-    },
-    transportConnector: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginLeft: 16,
-        paddingVertical: 8,
-    },
-    transportLine: {
-        flex: 1,
-        height: 2,
-        backgroundColor: "#CCFBF1",
-    },
-    transportBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "white",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        gap: 6,
-        marginHorizontal: 8,
-        borderWidth: 1,
-        borderColor: "#CCFBF1",
-    },
-    transportBadgeText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#0D9488",
-        textTransform: "capitalize",
-    },
-    routeSummary: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: "#CCFBF1",
-    },
-    routeSummaryItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-    },
-    routeSummaryText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#0D9488",
     },
 });

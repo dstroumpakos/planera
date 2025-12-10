@@ -5,210 +5,16 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import OpenAI from "openai";
 
-// Route optimization helper - calculates optimal order and transport methods
-function optimizeRoute(
-    origin: string,
-    destinations: Array<{ city: string; country: string; days: number; order: number }>
-): {
-    optimizedDestinations: typeof destinations;
-    segments: Array<{
-        from: string;
-        to: string;
-        transportMethod: string;
-        duration: string;
-        distance: string;
-        estimatedCost: string;
-    }>;
-    totalTravelTime: string;
-} {
-    // City coordinates for distance calculation (approximate)
-    const cityCoords: Record<string, { lat: number; lng: number; region: string }> = {
-        // Italy
-        "Rome": { lat: 41.9028, lng: 12.4964, region: "italy" },
-        "Florence": { lat: 43.7696, lng: 11.2558, region: "italy" },
-        "Milan": { lat: 45.4642, lng: 9.1900, region: "italy" },
-        "Venice": { lat: 45.4408, lng: 12.3155, region: "italy" },
-        "Naples": { lat: 40.8518, lng: 14.2681, region: "italy" },
-        // France
-        "Paris": { lat: 48.8566, lng: 2.3522, region: "france" },
-        "Nice": { lat: 43.7102, lng: 7.2620, region: "france" },
-        "Lyon": { lat: 45.7640, lng: 4.8357, region: "france" },
-        "Marseille": { lat: 43.2965, lng: 5.3698, region: "france" },
-        // Spain
-        "Barcelona": { lat: 41.3851, lng: 2.1734, region: "spain" },
-        "Madrid": { lat: 40.4168, lng: -3.7038, region: "spain" },
-        "Seville": { lat: 37.3891, lng: -5.9845, region: "spain" },
-        "Valencia": { lat: 39.4699, lng: -0.3763, region: "spain" },
-        // Germany
-        "Berlin": { lat: 52.5200, lng: 13.4050, region: "germany" },
-        "Munich": { lat: 48.1351, lng: 11.5820, region: "germany" },
-        "Frankfurt": { lat: 50.1109, lng: 8.6821, region: "germany" },
-        // UK
-        "London": { lat: 51.5074, lng: -0.1278, region: "uk" },
-        "Edinburgh": { lat: 55.9533, lng: -3.1883, region: "uk" },
-        "Manchester": { lat: 53.4808, lng: -2.2426, region: "uk" },
-        // Greece
-        "Athens": { lat: 37.9838, lng: 23.7275, region: "greece" },
-        "Santorini": { lat: 36.3932, lng: 25.4615, region: "greece" },
-        "Mykonos": { lat: 37.4467, lng: 25.3289, region: "greece" },
-        // Other Europe
-        "Amsterdam": { lat: 52.3676, lng: 4.9041, region: "netherlands" },
-        "Prague": { lat: 50.0755, lng: 14.4378, region: "czechia" },
-        "Vienna": { lat: 48.2082, lng: 16.3738, region: "austria" },
-        "Zurich": { lat: 47.3769, lng: 8.5417, region: "switzerland" },
-        "Lisbon": { lat: 38.7223, lng: -9.1393, region: "portugal" },
-        "Brussels": { lat: 50.8503, lng: 4.3517, region: "belgium" },
-        "Copenhagen": { lat: 55.6761, lng: 12.5683, region: "denmark" },
-        "Stockholm": { lat: 59.3293, lng: 18.0686, region: "sweden" },
-        "Budapest": { lat: 47.4979, lng: 19.0402, region: "hungary" },
-        // Asia
-        "Tokyo": { lat: 35.6762, lng: 139.6503, region: "japan" },
-        "Kyoto": { lat: 35.0116, lng: 135.7681, region: "japan" },
-        "Osaka": { lat: 34.6937, lng: 135.5023, region: "japan" },
-        "Bangkok": { lat: 13.7563, lng: 100.5018, region: "thailand" },
-        "Singapore": { lat: 1.3521, lng: 103.8198, region: "singapore" },
-        "Hong Kong": { lat: 22.3193, lng: 114.1694, region: "china" },
-        // USA
-        "New York": { lat: 40.7128, lng: -74.0060, region: "usa-east" },
-        "Los Angeles": { lat: 34.0522, lng: -118.2437, region: "usa-west" },
-        "San Francisco": { lat: 37.7749, lng: -122.4194, region: "usa-west" },
-        "Miami": { lat: 25.7617, lng: -80.1918, region: "usa-east" },
-        "Chicago": { lat: 41.8781, lng: -87.6298, region: "usa-central" },
-        "Las Vegas": { lat: 36.1699, lng: -115.1398, region: "usa-west" },
-    };
-
-    // Calculate distance between two cities (Haversine formula)
-    function getDistance(city1: string, city2: string): number {
-        const c1 = cityCoords[city1];
-        const c2 = cityCoords[city2];
-        if (!c1 || !c2) return 500; // Default distance if city not found
-
-        const R = 6371; // Earth's radius in km
-        const dLat = (c2.lat - c1.lat) * Math.PI / 180;
-        const dLng = (c2.lng - c1.lng) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(c1.lat * Math.PI / 180) * Math.cos(c2.lat * Math.PI / 180) *
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
-
-    // Determine best transport method based on distance and regions
-    function getTransportMethod(city1: string, city2: string, distance: number): { method: string; duration: string; cost: string } {
-        const c1 = cityCoords[city1];
-        const c2 = cityCoords[city2];
-        const sameRegion = c1 && c2 && c1.region === c2.region;
-
-        // Greek islands - ferry
-        if ((city1 === "Santorini" || city1 === "Mykonos" || city2 === "Santorini" || city2 === "Mykonos") && 
-            (c1?.region === "greece" && c2?.region === "greece")) {
-            return { method: "ferry", duration: `${Math.round(distance / 30)}h`, cost: `€${Math.round(40 + distance * 0.1)}` };
-        }
-
-        // Short distances (< 200km) - train or car
-        if (distance < 200) {
-            if (sameRegion && (c1?.region === "italy" || c1?.region === "france" || c1?.region === "germany" || c1?.region === "japan")) {
-                return { method: "train", duration: `${Math.round(distance / 150)}h ${Math.round((distance % 150) / 2.5)}min`, cost: `€${Math.round(30 + distance * 0.15)}` };
-            }
-            return { method: "car/bus", duration: `${Math.round(distance / 80)}h ${Math.round((distance % 80) * 0.75)}min`, cost: `€${Math.round(20 + distance * 0.1)}` };
-        }
-
-        // Medium distances (200-600km) - high-speed train preferred in Europe/Japan
-        if (distance < 600) {
-            if (c1?.region === "italy" || c1?.region === "france" || c1?.region === "germany" || c1?.region === "spain" || c1?.region === "japan") {
-                return { method: "high-speed train", duration: `${Math.round(distance / 250)}h ${Math.round((distance % 250) / 4)}min`, cost: `€${Math.round(50 + distance * 0.12)}` };
-            }
-            return { method: "train", duration: `${Math.round(distance / 120)}h`, cost: `€${Math.round(40 + distance * 0.1)}` };
-        }
-
-        // Long distances (> 600km) - flight
-        const flightTime = Math.max(1, Math.round(distance / 800));
-        return { method: "flight", duration: `${flightTime}h ${Math.round((distance % 800) / 13)}min`, cost: `€${Math.round(80 + distance * 0.08)}` };
-    }
-
-    // Optimize route using nearest neighbor algorithm
-    const optimized: typeof destinations = [];
-    const remaining = [...destinations];
-    let currentCity = origin;
-    
-    while (remaining.length > 0) {
-        let nearestIdx = 0;
-        let nearestDist = Infinity;
-        
-        for (let i = 0; i < remaining.length; i++) {
-            const dist = getDistance(currentCity, remaining[i].city);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestIdx = i;
-            }
-        }
-        
-        const nearest = remaining.splice(nearestIdx, 1)[0];
-        optimized.push({ ...nearest, order: optimized.length + 1 });
-        currentCity = nearest.city;
-    }
-
-    // Generate segments
-    const segments: Array<{
-        from: string;
-        to: string;
-        transportMethod: string;
-        duration: string;
-        distance: string;
-        estimatedCost: string;
-    }> = [];
-
-    let totalMinutes = 0;
-    let prevCity = origin;
-
-    for (const dest of optimized) {
-        const distance = getDistance(prevCity, dest.city);
-        const transport = getTransportMethod(prevCity, dest.city, distance);
-        
-        segments.push({
-            from: prevCity,
-            to: dest.city,
-            transportMethod: transport.method,
-            duration: transport.duration,
-            distance: `${Math.round(distance)} km`,
-            estimatedCost: transport.cost,
-        });
-
-        // Parse duration for total
-        const hours = parseInt(transport.duration.match(/(\d+)h/)?.[1] || "0");
-        const mins = parseInt(transport.duration.match(/(\d+)min/)?.[1] || "0");
-        totalMinutes += hours * 60 + mins;
-        
-        prevCity = dest.city;
-    }
-
-    const totalHours = Math.floor(totalMinutes / 60);
-    const totalMins = totalMinutes % 60;
-
-    return {
-        optimizedDestinations: optimized,
-        segments,
-        totalTravelTime: `${totalHours}h ${totalMins}min`,
-    };
-}
-
 export const generate = internalAction({
     args: { 
         tripId: v.id("trips"), 
         prompt: v.string(), 
         skipFlights: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
-        isMultiCity: v.optional(v.boolean()),
-        destinations: v.optional(v.array(v.object({
-            city: v.string(),
-            country: v.string(),
-            days: v.number(),
-            order: v.number(),
-        }))),
     },
     returns: v.null(),
     handler: async (ctx, args) => {
-        const { tripId, skipFlights, preferredFlightTime, isMultiCity, destinations } = args;
+        const { tripId, skipFlights, preferredFlightTime } = args;
 
         console.log("=".repeat(80));
         console.log("🚀 TRIP GENERATION STARTED");
@@ -217,10 +23,6 @@ export const generate = internalAction({
         console.log("Prompt:", args.prompt);
         console.log("Skip Flights:", skipFlights ? "Yes" : "No");
         console.log("Preferred Flight Time:", preferredFlightTime || "any");
-        console.log("Is Multi-City:", isMultiCity ? "Yes" : "No");
-        if (destinations) {
-            console.log("Destinations:", JSON.stringify(destinations, null, 2));
-        }
 
         // Get trip details
         const trip = await ctx.runQuery(internal.trips.getTripDetails, { tripId });
@@ -233,28 +35,6 @@ export const generate = internalAction({
 
         // Default origin if not set (for backward compatibility with old trips)
         const origin = trip.origin || "London";
-
-        // Handle multi-city route optimization
-        let optimizedRoute = null;
-        let optimizedDestinations = destinations;
-        
-        if (isMultiCity && destinations && destinations.length > 1) {
-            console.log("🗺️ Optimizing multi-city route...");
-            const routeResult = optimizeRoute(origin, destinations);
-            optimizedDestinations = routeResult.optimizedDestinations;
-            optimizedRoute = {
-                totalTravelTime: routeResult.totalTravelTime,
-                segments: routeResult.segments,
-            };
-            console.log("✅ Route optimized:", JSON.stringify(optimizedRoute, null, 2));
-            
-            // Update trip with optimized route
-            await ctx.runMutation(internal.trips.updateOptimizedRoute, {
-                tripId,
-                optimizedRoute,
-                destinations: optimizedDestinations,
-            });
-        }
 
         console.log("✅ Trip details loaded:");
         console.log("  - Destination:", trip.destination);
@@ -780,7 +560,7 @@ function getActivitiesWithPrices(destination: string) {
         { title: `City Highlights Tour`, description: "Guided tour of main attractions", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
         { title: "Main Museum", description: "Discover local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
         { title: "Walking Tour", description: "Explore the old town", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
-        { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1-2 hours", bookingUrl: null, tips: "Best in the morning" },
+        { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "2-3 hours", bookingUrl: null, tips: "Best in the morning" },
         { title: "Sunset Viewpoint", description: "Best views of the city", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: null, tips: "Arrive 30 min before sunset" },
     ];
 }
@@ -1714,10 +1494,14 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 title: product.title || "Activity",
                 price: product.pricing?.summary?.fromPrice || 25,
                 currency: product.pricing?.currency || "EUR",
-                duration: "2-3h",
+                duration: product.duration?.fixedDurationInMinutes 
+                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
+                : product.duration?.variableDurationFromMinutes
+                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
+                    : "2-3h",
                 description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
-                rating: product.reviews?.combinedAverageRating || 4.5,
-                reviewCount: product.reviews?.totalReviews || 0,
+                rating: product.rating || 4.5,
+                reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
                 image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
@@ -1739,13 +1523,18 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 title: product.title || "Activity",
                 price: product.pricing?.summary?.fromPrice || 25,
                 currency: product.pricing?.currency || "EUR",
-                duration: "2-3h",
+                duration: product.duration?.fixedDurationInMinutes 
+                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
+                : product.duration?.variableDurationFromMinutes
+                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
+                    : "2-3h",
                 description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
                 rating: product.rating || 4.5,
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.primaryImage?.url || product.images?.[0]?.url || null,
+                image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
+                   product.images?.[0]?.variants?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
                         product.title?.toLowerCase().includes("skip") ||
                         product.title?.toLowerCase().includes("priority"),
@@ -1764,7 +1553,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 : product.duration?.variableDurationFromMinutes
                     ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
                     : "2-3h",
-            description: product.description?.substring(0, 200) || "Popular activity",
+            description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
             rating: product.reviews?.combinedAverageRating || 4.5,
             reviewCount: product.reviews?.totalReviews || 0,
             productCode: product.productCode,
@@ -1835,7 +1624,7 @@ async function searchViatorProductsByText(searchText: string, apiKey: string) {
                 : product.duration?.variableDurationFromMinutes
                     ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
                     : "2-3h",
-            description: product.description?.substring(0, 200) || "Popular activity",
+            description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
             rating: product.reviews?.combinedAverageRating || 4.5,
             reviewCount: product.reviews?.totalReviews || 0,
             productCode: product.productCode,
@@ -1870,9 +1659,9 @@ function getFallbackActivities(destination: string) {
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
             { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "Roman Forum", price: "€16", duration: "2h", description: "Ancient Roman ruins" },
+            { title: "St. Peter's Basilica Dome", price: "€10", duration: "1.5h", description: "Climb to the top for panoramic views" },
+            { title: "Borghese Gallery", price: "€15", duration: "2h", description: "Stunning art collection in beautiful villa" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
-            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
         ],
         "london": [
             { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
@@ -1884,16 +1673,16 @@ function getFallbackActivities(destination: string) {
         "barcelona": [
             { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
             { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
-            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
-            { title: "La Rambla", price: "Free", duration: "1h", description: "Famous tree-lined street" },
+            { title: "Casa Batlló", price: "€35", duration: "1.5h", description: "Gaudí's stunning modernist building" },
             { title: "La Pedrera", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
+            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
         ],
         "athens": [
             { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
             { title: "Acropolis Museum", price: "€10", duration: "2h", description: "Archaeological museum" },
             { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
-            { title: "Plaka Walking Tour", price: "Free", duration: "2h", description: "Historic neighborhood" },
-            { title: "Temple of Olympian Zeus", price: "€8", duration: "1h", description: "Ancient Greek temple ruins" },
+            { title: "National Archaeological Museum", price: "€12", duration: "2h", description: "Greece's largest archaeological museum" },
+            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2-3h", description: "Historic neighborhoods" },
         ],
         "amsterdam": [
             { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
@@ -2636,7 +2425,6 @@ function getAirlineName(carrierCode: string): string {
         "LH": "Lufthansa",
         "EK": "Emirates",
         "QR": "Qatar Airways",
-        "TK": "Turkish Airlines",
         "KL": "KLM Royal Dutch Airlines",
         "IB": "Iberia",
         "AZ": "ITA Airways",
