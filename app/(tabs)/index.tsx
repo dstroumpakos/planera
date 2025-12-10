@@ -137,6 +137,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#F8FAFC",
     },
+    center: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
     header: {
         paddingHorizontal: 20,
         paddingTop: 16,
@@ -144,16 +149,24 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFFFFF",
         borderBottomWidth: 1,
         borderBottomColor: "#E2E8F0",
-    },
-    headerContent: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
     },
-    logo: {
-        width: 40,
-        height: 40,
-        borderRadius: 8,
+    headerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+    },
+    headerLogo: {
+        width: 50,
+        height: 50,
+        marginRight: 12,
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        color: "#A1AEC6",
+        fontWeight: "500",
     },
     headerTitle: {
         fontSize: 24,
@@ -162,14 +175,24 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 12,
     },
-    headerIcon: {
-        padding: 8,
+    addButton: {
+        width: 50,
+        height: 50,
+        borderRadius: 14,
+        backgroundColor: "#4F6DF5",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#4F6DF5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    content: {
-        flex: 1,
+    listContent: {
         padding: 16,
+        paddingBottom: 100,
     },
-    tripCard: {
+    card: {
         backgroundColor: "#FFFFFF",
         borderRadius: 20,
         marginBottom: 16,
