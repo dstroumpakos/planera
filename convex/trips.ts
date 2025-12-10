@@ -9,12 +9,20 @@ export const create = authMutation({
         origin: v.string(),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.union(v.number(), v.string()), // Accept both for backward compatibility
+        budget: v.union(v.number(), v.string()),
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
+        // Multi-city trip fields
+        isMultiCity: v.optional(v.boolean()),
+        destinations: v.optional(v.array(v.object({
+            city: v.string(),
+            country: v.string(),
+            days: v.number(),
+            order: v.number(),
+        }))),
     },
     returns: v.id("trips"),
     handler: async (ctx, args) => {
@@ -66,9 +74,14 @@ export const create = authMutation({
             });
         }
 
+        // Build destination string for multi-city trips
+        const destinationDisplay = args.isMultiCity && args.destinations 
+            ? args.destinations.map(d => d.city).join(" → ")
+            : args.destination;
+
         const tripId = await ctx.db.insert("trips", {
             userId: ctx.user._id,
-            destination: args.destination,
+            destination: destinationDisplay,
             origin: args.origin,
             startDate: args.startDate,
             endDate: args.endDate,
@@ -79,17 +92,37 @@ export const create = authMutation({
             skipFlights: args.skipFlights ?? false,
             skipHotel: args.skipHotel ?? false,
             preferredFlightTime: args.preferredFlightTime ?? "any",
+            isMultiCity: args.isMultiCity ?? false,
+            destinations: args.destinations,
         });
 
         const flightInfo = args.skipFlights 
             ? "Note: User already has flights booked, so DO NOT include flight recommendations."
             : `Flying from: ${args.origin}. Preferred flight time: ${args.preferredFlightTime || "any"}`;
 
-        const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
-        ${flightInfo}
-        Budget: ${args.budget}.
-        Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
-        Interests: ${args.interests.join(", ")}.`;
+        // Build prompt based on trip type
+        let prompt: string;
+        if (args.isMultiCity && args.destinations && args.destinations.length > 1) {
+            const citiesInfo = args.destinations
+                .sort((a, b) => a.order - b.order)
+                .map(d => `${d.city}, ${d.country} (${d.days} days)`)
+                .join(" → ");
+            
+            prompt = `Plan a MULTI-CITY trip: ${citiesInfo} for ${args.travelers} people.
+            ${flightInfo}
+            Budget: ${args.budget}.
+            Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
+            Interests: ${args.interests.join(", ")}.
+            
+            IMPORTANT: This is a multi-city trip. Generate a complete itinerary for EACH city, with the specified number of days per city.
+            Include transportation recommendations between cities (flight, train, bus, or car).`;
+        } else {
+            prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
+            ${flightInfo}
+            Budget: ${args.budget}.
+            Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
+            Interests: ${args.interests.join(", ")}.`;
+        }
 
         // Schedule the generation action from tripsActions.ts
         await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 
@@ -97,6 +130,8 @@ export const create = authMutation({
             prompt, 
             skipFlights: args.skipFlights ?? false,
             preferredFlightTime: args.preferredFlightTime ?? "any",
+            isMultiCity: args.isMultiCity ?? false,
+            destinations: args.destinations,
         });
 
         return tripId;
@@ -122,6 +157,37 @@ export const updateItinerary = internalMutation({
             itinerary: args.itinerary,
             status: args.status,
         });
+    },
+});
+
+export const updateOptimizedRoute = internalMutation({
+    args: {
+        tripId: v.id("trips"),
+        optimizedRoute: v.object({
+            totalTravelTime: v.string(),
+            segments: v.array(v.object({
+                from: v.string(),
+                to: v.string(),
+                transportMethod: v.string(),
+                duration: v.string(),
+                distance: v.string(),
+                estimatedCost: v.string(),
+            })),
+        }),
+        destinations: v.array(v.object({
+            city: v.string(),
+            country: v.string(),
+            days: v.number(),
+            order: v.number(),
+        })),
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.tripId, {
+            optimizedRoute: args.optimizedRoute,
+            destinations: args.destinations,
+        });
+        return null;
     },
 });
 

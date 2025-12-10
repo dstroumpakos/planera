@@ -5,15 +5,35 @@ export default defineSchema({
     trips: defineTable({
         userId: v.string(),
         destination: v.string(),
-        origin: v.optional(v.string()), // Optional for backward compatibility with old trips
+        origin: v.optional(v.string()),
         startDate: v.number(),
         endDate: v.number(),
-        budget: v.union(v.number(), v.string()), // Accept both for backward compatibility
+        budget: v.union(v.number(), v.string()),
         travelers: v.number(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
-        preferredFlightTime: v.optional(v.string()), // "morning", "afternoon", "evening", "night", "any"
+        preferredFlightTime: v.optional(v.string()),
+        // Multi-city trip fields
+        isMultiCity: v.optional(v.boolean()),
+        destinations: v.optional(v.array(v.object({
+            city: v.string(),
+            country: v.string(),
+            days: v.number(),
+            order: v.number(),
+        }))),
+        optimizedRoute: v.optional(v.object({
+            totalDistance: v.optional(v.number()),
+            totalTravelTime: v.optional(v.string()),
+            segments: v.optional(v.array(v.object({
+                from: v.string(),
+                to: v.string(),
+                transportMethod: v.string(),
+                duration: v.string(),
+                distance: v.optional(v.string()),
+                estimatedCost: v.optional(v.string()),
+            }))),
+        })),
         status: v.string(),
         itinerary: v.optional(v.any()),
     }).index("by_user", ["userId"]),

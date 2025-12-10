@@ -258,6 +258,18 @@ export default function CreateTrip() {
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
     const [destinationSuggestions, setDestinationSuggestions] = useState<typeof DESTINATIONS>([]);
+    
+    // Multi-city state
+    const [isMultiCity, setIsMultiCity] = useState(false);
+    const [multiCityDestinations, setMultiCityDestinations] = useState<Array<{
+        city: string;
+        country: string;
+        days: number;
+        order: number;
+    }>>([]);
+    const [currentCityInput, setCurrentCityInput] = useState("");
+    const [showMultiCitySuggestions, setShowMultiCitySuggestions] = useState(false);
+    const [multiCitySuggestions, setMultiCitySuggestions] = useState<typeof DESTINATIONS>([]);
 
     const [formData, setFormData] = useState({
         destination: "",
@@ -333,6 +345,77 @@ export default function CreateTrip() {
         setDestinationSuggestions([]);
     };
 
+    // Multi-city functions
+    const searchMultiCityDestinations = (query: string) => {
+        if (query.length < 2) {
+            setShowMultiCitySuggestions(false);
+            setMultiCitySuggestions([]);
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        const filtered = DESTINATIONS.filter(dest => 
+            dest.city.toLowerCase().includes(lowerQuery) ||
+            dest.country.toLowerCase().includes(lowerQuery)
+        ).slice(0, 8);
+
+        setMultiCitySuggestions(filtered);
+        setShowMultiCitySuggestions(filtered.length > 0);
+    };
+
+    const addMultiCityDestination = (destination: typeof DESTINATIONS[0]) => {
+        const totalDays = Math.round((formData.endDate - formData.startDate) / (24 * 60 * 60 * 1000));
+        const existingDays = multiCityDestinations.reduce((sum, d) => sum + d.days, 0);
+        const remainingDays = Math.max(1, totalDays - existingDays);
+        const defaultDays = Math.min(remainingDays, Math.max(2, Math.floor(remainingDays / 2)));
+
+        setMultiCityDestinations([
+            ...multiCityDestinations,
+            {
+                city: destination.city,
+                country: destination.country,
+                days: defaultDays,
+                order: multiCityDestinations.length,
+            }
+        ]);
+        setCurrentCityInput("");
+        setShowMultiCitySuggestions(false);
+        setMultiCitySuggestions([]);
+    };
+
+    const removeMultiCityDestination = (index: number) => {
+        const updated = multiCityDestinations
+            .filter((_, i) => i !== index)
+            .map((d, i) => ({ ...d, order: i }));
+        setMultiCityDestinations(updated);
+    };
+
+    const updateCityDays = (index: number, days: number) => {
+        const updated = [...multiCityDestinations];
+        updated[index] = { ...updated[index], days: Math.max(1, days) };
+        setMultiCityDestinations(updated);
+    };
+
+    const moveCityOrder = (index: number, direction: 'up' | 'down') => {
+        if (direction === 'up' && index === 0) return;
+        if (direction === 'down' && index === multiCityDestinations.length - 1) return;
+
+        const updated = [...multiCityDestinations];
+        const swapIndex = direction === 'up' ? index - 1 : index + 1;
+        
+        // Swap the items
+        [updated[index], updated[swapIndex]] = [updated[swapIndex], updated[index]];
+        
+        // Update order numbers
+        updated.forEach((d, i) => d.order = i);
+        
+        setMultiCityDestinations(updated);
+    };
+
+    const getTotalAllocatedDays = () => {
+        return multiCityDestinations.reduce((sum, d) => sum + d.days, 0);
+    };
+
     const formatDateForCalendar = (timestamp: number) => {
         const date = new Date(timestamp);
         return date.toISOString().split('T')[0];
@@ -403,9 +486,21 @@ export default function CreateTrip() {
 
     const handleNext = () => {
         if (step === 1) {
-            if (!formData.destination) {
-                Alert.alert("Required", "Please enter a destination");
-                return;
+            // Validate destination(s)
+            if (isMultiCity) {
+                if (multiCityDestinations.length < 2) {
+                    if (Platform.OS !== 'web') {
+                        Alert.alert("Error", "Please add at least 2 cities for a multi-city trip");
+                    }
+                    return;
+                }
+            } else {
+                if (!formData.destination) {
+                    if (Platform.OS !== 'web') {
+                        Alert.alert("Error", "Please enter a destination");
+                    }
+                    return;
+                }
             }
             if (!formData.skipFlights && !formData.origin) {
                 Alert.alert("Required", "Please enter where you are flying from");
@@ -454,7 +549,9 @@ export default function CreateTrip() {
         setShowLoadingScreen(true);
         try {
             const tripId = await createTrip({
-                destination: formData.destination,
+                destination: isMultiCity 
+                    ? multiCityDestinations.map(d => `${d.city}, ${d.country}`).join(" → ")
+                    : formData.destination,
                 origin: formData.skipFlights ? "N/A" : formData.origin,
                 startDate: formData.startDate,
                 endDate: formData.endDate,
@@ -464,6 +561,8 @@ export default function CreateTrip() {
                 skipFlights: formData.skipFlights,
                 skipHotel: formData.skipHotel,
                 preferredFlightTime: formData.skipFlights ? undefined : formData.preferredFlightTime,
+                isMultiCity: isMultiCity,
+                destinations: isMultiCity ? multiCityDestinations : undefined,
             });
             // Wait a bit to show the animation
             setTimeout(() => {
@@ -521,6 +620,26 @@ export default function CreateTrip() {
                     <View>
                         <Text style={styles.question}>Where is your adventure?</Text>
                         
+                        {/* Multi-City Toggle */}
+                        <View style={styles.multiCityToggleContainer}>
+                            <TouchableOpacity
+                                style={[styles.tripTypeButton, !isMultiCity && styles.tripTypeButtonActive]}
+                                onPress={() => setIsMultiCity(false)}
+                            >
+                                <Ionicons name="location" size={18} color={!isMultiCity ? "#fff" : "#14B8A6"} />
+                                <Text style={[styles.tripTypeText, !isMultiCity && styles.tripTypeTextActive]}>Single City</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.tripTypeButton, isMultiCity && styles.tripTypeButtonActive]}
+                                onPress={() => setIsMultiCity(true)}
+                            >
+                                <Ionicons name="git-branch-outline" size={18} color={isMultiCity ? "#fff" : "#14B8A6"} />
+                                <Text style={[styles.tripTypeText, isMultiCity && styles.tripTypeTextActive]}>Multi-City</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Single City Destination Input */}
+                        {!isMultiCity && (
                         <View style={{ zIndex: 200 }}>
                             <Text style={styles.label}>Destination</Text>
                             <View style={styles.inputContainer}>
@@ -590,6 +709,138 @@ export default function CreateTrip() {
                             
                             <Text style={styles.helperText}>Type to search popular destinations.</Text>
                         </View>
+                        )}
+
+                        {/* Multi-City Destinations UI */}
+                        {isMultiCity && (
+                            <View style={{ zIndex: 200 }}>
+                                <Text style={styles.label}>Add Your Destinations</Text>
+                                <Text style={styles.helperText}>Add cities in your preferred order. We'll optimize the route for you!</Text>
+                                
+                                {/* Added destinations list */}
+                                {multiCityDestinations.length > 0 && (
+                                    <View style={styles.multiCityList}>
+                                        {multiCityDestinations.map((dest, index) => (
+                                            <View key={`${dest.city}-${index}`} style={styles.multiCityItem}>
+                                                <View style={styles.multiCityItemLeft}>
+                                                    <View style={styles.multiCityNumber}>
+                                                        <Text style={styles.multiCityNumberText}>{index + 1}</Text>
+                                                    </View>
+                                                    <View style={styles.multiCityInfo}>
+                                                        <Text style={styles.multiCityName}>{dest.city}</Text>
+                                                        <Text style={styles.multiCityCountry}>{dest.country}</Text>
+                                                    </View>
+                                                </View>
+                                                <View style={styles.multiCityItemRight}>
+                                                    <View style={styles.daysControl}>
+                                                        <TouchableOpacity 
+                                                            style={styles.daysButton}
+                                                            onPress={() => updateCityDays(index, dest.days - 1)}
+                                                        >
+                                                            <Ionicons name="remove" size={16} color="#14B8A6" />
+                                                        </TouchableOpacity>
+                                                        <Text style={styles.daysText}>{dest.days}d</Text>
+                                                        <TouchableOpacity 
+                                                            style={styles.daysButton}
+                                                            onPress={() => updateCityDays(index, dest.days + 1)}
+                                                        >
+                                                            <Ionicons name="add" size={16} color="#14B8A6" />
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                    <View style={styles.orderControls}>
+                                                        <TouchableOpacity 
+                                                            style={[styles.orderButton, index === 0 && styles.orderButtonDisabled]}
+                                                            onPress={() => moveCityOrder(index, 'up')}
+                                                        >
+                                                            <Ionicons name="chevron-up" size={16} color={index === 0 ? "#ccc" : "#666"} />
+                                                        </TouchableOpacity>
+                                                        <TouchableOpacity 
+                                                            style={[styles.orderButton, index === multiCityDestinations.length - 1 && styles.orderButtonDisabled]}
+                                                            onPress={() => moveCityOrder(index, 'down')}
+                                                        >
+                                                            <Ionicons name="chevron-down" size={16} color={index === multiCityDestinations.length - 1 ? "#ccc" : "#666"} />
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                    <TouchableOpacity 
+                                                        style={styles.removeButton}
+                                                        onPress={() => removeMultiCityDestination(index)}
+                                                    >
+                                                        <Ionicons name="close" size={18} color="#EF4444" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        ))}
+                                        
+                                        {/* Route visualization */}
+                                        {multiCityDestinations.length >= 2 && (
+                                            <View style={styles.routePreview}>
+                                                <Ionicons name="git-branch-outline" size={16} color="#14B8A6" />
+                                                <Text style={styles.routePreviewText}>
+                                                    {multiCityDestinations.map(d => d.city).join(" → ")}
+                                                </Text>
+                                            </View>
+                                        )}
+                                        
+                                        {/* Days summary */}
+                                        <View style={styles.daysSummary}>
+                                            <Text style={styles.daysSummaryText}>
+                                                Total: {getTotalAllocatedDays()} days allocated / {tripDuration} days trip
+                                            </Text>
+                                            {getTotalAllocatedDays() > tripDuration && (
+                                                <Text style={styles.daysWarning}>
+                                                    ⚠️ You've allocated more days than your trip duration
+                                                </Text>
+                                            )}
+                                        </View>
+                                    </View>
+                                )}
+                                
+                                {/* Add new city input */}
+                                <View style={styles.addCityContainer}>
+                                    <View style={styles.inputContainer}>
+                                        <Ionicons name="add-circle-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Add another city..."
+                                            placeholderTextColor="#90A4AE"
+                                            value={currentCityInput}
+                                            onChangeText={(text) => {
+                                                setCurrentCityInput(text);
+                                                searchMultiCityDestinations(text);
+                                            }}
+                                        />
+                                    </View>
+                                    
+                                    {showMultiCitySuggestions && multiCitySuggestions.length > 0 && (
+                                        <View style={styles.suggestionsContainer}>
+                                            <ScrollView 
+                                                nestedScrollEnabled={true}
+                                                keyboardShouldPersistTaps="handled"
+                                            >
+                                                {multiCitySuggestions.map((dest, index) => (
+                                                    <TouchableOpacity
+                                                        key={`multi-${dest.city}-${index}`}
+                                                        style={[
+                                                            styles.suggestionItem,
+                                                            index === multiCitySuggestions.length - 1 && styles.suggestionItemLast
+                                                        ]}
+                                                        onPress={() => addMultiCityDestination(dest)}
+                                                    >
+                                                        <View style={styles.suggestionIcon}>
+                                                            <Text style={{ fontSize: 18 }}>{dest.emoji}</Text>
+                                                        </View>
+                                                        <View style={styles.suggestionTextContainer}>
+                                                            <Text style={styles.suggestionCity}>{dest.city}</Text>
+                                                            <Text style={styles.suggestionDetails}>{dest.country}</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+                        )}
                         
                         {/* Skip Flights Toggle */}
                         <View style={styles.skipFlightsContainer}>
@@ -1354,5 +1605,165 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#5EEAD4",
         fontWeight: "500",
+    },
+    // Multi-City Styles
+    multiCityToggleContainer: {
+        flexDirection: "row",
+        backgroundColor: "#E0F2F1",
+        borderRadius: 16,
+        padding: 4,
+        marginBottom: 20,
+    },
+    tripTypeButton: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 6,
+    },
+    tripTypeButtonActive: {
+        backgroundColor: "#14B8A6",
+    },
+    tripTypeText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#14B8A6",
+    },
+    tripTypeTextActive: {
+        color: "#fff",
+    },
+    multiCityList: {
+        marginTop: 16,
+        marginBottom: 16,
+    },
+    multiCityItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "white",
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 10,
+        borderWidth: 2,
+        borderColor: "#99F6E4",
+    },
+    multiCityItemLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+    },
+    multiCityNumber: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: "#14B8A6",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 12,
+    },
+    multiCityNumberText: {
+        color: "white",
+        fontWeight: "700",
+        fontSize: 14,
+    },
+    multiCityInfo: {
+        flex: 1,
+    },
+    multiCityName: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#0D9488",
+    },
+    multiCityCountry: {
+        fontSize: 13,
+        color: "#5EEAD4",
+        fontWeight: "500",
+    },
+    multiCityItemRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    daysControl: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#E0F2F1",
+        borderRadius: 10,
+        paddingHorizontal: 4,
+        paddingVertical: 4,
+    },
+    daysButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        backgroundColor: "white",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    daysText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#0D9488",
+        marginHorizontal: 8,
+    },
+    orderControls: {
+        flexDirection: "column",
+        gap: 2,
+    },
+    orderButton: {
+        width: 24,
+        height: 20,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    orderButtonDisabled: {
+        opacity: 0.4,
+    },
+    removeButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: "#FEE2E2",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    routePreview: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#CCFBF1",
+        borderRadius: 12,
+        padding: 12,
+        marginTop: 8,
+        gap: 8,
+    },
+    routePreviewText: {
+        flex: 1,
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#0D9488",
+    },
+    daysSummary: {
+        marginTop: 12,
+        padding: 12,
+        backgroundColor: "#F0FFFE",
+        borderRadius: 10,
+    },
+    daysSummaryText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#0D9488",
+        textAlign: "center",
+    },
+    daysWarning: {
+        fontSize: 13,
+        color: "#EF4444",
+        textAlign: "center",
+        marginTop: 6,
+        fontWeight: "500",
+    },
+    addCityContainer: {
+        marginTop: 8,
     },
 });

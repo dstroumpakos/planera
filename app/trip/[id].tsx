@@ -943,6 +943,82 @@ export default function TripDetails() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
+                {/* Multi-City Route Overview */}
+                {trip.isMultiCity && trip.optimizedRoute?.segments && trip.optimizedRoute.segments.length > 0 && (
+                    <Section title="Your Route">
+                        <View style={styles.multiCityRouteContainer}>
+                            {/* Route visualization */}
+                            <View style={styles.routeVisualization}>
+                                {trip.optimizedRoute.segments.map((segment: any, index: number) => (
+                                    <View key={index} style={styles.routeSegmentContainer}>
+                                        {/* City marker */}
+                                        <View style={styles.cityMarker}>
+                                            <View style={styles.cityMarkerDot}>
+                                                <Text style={styles.cityMarkerNumber}>{index + 1}</Text>
+                                            </View>
+                                            <View style={styles.cityMarkerInfo}>
+                                                <Text style={styles.cityMarkerName}>{segment.from}</Text>
+                                                <Text style={styles.cityMarkerDays}>{segment.duration}</Text>
+                                            </View>
+                                        </View>
+                                        
+                                        {/* Transport connector */}
+                                        <View style={styles.transportConnector}>
+                                            <View style={styles.transportLine} />
+                                            <View style={styles.transportBadge}>
+                                                <Ionicons 
+                                                    name={
+                                                        segment.transportMethod === 'flight' ? 'airplane' :
+                                                        segment.transportMethod === 'train' ? 'train' :
+                                                        segment.transportMethod === 'ferry' ? 'boat' : 'car'
+                                                    } 
+                                                    size={14} 
+                                                    color="#14B8A6" 
+                                                />
+                                                <Text style={styles.transportBadgeText}>
+                                                    {segment.transportMethod} • {segment.duration}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.transportLine} />
+                                        </View>
+                                    </View>
+                                ))}
+                                
+                                {/* Final destination marker */}
+                                {trip.optimizedRoute.segments.length > 0 && (
+                                    <View style={styles.cityMarker}>
+                                        <View style={[styles.cityMarkerDot, styles.finalCityMarkerDot]}>
+                                            <Ionicons name="flag" size={14} color="#fff" />
+                                        </View>
+                                        <View style={styles.cityMarkerInfo}>
+                                            <Text style={styles.cityMarkerName}>
+                                                {trip.optimizedRoute.segments[trip.optimizedRoute.segments.length - 1].to}
+                                            </Text>
+                                            <Text style={styles.cityMarkerDays}>Final stop</Text>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                            
+                            {/* Route summary */}
+                            <View style={styles.routeSummary}>
+                                <View style={styles.routeSummaryItem}>
+                                    <Ionicons name="location" size={18} color="#14B8A6" />
+                                    <Text style={styles.routeSummaryText}>
+                                        {trip.destinations?.length || trip.optimizedRoute.segments.length + 1} cities
+                                    </Text>
+                                </View>
+                                <View style={styles.routeSummaryItem}>
+                                    <Ionicons name="time" size={18} color="#14B8A6" />
+                                    <Text style={styles.routeSummaryText}>
+                                        {Math.round((trip.endDate - trip.startDate) / (24 * 60 * 60 * 1000))} days total
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    </Section>
+                )}
+
                 {!trip.skipFlights ? (
                     <Section title="Flights">
                         {renderFlights()}
@@ -1588,7 +1664,6 @@ export default function TripDetails() {
                                         // But usually "Not Now" means "Close this upsell".
                                         // Since the content IS locked, they can't really "close" it to see the content.
                                         // So "Not Now" might just be a way to go back or stay on the limited view.
-                                        // For this flow, let's make it just a secondary action that maybe scrolls to top or does nothing (just acknowledges).
                                         // Or better, let's make it clear they are staying on the limited plan.
                                     }}
                                 >
@@ -2557,7 +2632,7 @@ const styles = StyleSheet.create({
     },
     publicTransportMode: {
         fontSize: 12,
-        fontWeight: "700",
+        fontWeight: "600",
         color: "#5EEAD4",
         textTransform: "uppercase",
         letterSpacing: 1,
@@ -2726,7 +2801,8 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 8,
         gap: 4,
-        minWidth: 70,
+        borderWidth: 1,
+        borderColor: "#14B8A6",
     },
     bookActivityButtonText: {
         color: "white",
@@ -3264,7 +3340,7 @@ const styles = StyleSheet.create({
     restaurantMetaRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
+        gap: 4,
         marginTop: 8,
     },
     cuisineActivityBadge: {
@@ -3308,5 +3384,98 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: "600",
         color: "#00AA6C",
+    },
+    // Multi-City Route Styles
+    multiCityRouteContainer: {
+        backgroundColor: "#F0FFFE",
+        borderRadius: 16,
+        padding: 16,
+    },
+    routeVisualization: {
+        marginBottom: 16,
+    },
+    routeSegmentContainer: {
+        marginBottom: 0,
+    },
+    cityMarker: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 8,
+    },
+    cityMarkerDot: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "#14B8A6",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    finalCityMarkerDot: {
+        backgroundColor: "#0D9488",
+    },
+    cityMarkerNumber: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "white",
+    },
+    cityMarkerInfo: {
+        flex: 1,
+    },
+    cityMarkerName: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#134E4A",
+    },
+    cityMarkerDays: {
+        fontSize: 13,
+        color: "#5EEAD4",
+        marginTop: 2,
+    },
+    transportConnector: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginLeft: 16,
+        paddingVertical: 8,
+    },
+    transportLine: {
+        flex: 1,
+        height: 2,
+        backgroundColor: "#CCFBF1",
+    },
+    transportBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "white",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 6,
+        marginHorizontal: 8,
+        borderWidth: 1,
+        borderColor: "#CCFBF1",
+    },
+    transportBadgeText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#0D9488",
+        textTransform: "capitalize",
+    },
+    routeSummary: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: "#CCFBF1",
+    },
+    routeSummaryItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    routeSummaryText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#0D9488",
     },
 });
