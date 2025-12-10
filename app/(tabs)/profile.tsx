@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
-import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
+import logoImage from "@/assets/images/image.png";
 
 export default function Profile() {
     const router = useRouter();

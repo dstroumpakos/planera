@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
 
-import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
+import logoImage from "@/assets/images/image.png";
 
 // Airport database with country/region groupings
 const AIRPORTS = [

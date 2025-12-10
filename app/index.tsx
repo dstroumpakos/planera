@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 
 // Import the new logo
-import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
+import logoImage from "@/assets/images/image.png";
 
 export default function Index() {
     const [isEmailAuth, setIsEmailAuth] = useState(false);
@@ -70,7 +70,7 @@ export default function Index() {
                             {/* Hero Section with Logo */}
                             <View style={styles.heroSection}>
                                 <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-                                <Text style={styles.title}>Voyage Buddy</Text>
+                                <Text style={styles.title}>Planora</Text>
                                 <Text style={styles.subtitle}>Your AI-powered travel companion.{"\n"}Plan your dream vacation in seconds.</Text>
                             </View>
                             

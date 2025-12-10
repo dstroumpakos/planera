@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
+import logoImage from "@/assets/images/image.png";
 
 export default function TripListScreen() {
     const router = useRouter();
@@ -44,7 +44,7 @@ export default function TripListScreen() {
                     <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
                     <View>
                         <Text style={styles.headerSubtitle}>Welcome to</Text>
-                        <Text style={styles.headerTitle}>Voyage Buddy</Text>
+                        <Text style={styles.headerTitle}>Planora</Text>
                     </View>
                 </View>
                 <TouchableOpacity 

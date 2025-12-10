@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { DEALS } from "@/lib/data";
 
-import logoImage from "@/assets/bloom/images/image-1dbiuq.png";
+import logoImage from "@/assets/images/image.png";
 
 export default function Deals() {
     const router = useRouter();
