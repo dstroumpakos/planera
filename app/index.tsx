@@ -76,6 +76,17 @@ export default function Index() {
         }
     };
 
+    const handleGuestExplore = async () => {
+        setOauthLoading("guest");
+        try {
+            await authClient.signIn.anonymous();
+        } catch (error: any) {
+            Alert.alert("Error", "Guest sign in failed");
+        } finally {
+            setOauthLoading(null);
+        }
+    };
+
     const onboardingData = [
         {
             title: "Plan Smarter,\nTravel Further",
@@ -293,6 +304,21 @@ export default function Index() {
                         >
                             <Ionicons name="mail-outline" size={20} color={COLORS.text} style={styles.socialIcon} />
                             <Text style={styles.primaryButtonText}>Sign Up with Email</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.guestButton} 
+                            onPress={handleGuestExplore}
+                            disabled={oauthLoading !== null}
+                        >
+                            {oauthLoading === "guest" ? (
+                                <ActivityIndicator color={COLORS.text} />
+                            ) : (
+                                <>
+                                    <Ionicons name="eye-outline" size={20} color={COLORS.text} style={styles.socialIcon} />
+                                    <Text style={styles.guestButtonText}>Explore as Guest</Text>
+                                </>
+                            )}
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => { setIsEmailAuth(true); setIsSignUp(false); }}>
@@ -640,6 +666,22 @@ const styles = StyleSheet.create({
     primaryButtonText: {
         fontSize: 16,
         fontWeight: "700",
+        color: COLORS.text,
+    },
+    guestButton: {
+        backgroundColor: COLORS.white,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    guestButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
         color: COLORS.text,
     },
     memberText: {
