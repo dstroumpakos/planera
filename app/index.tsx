@@ -1,8 +1,8 @@
 import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform, Dimensions } from "react-native";
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "convex/react";
 import { authClient } from "@/lib/auth-client";
 import { Redirect } from "expo-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -33,6 +33,17 @@ export default function Index() {
     const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+
+    // Add timeout for auth loading
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (oauthLoading === "guest") {
+                console.log("Auth loading timeout - forcing redirect");
+                setOauthLoading(null);
+            }
+        }, 10000);
+        return () => clearTimeout(timer);
+    }, [oauthLoading]);
 
     const handleEmailAuth = async () => {
         if (!email || !password || (isSignUp && !name)) {
