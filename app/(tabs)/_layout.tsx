@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 
-// Planora Colors
+// Planera Colors
 const COLORS = {
     primary: "#FFE500",
     background: "#2C2C2E",

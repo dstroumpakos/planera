@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { DEALS } from "@/lib/data";
 
-// Planora Colors
+// Planera Colors
 const COLORS = {
     primary: "#FFE500",
     background: "#FAF9F6",

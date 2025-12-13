@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
-// Planora Colors
+// Planera Colors
 const COLORS = {
     primary: "#FFE500", // Bright Yellow
     primaryDark: "#E6CF00",

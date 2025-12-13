@@ -7,7 +7,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth-client";
 
-// Planora Colors
+// Planera Colors
 const COLORS = {
     primary: "#FFE500",
     primaryDark: "#E6CF00",

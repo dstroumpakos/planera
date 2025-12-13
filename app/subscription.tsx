@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Planora Colors
+// Planera Colors
 const COLORS = {
     primary: "#FFE500",
     background: "#FAF9F6",

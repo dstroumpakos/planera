@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
-// Planora Colors
+// Planera Colors
 const COLORS = {
     primary: "#FFE500",
     background: "#FAF9F6",
@@ -92,11 +92,11 @@ export default function Profile() {
                             <Ionicons name="pencil" size={14} color={COLORS.text} />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.userName}>{user?.name || "Planora User"}</Text>
+                    <Text style={styles.userName}>{user?.name || "Planera User"}</Text>
                     <View style={styles.memberBadge}>
                         <Ionicons name="diamond-outline" size={14} color={COLORS.textMuted} />
                         <Text style={styles.memberText}>
-                            Planora {isPremium ? "Premium" : "Free"} Member
+                            Planera {isPremium ? "Premium" : "Free"} Member
                         </Text>
                     </View>
                 </View>
@@ -109,7 +109,7 @@ export default function Profile() {
                     >
                         <View style={styles.premiumHeader}>
                             <Ionicons name="sparkles" size={20} color={COLORS.primary} />
-                            <Text style={styles.premiumTitle}>Planora Premium</Text>
+                            <Text style={styles.premiumTitle}>Planera Premium</Text>
                         </View>
                         <Text style={styles.premiumDescription}>
                             Unlock AI superpowers for unlimited routing and smart travel recommendations.
