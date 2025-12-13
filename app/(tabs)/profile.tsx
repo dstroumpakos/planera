@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,7 +6,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
-import logoImage from "@/assets/images/image.png";
+// Planora Colors
+const COLORS = {
+    primary: "#FFE500",
+    background: "#FAF9F6",
+    backgroundDark: "#1A2433",
+    text: "#1A1A1A",
+    textSecondary: "#6B6B6B",
+    textMuted: "#9B9B9B",
+    white: "#FFFFFF",
+    border: "#E8E6E1",
+    error: "#EF4444",
+};
 
 export default function Profile() {
     const router = useRouter();
@@ -24,141 +35,131 @@ export default function Profile() {
         }
     };
 
-    const menuItems = [
-        {
-            title: "Personal Info",
-            icon: "person-outline",
-            action: () => router.push("/settings/personal-info")
-        },
-        {
-            title: "Payment (Subscriptions)",
-            icon: "card-outline",
-            action: () => router.push("/subscription")
-        },
-        {
-            title: "Travel Preferences",
-            icon: "airplane-outline",
-            action: () => router.push("/settings/travel-preferences")
-        },
-        {
-            title: "App Language",
-            icon: "language-outline",
-            action: () => router.push("/settings/language")
-        }
-    ];
-
     const user = session?.user;
     const tripCount = trips?.length || 0;
     const completedTrips = trips?.filter(t => t.status === "completed").length || 0;
     const isPremium = userPlan?.plan === "premium";
 
+    const menuItems = [
+        {
+            title: "Saved Trips",
+            subtitle: `${completedTrips} upcoming, ${tripCount - completedTrips} past`,
+            icon: "bookmark-outline",
+            iconBg: "#FFF8E1",
+            iconColor: COLORS.primary,
+            action: () => router.push("/(tabs)/trips")
+        },
+        {
+            title: "Travel Preferences",
+            subtitle: "Dietary, Airlines, Seats",
+            icon: "options-outline",
+            iconBg: "#FFF8E1",
+            iconColor: COLORS.primary,
+            action: () => router.push("/settings/travel-preferences")
+        },
+        {
+            title: "Payment Methods",
+            subtitle: "Visa ending in 4242",
+            icon: "card-outline",
+            iconBg: "#F3E8FF",
+            iconColor: "#9333EA",
+            action: () => router.push("/subscription")
+        },
+    ];
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
+                <TouchableOpacity onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+                </TouchableOpacity>
                 <Text style={styles.headerTitle}>Profile</Text>
-                <View style={styles.headerPlaceholder} />
+                <TouchableOpacity>
+                    <Ionicons name="ellipsis-horizontal" size={24} color={COLORS.text} />
+                </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content}>
-                {/* User Profile Card */}
-                <View style={styles.profileCard}>
+            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+                {/* Profile Card */}
+                <View style={styles.profileSection}>
                     <View style={styles.avatarContainer}>
-                        <Text style={styles.avatarText}>
-                            {user?.name?.[0]?.toUpperCase() || "V"}
-                        </Text>
-                    </View>
-                    <View style={styles.userInfo}>
-                        <Text style={styles.userName}>{user?.name || "Voyager"}</Text>
-                        <Text style={styles.userEmail}>{user?.email || "Guest User"}</Text>
-                        <View style={[styles.planBadge, isPremium && styles.premiumBadge]}>
-                            <Ionicons 
-                                name={isPremium ? "diamond" : "compass"} 
-                                size={12} 
-                                color={isPremium ? "#FFD700" : "#4F6DF5"} 
-                            />
-                            <Text style={[styles.planText, isPremium && styles.premiumText]}>
-                                {isPremium ? "PREMIUM" : "FREE PLAN"}
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>
+                                {user?.name?.[0]?.toUpperCase() || "P"}
                             </Text>
                         </View>
+                        <TouchableOpacity style={styles.editAvatarButton}>
+                            <Ionicons name="pencil" size={14} color={COLORS.text} />
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.userName}>{user?.name || "Planora User"}</Text>
+                    <View style={styles.memberBadge}>
+                        <Ionicons name="diamond-outline" size={14} color={COLORS.textMuted} />
+                        <Text style={styles.memberText}>
+                            Planora {isPremium ? "Premium" : "Free"} Member
+                        </Text>
                     </View>
                 </View>
 
-                {/* Stats Card */}
-                <View style={styles.statsCard}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>{tripCount}</Text>
-                        <Text style={styles.statLabel}>Total Trips</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>{completedTrips}</Text>
-                        <Text style={styles.statLabel}>Completed</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>{isPremium ? "∞" : "3"}</Text>
-                        <Text style={styles.statLabel}>Trips Left</Text>
-                    </View>
-                </View>
+                {/* Premium Upsell Card */}
+                {!isPremium && (
+                    <TouchableOpacity 
+                        style={styles.premiumCard}
+                        onPress={() => router.push("/subscription")}
+                    >
+                        <View style={styles.premiumHeader}>
+                            <Ionicons name="sparkles" size={20} color={COLORS.primary} />
+                            <Text style={styles.premiumTitle}>Planora Premium</Text>
+                        </View>
+                        <Text style={styles.premiumDescription}>
+                            Unlock AI superpowers for unlimited routing and smart travel recommendations.
+                        </Text>
+                        <View style={styles.upgradeButton}>
+                            <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
+                            <Ionicons name="arrow-forward" size={18} color={COLORS.text} />
+                        </View>
+                    </TouchableOpacity>
+                )}
 
-                {/* Settings Menu */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Settings</Text>
+                {/* Account Settings */}
+                <Text style={styles.sectionTitle}>ACCOUNT SETTINGS</Text>
+                <View style={styles.menuContainer}>
                     {menuItems.map((item, index) => (
                         <TouchableOpacity 
                             key={index} 
                             style={styles.menuItem}
                             onPress={item.action}
                         >
-                            <View style={styles.menuIconContainer}>
-                                <Ionicons name={item.icon as any} size={22} color="#4F6DF5" />
+                            <View style={[styles.menuIconContainer, { backgroundColor: item.iconBg }]}>
+                                <Ionicons name={item.icon as any} size={20} color={item.iconColor} />
                             </View>
-                            <Text style={styles.menuText}>{item.title}</Text>
-                            <Ionicons name="chevron-forward" size={20} color="#CFD8DC" />
+                            <View style={styles.menuTextContainer}>
+                                <Text style={styles.menuTitle}>{item.title}</Text>
+                                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
                         </TouchableOpacity>
                     ))}
+                </View>
 
-                    {/* Notifications Toggle */}
-                    <TouchableOpacity 
-                        style={styles.menuItem}
-                        onPress={() => router.push("/settings/notifications")}
-                    >
-                        <View style={styles.menuIconContainer}>
-                            <Ionicons name="notifications-outline" size={22} color="#4F6DF5" />
-                        </View>
-                        <Text style={styles.menuText}>Notifications</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#CFD8DC" />
+                {/* Help & Support */}
+                <View style={styles.helpSection}>
+                    <TouchableOpacity style={styles.helpItem}>
+                        <Ionicons name="help-circle-outline" size={20} color={COLORS.textSecondary} />
+                        <Text style={styles.helpText}>Help & Support</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity style={styles.helpItem} onPress={handleLogout}>
+                        <Ionicons name="log-out-outline" size={20} color={COLORS.textSecondary} />
+                        <Text style={styles.helpText}>Log Out</Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* Upgrade Banner (for free users) */}
-                {!isPremium && (
-                    <TouchableOpacity 
-                        style={styles.upgradeBanner}
-                        onPress={() => router.push("/subscription")}
-                    >
-                        <View style={styles.upgradeContent}>
-                            <Ionicons name="rocket" size={24} color="#FFD700" />
-                            <View style={styles.upgradeTextContainer}>
-                                <Text style={styles.upgradeTitle}>Upgrade to Premium</Text>
-                                <Text style={styles.upgradeSubtitle}>Unlimited trips & exclusive features</Text>
-                            </View>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="white" />
-                    </TouchableOpacity>
-                )}
+                {/* Version */}
+                <Text style={styles.versionText}>PLANORA V2.4.0</Text>
 
-                {/* Logout Button */}
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Ionicons name="log-out-outline" size={20} color="#EF5350" />
-                    <Text style={styles.logoutText}>Log Out</Text>
-                </TouchableOpacity>
-
-                <View style={styles.versionInfo}>
-                    <Text style={styles.versionText}>Voyage Buddy v1.0.0</Text>
-                    <Text style={styles.copyrightText}>Made with ❤️ for travelers</Text>
-                </View>
+                {/* Bottom Spacing */}
+                <View style={{ height: 120 }} />
             </ScrollView>
         </SafeAreaView>
     );
@@ -167,245 +168,182 @@ export default function Profile() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: COLORS.background,
     },
     header: {
-        backgroundColor: '#FFFFFF',
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
         paddingHorizontal: 20,
         paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        shadowColor: '#1A2433',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    headerLogo: {
-        width: 40,
-        height: 40,
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#1A2433',
-    },
-    headerPlaceholder: {
-        width: 40,
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.text,
     },
     content: {
         flex: 1,
-        padding: 20,
     },
-    profileCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 16,
-        shadowColor: '#1A2433',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 4,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
+    scrollContent: {
+        paddingHorizontal: 20,
+    },
+    profileSection: {
+        alignItems: "center",
+        paddingVertical: 24,
     },
     avatarContainer: {
-        width: 68,
-        height: 68,
-        borderRadius: 34,
-        backgroundColor: '#4F6DF5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
+        position: "relative",
+        marginBottom: 16,
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: "#E8E6E1",
+        justifyContent: "center",
+        alignItems: "center",
     },
     avatarText: {
-        color: '#FFFFFF',
-        fontSize: 28,
-        fontWeight: '700',
+        fontSize: 36,
+        fontWeight: "700",
+        color: COLORS.text,
     },
-    userInfo: {
-        flex: 1,
+    editAvatarButton: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.primary,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 3,
+        borderColor: COLORS.background,
     },
     userName: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: '#1A2433',
-        marginBottom: 4,
+        fontSize: 24,
+        fontWeight: "800",
+        color: COLORS.text,
+        marginBottom: 8,
     },
-    userEmail: {
-        fontSize: 14,
-        color: '#A1AEC6',
-        marginBottom: 10,
-        fontWeight: '500',
-    },
-    planBadge: {
-        backgroundColor: '#E0E7FF',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 10,
-        alignSelf: 'flex-start',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    premiumBadge: {
-        backgroundColor: '#FEF3C7',
-    },
-    planText: {
-        color: '#4F6DF5',
-        fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.5,
-    },
-    premiumText: {
-        color: '#D97706',
-    },
-    statsCard: {
-        backgroundColor: '#FFFFFF',
+    memberBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.white,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
         borderRadius: 20,
-        padding: 24,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        marginBottom: 24,
-        shadowColor: '#1A2433',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 4,
+        gap: 6,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: COLORS.border,
     },
-    statItem: {
-        alignItems: 'center',
-    },
-    statNumber: {
-        fontSize: 30,
-        fontWeight: '800',
-        color: '#4F6DF5',
-    },
-    statLabel: {
-        fontSize: 12,
-        color: '#A1AEC6',
-        marginTop: 4,
-        fontWeight: '600',
-    },
-    statDivider: {
-        width: 1,
-        height: 44,
-        backgroundColor: '#E2E8F0',
-    },
-    section: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        overflow: 'hidden',
-        marginBottom: 16,
-        shadowColor: '#1A2433',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 4,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-    },
-    sectionTitle: {
+    memberText: {
         fontSize: 14,
-        fontWeight: '700',
-        color: '#A1AEC6',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        padding: 16,
-        paddingBottom: 8,
+        color: COLORS.textMuted,
+        fontWeight: "500",
     },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F8FAFC',
-    },
-    menuIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: '#E0E7FF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 14,
-    },
-    menuText: {
-        flex: 1,
-        fontSize: 16,
-        color: '#1A2433',
-        fontWeight: '600',
-    },
-    upgradeBanner: {
-        backgroundColor: '#4F6DF5',
+    premiumCard: {
+        backgroundColor: COLORS.backgroundDark,
         borderRadius: 20,
         padding: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-        shadowColor: '#4F6DF5',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    upgradeContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-    },
-    upgradeTextContainer: {
-        gap: 2,
-    },
-    upgradeTitle: {
-        color: 'white',
-        fontSize: 17,
-        fontWeight: '700',
-    },
-    upgradeSubtitle: {
-        color: 'rgba(255,255,255,0.85)',
-        fontSize: 13,
-        fontWeight: '500',
-    },
-    logoutButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FFFFFF',
-        padding: 18,
-        borderRadius: 16,
         marginBottom: 24,
-        borderWidth: 2,
-        borderColor: '#FEE2E2',
+    },
+    premiumHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 8,
+    },
+    premiumTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.white,
+    },
+    premiumDescription: {
+        fontSize: 14,
+        color: "rgba(255,255,255,0.7)",
+        lineHeight: 20,
+        marginBottom: 16,
+    },
+    upgradeButton: {
+        backgroundColor: "#4A90D9",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 14,
+        borderRadius: 12,
         gap: 8,
     },
-    logoutText: {
-        color: '#EF4444',
+    upgradeButtonText: {
         fontSize: 16,
-        fontWeight: '700',
+        fontWeight: "700",
+        color: COLORS.white,
     },
-    versionInfo: {
-        alignItems: 'center',
-        marginBottom: 40,
-        gap: 4,
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: COLORS.textMuted,
+        letterSpacing: 1,
+        marginBottom: 12,
+    },
+    menuContainer: {
+        backgroundColor: COLORS.white,
+        borderRadius: 16,
+        overflow: "hidden",
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    menuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+    },
+    menuIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 12,
+    },
+    menuTextContainer: {
+        flex: 1,
+    },
+    menuTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.text,
+        marginBottom: 2,
+    },
+    menuSubtitle: {
+        fontSize: 13,
+        color: COLORS.textMuted,
+    },
+    helpSection: {
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
+        paddingTop: 16,
+        marginBottom: 24,
+    },
+    helpItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 12,
+        gap: 12,
+    },
+    helpText: {
+        fontSize: 16,
+        color: COLORS.textSecondary,
     },
     versionText: {
-        color: '#A1AEC6',
         fontSize: 12,
-        fontWeight: '500',
-    },
-    copyrightText: {
-        color: '#A1AEC6',
-        fontSize: 11,
+        color: COLORS.textMuted,
+        textAlign: "center",
+        letterSpacing: 1,
     },
 });

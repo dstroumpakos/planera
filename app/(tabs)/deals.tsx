@@ -4,7 +4,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { DEALS } from "@/lib/data";
 
-import logoImage from "@/assets/images/image.png";
+// Planora Colors
+const COLORS = {
+    primary: "#FFE500",
+    background: "#FAF9F6",
+    text: "#1A1A1A",
+    textSecondary: "#6B6B6B",
+    textMuted: "#9B9B9B",
+    white: "#FFFFFF",
+    border: "#E8E6E1",
+};
 
 export default function Deals() {
     const router = useRouter();
@@ -12,11 +21,10 @@ export default function Deals() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
-                <View>
-                    <Text style={styles.headerTitle}>Last Minute Deals</Text>
-                    <Text style={styles.headerSubtitle}>Exclusive offers for your next getaway</Text>
-                </View>
+                <Text style={styles.headerTitle}>Explore Deals</Text>
+                <TouchableOpacity style={styles.filterButton}>
+                    <Ionicons name="options-outline" size={20} color={COLORS.text} />
+                </TouchableOpacity>
             </View>
 
             <FlatList
@@ -32,31 +40,30 @@ export default function Deals() {
                         <View style={styles.discountBadge}>
                             <Text style={styles.discountText}>{item.discount}</Text>
                         </View>
+                        <View style={styles.ratingBadge}>
+                            <Ionicons name="star" size={12} color={COLORS.primary} />
+                            <Text style={styles.ratingText}>4.8</Text>
+                        </View>
                         <View style={styles.cardContent}>
-                            <View style={styles.cardHeader}>
-                                <Text style={styles.destination}>{item.destination}</Text>
-                                <View style={styles.priceContainer}>
-                                    <Text style={styles.originalPrice}>${item.originalPrice}</Text>
-                                    <Text style={styles.price}>${item.price}</Text>
-                                </View>
+                            <Text style={styles.destination}>{item.destination}</Text>
+                            <View style={styles.locationRow}>
+                                <Ionicons name="location" size={14} color={COLORS.textMuted} />
+                                <Text style={styles.locationText}>{item.dates}</Text>
                             </View>
-                            <View style={styles.cardFooter}>
-                                <View style={styles.dateContainer}>
-                                    <Ionicons name="calendar-outline" size={16} color="#78909C" />
-                                    <Text style={styles.dateText}>{item.dates}</Text>
-                                </View>
-                                <TouchableOpacity style={styles.bookButton}>
-                                    <Text style={styles.bookButtonText}>View Deal</Text>
-                                    <Ionicons name="arrow-forward" size={14} color="#00BFA6" />
-                                </TouchableOpacity>
+                            <View style={styles.priceRow}>
+                                <Text style={styles.price}>${item.price}</Text>
+                                <Text style={styles.originalPrice}>${item.originalPrice}</Text>
                             </View>
                         </View>
+                        <TouchableOpacity style={styles.arrowButton}>
+                            <Ionicons name="arrow-forward" size={18} color={COLORS.text} />
+                        </TouchableOpacity>
                     </TouchableOpacity>
                 )}
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconContainer}>
-                            <Ionicons name="pricetag-outline" size={48} color="#00BFA6" />
+                            <Ionicons name="pricetag-outline" size={40} color={COLORS.primary} />
                         </View>
                         <Text style={styles.emptyText}>No deals available</Text>
                         <Text style={styles.emptySubtext}>Check back soon for exclusive offers!</Text>
@@ -70,53 +77,43 @@ export default function Deals() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: "row",
+        justifyContent: "space-between",
         alignItems: "center",
-        padding: 20,
-        backgroundColor: "white",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
-        gap: 14,
-        shadowColor: "#1A2433",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    headerLogo: {
-        width: 50,
-        height: 50,
+        paddingHorizontal: 20,
+        paddingTop: 8,
+        paddingBottom: 16,
     },
     headerTitle: {
-        fontSize: 22,
+        fontSize: 28,
         fontWeight: "800",
-        color: "#1A2433",
-        marginBottom: 2,
+        color: COLORS.text,
     },
-    headerSubtitle: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        fontWeight: "500",
+    filterButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     listContent: {
-        padding: 16,
+        padding: 20,
         paddingBottom: 100,
     },
     card: {
-        backgroundColor: "white",
+        backgroundColor: COLORS.white,
         borderRadius: 20,
-        marginBottom: 20,
-        shadowColor: "#1A2433",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 4,
+        marginBottom: 16,
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: "#E2E8F0",
+        borderColor: COLORS.border,
+        position: "relative",
     },
     cardImage: {
         width: "100%",
@@ -124,84 +121,81 @@ const styles = StyleSheet.create({
     },
     discountBadge: {
         position: "absolute",
-        top: 16,
-        right: 16,
-        backgroundColor: "#4F6DF5",
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 10,
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 4,
+        top: 12,
+        left: 12,
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
     },
     discountText: {
-        color: "white",
+        color: COLORS.text,
         fontWeight: "700",
-        fontSize: 14,
+        fontSize: 12,
+    },
+    ratingBadge: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.95)",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        gap: 4,
+    },
+    ratingText: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: COLORS.text,
     },
     cardContent: {
-        padding: 18,
-    },
-    cardHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        marginBottom: 14,
+        padding: 16,
     },
     destination: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#1A2433",
-        flex: 1,
-        marginRight: 8,
+        color: COLORS.text,
+        marginBottom: 4,
     },
-    priceContainer: {
-        alignItems: "flex-end",
+    locationRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginBottom: 12,
+    },
+    locationText: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+    },
+    priceRow: {
+        flexDirection: "row",
+        alignItems: "baseline",
+        gap: 8,
+    },
+    price: {
+        fontSize: 22,
+        fontWeight: "800",
+        color: COLORS.primary,
     },
     originalPrice: {
         fontSize: 14,
-        color: "#A1AEC6",
+        color: COLORS.textMuted,
         textDecorationLine: "line-through",
-        marginBottom: 2,
     },
-    price: {
-        fontSize: 24,
-        fontWeight: "800",
-        color: "#4F6DF5",
-    },
-    cardFooter: {
-        flexDirection: "row",
-        justifyContent: "space-between",
+    arrowButton: {
+        position: "absolute",
+        bottom: 16,
+        right: 16,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
         alignItems: "center",
-        paddingTop: 14,
-        borderTopWidth: 1,
-        borderTopColor: "#F8FAFC",
-    },
-    dateContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-    },
-    dateText: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        fontWeight: "500",
-    },
-    bookButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#E0E7FF",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 10,
-        gap: 6,
-    },
-    bookButtonText: {
-        color: "#4F6DF5",
-        fontWeight: "700",
-        fontSize: 14,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     emptyState: {
         flex: 1,
@@ -211,25 +205,25 @@ const styles = StyleSheet.create({
         marginTop: 60,
     },
     emptyIconContainer: {
-        width: 110,
-        height: 110,
-        borderRadius: 55,
-        backgroundColor: "#E0E7FF",
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: COLORS.white,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 24,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     emptyText: {
-        fontSize: 24,
-        fontWeight: "800",
-        color: "#1A2433",
+        fontSize: 20,
+        fontWeight: "700",
+        color: COLORS.text,
         marginBottom: 8,
     },
     emptySubtext: {
-        fontSize: 16,
-        color: "#A1AEC6",
+        fontSize: 14,
+        color: COLORS.textMuted,
         textAlign: "center",
-        lineHeight: 24,
-        fontWeight: "500",
     },
 });

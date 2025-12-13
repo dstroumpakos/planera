@@ -400,7 +400,7 @@ export default function TripDetails() {
     if (trip === undefined) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#14B8A6" />
+                <ActivityIndicator size="large" color="#FFE500" />
             </View>
         );
     }
@@ -416,7 +416,7 @@ export default function TripDetails() {
     if (trip.status === "generating") {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#14B8A6" />
+                <ActivityIndicator size="large" color="#FFE500" />
                 <Text style={styles.generatingText}>Generating your dream trip...</Text>
                 <Text style={styles.generatingSubtext}>This usually takes a few seconds.</Text>
             </View>
@@ -1770,24 +1770,24 @@ function Section({ title, children }: { title: string, children: React.ReactNode
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: "#FAF9F6",
     },
     center: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
+        backgroundColor: "#FAF9F6",
     },
     generatingText: {
         marginTop: 16,
         fontSize: 18,
         fontWeight: "600",
-        color: "#4F6DF5",
+        color: "#FFE500",
     },
     generatingSubtext: {
         marginTop: 8,
         fontSize: 14,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
     },
     errorText: {
         marginTop: 16,
@@ -1795,7 +1795,7 @@ const styles = StyleSheet.create({
         color: "#EF4444",
     },
     skippedSection: {
-        backgroundColor: "#F0F4F8",
+        backgroundColor: "#F5F3EE",
         borderRadius: 16,
         padding: 20,
         marginBottom: 16,
@@ -1806,7 +1806,7 @@ const styles = StyleSheet.create({
     },
     skippedText: {
         fontSize: 14,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         flex: 1,
     },
     header: {
@@ -1819,7 +1819,7 @@ const styles = StyleSheet.create({
     },
     headerOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(79, 109, 245, 0.3)",
+        backgroundColor: "rgba(26, 26, 26, 0.3)",
     },
     headerContent: {
         position: "absolute",
@@ -1870,7 +1870,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#1A2433",
+        color: "#1A1A1A",
         marginBottom: 16,
         letterSpacing: 0.5,
     },
@@ -1879,13 +1879,13 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 20,
         marginBottom: 12,
-        shadowColor: "#1A2433",
+        shadowColor: "#1A1A1A",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 3,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
+        borderColor: "#E8E6E1",
     },
     row: {
         flexDirection: "row",
@@ -1898,16 +1898,16 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     cardSubtitle: {
         fontSize: 14,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
     },
     price: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#4F6DF5",
+        color: "#FFE500",
     },
     flightTimes: {
         flexDirection: "row",
@@ -1916,12 +1916,12 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: "#E2E8F0",
+        borderTopColor: "#E8E6E1",
     },
     time: {
         fontSize: 16,
         fontWeight: "500",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     stars: {
         flexDirection: "row",
@@ -1930,7 +1930,7 @@ const styles = StyleSheet.create({
     },
     address: {
         fontSize: 13,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         marginTop: 8,
     },
     dayCard: {
@@ -1939,8 +1939,8 @@ const styles = StyleSheet.create({
         padding: 20,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
-        shadowColor: "#14B8A6",
+        borderColor: "#E8E6E1",
+        shadowColor: "#FFE500",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
@@ -1953,13 +1953,13 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     dayBadge: {
-        backgroundColor: "#E0E7FF",
+        backgroundColor: "#FFF8E1",
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 10,
     },
     dayBadgeText: {
-        color: "#4F6DF5",
+        color: "#1A1A1A",
         fontWeight: "700",
         fontSize: 12,
         textTransform: "uppercase",
@@ -1968,7 +1968,7 @@ const styles = StyleSheet.create({
     dayTitle: {
         fontSize: 18,
         fontWeight: "bold",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     activityItem: {
         flexDirection: "row",
@@ -1978,24 +1978,24 @@ const styles = StyleSheet.create({
         width: 70,
         fontSize: 14,
         fontWeight: "600",
-        color: "#A1AEC6",
+        color: "#9B9B9B",
     },
     activityContent: {
         flex: 1,
         paddingLeft: 16,
         borderLeftWidth: 2,
-        borderLeftColor: "#E2E8F0",
+        borderLeftColor: "#E8E6E1",
         paddingBottom: 4,
     },
     activityTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#1A2433",
+        color: "#1A1A1A",
         marginBottom: 4,
     },
     activityDesc: {
         fontSize: 14,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         lineHeight: 20,
     },
     mapLink: {
@@ -2557,7 +2557,7 @@ const styles = StyleSheet.create({
     },
     publicTransportMode: {
         fontSize: 12,
-        fontWeight: "700",
+        fontWeight: "600",
         color: "#A1AEC6",
         textTransform: "uppercase",
         letterSpacing: 1,

@@ -347,14 +347,14 @@ export default function CreateTrip() {
         // Mark start date
         marked[startStr] = {
             startingDay: true,
-            color: '#14B8A6',
+            color: '#FFE500',
             textColor: 'white',
         };
         
         // Mark end date
         marked[endStr] = {
             endingDay: true,
-            color: '#14B8A6',
+            color: '#FFE500',
             textColor: 'white',
         };
         
@@ -367,8 +367,8 @@ export default function CreateTrip() {
         while (current < end) {
             const dateStr = current.toISOString().split('T')[0];
             marked[dateStr] = {
-                color: '#CCFBF1',
-                textColor: '#0D9488',
+                color: '#FFF8E1',
+                textColor: '#9B9B9B',
             };
             current.setDate(current.getDate() + 1);
         }
@@ -490,7 +490,7 @@ export default function CreateTrip() {
         return (
             <View style={styles.loadingContainer}>
                 <Image source={logoImage} style={styles.loadingLogo} resizeMode="contain" />
-                <ActivityIndicator size="large" color="#00BFA6" style={{ marginTop: 24 }} />
+                <ActivityIndicator size="large" color="#FFE500" style={{ marginTop: 24 }} />
                 <Text style={styles.loadingText}>Generating your dream trip...</Text>
                 <Text style={styles.loadingSubtext}>
                     {formData.skipFlights 
@@ -506,7 +506,7 @@ export default function CreateTrip() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A237E" />
+                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Step {step} of 4</Text>
                 <View style={{ width: 40 }} />
@@ -524,7 +524,7 @@ export default function CreateTrip() {
                         <View style={{ zIndex: 200 }}>
                             <Text style={styles.label}>Destination</Text>
                             <View style={styles.inputContainer}>
-                                <Ionicons name="location-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                <Ionicons name="location-outline" size={20} color="#FFE500" style={styles.inputIcon} />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Search city or country..."
@@ -594,15 +594,15 @@ export default function CreateTrip() {
                         {/* Skip Flights Toggle */}
                         <View style={styles.skipFlightsContainer}>
                             <View style={styles.skipFlightsTextContainer}>
-                                <Ionicons name="airplane" size={20} color="#14B8A6" />
+                                <Ionicons name="airplane" size={20} color="#FFE500" />
                                 <Text style={styles.skipFlightsText}>I already have flights booked</Text>
                             </View>
                             <Switch
                                 value={formData.skipFlights}
                                 onValueChange={(value) => setFormData({ ...formData, skipFlights: value })}
-                                trackColor={{ false: "#E0F2F1", true: "#5EEAD4" }}
-                                thumbColor={formData.skipFlights ? "#14B8A6" : "#B2DFDB"}
-                                ios_backgroundColor="#E0F2F1"
+                                trackColor={{ false: "#E8E6E1", true: "#FFE500" }}
+                                thumbColor={formData.skipFlights ? "#FFE500" : "#E6CF00"}
+                                ios_backgroundColor="#E8E6E1"
                             />
                         </View>
                         
@@ -611,7 +611,7 @@ export default function CreateTrip() {
                                 <View style={{ zIndex: 100 }}>
                                     <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
                                     <View style={styles.inputContainer}>
-                                        <Ionicons name="airplane-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                                        <Ionicons name="airplane-outline" size={20} color="#FFE500" style={styles.inputIcon} />
                                         <TextInput
                                             style={styles.input}
                                             placeholder="Search city, country or airport..."
@@ -658,7 +658,7 @@ export default function CreateTrip() {
                                                         onPress={() => selectAirport(airport)}
                                                     >
                                                         <View style={styles.suggestionIcon}>
-                                                            <Ionicons name="airplane" size={16} color="#14B8A6" />
+                                                            <Ionicons name="airplane" size={16} color="#FFE500" />
                                                         </View>
                                                         <View style={styles.suggestionTextContainer}>
                                                             <Text style={styles.suggestionCity}>
@@ -698,7 +698,7 @@ export default function CreateTrip() {
                                             <Ionicons 
                                                 name={option.icon as any} 
                                                 size={20} 
-                                                color={formData.preferredFlightTime === option.value ? "#FFFFFF" : "#14B8A6"} 
+                                                color={formData.preferredFlightTime === option.value ? "#1A1A1A" : "#FFE500"} 
                                             />
                                             <Text style={[
                                                 styles.flightTimeText,
@@ -715,7 +715,7 @@ export default function CreateTrip() {
                         
                         {formData.skipFlights && (
                             <View style={styles.skipFlightsInfo}>
-                                <Ionicons name="information-circle-outline" size={18} color="#5EEAD4" />
+                                <Ionicons name="information-circle-outline" size={18} color="#FFE500" />
                                 <Text style={styles.skipFlightsInfoText}>
                                     We'll skip flight recommendations and focus on hotels, activities, and restaurants for your trip.
                                 </Text>
@@ -738,7 +738,7 @@ export default function CreateTrip() {
                                 }}
                             >
                                 <View style={styles.dateCardIcon}>
-                                    <Ionicons name="airplane" size={20} color="#00BFA6" />
+                                    <Ionicons name="airplane" size={20} color="#FFE500" />
                                 </View>
                                 <Text style={styles.dateCardLabel}>DEPARTURE</Text>
                                 <Text style={styles.dateCardValue}>{formatDate(formData.startDate)}</Text>
@@ -752,7 +752,7 @@ export default function CreateTrip() {
                                 }}
                             >
                                 <View style={styles.dateCardIcon}>
-                                    <Ionicons name="airplane" size={20} color="#00BFA6" style={{ transform: [{ rotate: '180deg' }] }} />
+                                    <Ionicons name="airplane" size={20} color="#FFE500" style={{ transform: [{ rotate: '180deg' }] }} />
                                 </View>
                                 <Text style={styles.dateCardLabel}>RETURN</Text>
                                 <Text style={styles.dateCardValue}>{formatDate(formData.endDate)}</Text>
@@ -761,7 +761,7 @@ export default function CreateTrip() {
 
                         {/* Trip Duration Summary */}
                         <View style={styles.durationSummary}>
-                            <Ionicons name="time-outline" size={20} color="#00BFA6" />
+                            <Ionicons name="time-outline" size={20} color="#FFE500" />
                             <Text style={styles.durationText}>
                                 {tripDuration} {tripDuration === 1 ? 'day' : 'days'} trip
                             </Text>
@@ -781,7 +781,7 @@ export default function CreateTrip() {
                                             Select {selectingDate === 'start' ? 'Departure' : 'Return'} Date
                                         </Text>
                                         <TouchableOpacity onPress={() => setShowCalendar(false)}>
-                                            <Ionicons name="close" size={24} color="#1A237E" />
+                                            <Ionicons name="close" size={24} color="#1A1A1A" />
                                         </TouchableOpacity>
                                     </View>
                                     
@@ -794,16 +794,16 @@ export default function CreateTrip() {
                                         theme={{
                                             backgroundColor: '#ffffff',
                                             calendarBackground: '#ffffff',
-                                            textSectionTitleColor: '#5EEAD4',
-                                            selectedDayBackgroundColor: '#14B8A6',
-                                            selectedDayTextColor: '#ffffff',
-                                            todayTextColor: '#14B8A6',
-                                            dayTextColor: '#134E4A',
-                                            textDisabledColor: '#99F6E4',
-                                            dotColor: '#14B8A6',
-                                            selectedDotColor: '#ffffff',
-                                            arrowColor: '#14B8A6',
-                                            monthTextColor: '#0D9488',
+                                            textSectionTitleColor: '#FFE500',
+                                            selectedDayBackgroundColor: '#FFE500',
+                                            selectedDayTextColor: '#1A1A1A',
+                                            todayTextColor: '#FFE500',
+                                            dayTextColor: '#1A1A1A',
+                                            textDisabledColor: '#E8E6E1',
+                                            dotColor: '#FFE500',
+                                            selectedDotColor: '#1A1A1A',
+                                            arrowColor: '#FFE500',
+                                            monthTextColor: '#1A1A1A',
                                             textDayFontWeight: '500',
                                             textMonthFontWeight: '700',
                                             textDayHeaderFontWeight: '600',
@@ -816,11 +816,11 @@ export default function CreateTrip() {
                                     
                                     <View style={styles.calendarLegend}>
                                         <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#14B8A6' }]} />
+                                            <View style={[styles.legendDot, { backgroundColor: '#FFE500' }]} />
                                             <Text style={styles.legendText}>Selected dates</Text>
                                         </View>
                                         <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#CCFBF1' }]} />
+                                            <View style={[styles.legendDot, { backgroundColor: '#FFF8E1' }]} />
                                             <Text style={styles.legendText}>Trip duration</Text>
                                         </View>
                                     </View>
@@ -836,7 +836,7 @@ export default function CreateTrip() {
                         
                         <Text style={styles.label}>Budget (€)</Text>
                         <View style={styles.inputContainer}>
-                            <Ionicons name="wallet-outline" size={20} color="#00BFA6" style={styles.inputIcon} />
+                            <Ionicons name="wallet-outline" size={20} color="#FFE500" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="e.g. 2000"
@@ -857,35 +857,35 @@ export default function CreateTrip() {
                                 style={styles.counterBtn}
                                 onPress={() => setFormData({ ...formData, travelers: Math.max(1, formData.travelers - 1) })}
                             >
-                                <Ionicons name="remove" size={24} color="#00BFA6" />
+                                <Ionicons name="remove" size={24} color="#FFE500" />
                             </TouchableOpacity>
                             <Text style={styles.counterText}>{formData.travelers}</Text>
                             <TouchableOpacity 
                                 style={styles.counterBtn}
                                 onPress={() => setFormData({ ...formData, travelers: formData.travelers + 1 })}
                             >
-                                <Ionicons name="add" size={24} color="#00BFA6" />
+                                <Ionicons name="add" size={24} color="#FFE500" />
                             </TouchableOpacity>
                         </View>
 
                         {/* Skip Hotel Toggle */}
                         <View style={[styles.skipFlightsContainer, { marginTop: 24 }]}>
                             <View style={styles.skipFlightsTextContainer}>
-                                <Ionicons name="bed" size={20} color="#14B8A6" />
+                                <Ionicons name="bed" size={20} color="#FFE500" />
                                 <Text style={styles.skipFlightsText}>I already have accommodation</Text>
                             </View>
                             <Switch
                                 value={formData.skipHotel}
                                 onValueChange={(value) => setFormData({ ...formData, skipHotel: value })}
-                                trackColor={{ false: "#E0F2F1", true: "#5EEAD4" }}
-                                thumbColor={formData.skipHotel ? "#14B8A6" : "#B2DFDB"}
-                                ios_backgroundColor="#E0F2F1"
+                                trackColor={{ false: "#FFF8E1", true: "#FFE500" }}
+                                thumbColor={formData.skipHotel ? "#E6CF00" : "#E8E6E1"}
+                                ios_backgroundColor="#FFF8E1"
                             />
                         </View>
                         
                         {formData.skipHotel && (
                             <View style={styles.skipFlightsInfo}>
-                                <Ionicons name="information-circle-outline" size={18} color="#5EEAD4" />
+                                <Ionicons name="information-circle-outline" size={18} color="#FFE500" />
                                 <Text style={styles.skipFlightsInfoText}>
                                     We'll skip hotel recommendations and focus on activities and restaurants for your trip.
                                 </Text>
@@ -937,7 +937,7 @@ export default function CreateTrip() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: "#FAF9F6",
     },
     header: {
         flexDirection: "row",
@@ -947,8 +947,8 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         backgroundColor: "white",
         borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
-        shadowColor: "#1A2433",
+        borderBottomColor: "#E8E6E1",
+        shadowColor: "#1A1A1A",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
@@ -958,24 +958,24 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 14,
-        backgroundColor: "#E0E7FF",
+        backgroundColor: "#FFF8E1",
         justifyContent: "center",
         alignItems: "center",
     },
     headerTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#1A2433",
+        color: "#1A1A1A",
         letterSpacing: 0.5,
     },
     progressBar: {
         height: 5,
-        backgroundColor: "#E2E8F0",
+        backgroundColor: "#E8E6E1",
         width: "100%",
     },
     progressFill: {
         height: "100%",
-        backgroundColor: "#4F6DF5",
+        backgroundColor: "#FFE500",
     },
     content: {
         padding: 24,
@@ -983,7 +983,7 @@ const styles = StyleSheet.create({
     question: {
         fontSize: 28,
         fontWeight: "800",
-        color: "#1A2433",
+        color: "#1A1A1A",
         marginBottom: 32,
     },
     inputContainer: {
@@ -991,7 +991,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: "white",
         borderWidth: 2,
-        borderColor: "#E2E8F0",
+        borderColor: "#E8E6E1",
         borderRadius: 16,
         paddingHorizontal: 16,
         marginBottom: 8,
@@ -1003,11 +1003,11 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 16,
         paddingVertical: 18,
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     helperText: {
         fontSize: 14,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         marginTop: 4,
         fontWeight: "500",
     },
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "700",
         marginBottom: 10,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         textTransform: "uppercase",
         letterSpacing: 1,
     },
@@ -1031,14 +1031,14 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         backgroundColor: "white",
         borderWidth: 2,
-        borderColor: "#E2E8F0",
+        borderColor: "#E8E6E1",
         justifyContent: "center",
         alignItems: "center",
     },
     counterText: {
         fontSize: 36,
         fontWeight: "800",
-        color: "#4F6DF5",
+        color: "#1A1A1A",
     },
     tagsContainer: {
         flexDirection: "row",
@@ -1051,41 +1051,41 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         backgroundColor: "white",
         borderWidth: 2,
-        borderColor: "#E2E8F0",
+        borderColor: "#E8E6E1",
     },
     tagSelected: {
-        backgroundColor: "#4F6DF5",
-        borderColor: "#4F6DF5",
+        backgroundColor: "#FFE500",
+        borderColor: "#FFE500",
     },
     tagText: {
         fontSize: 16,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         fontWeight: "600",
     },
     tagTextSelected: {
-        color: "white",
+        color: "#1A1A1A",
         fontWeight: "700",
     },
     footer: {
         padding: 24,
         backgroundColor: "white",
         borderTopWidth: 1,
-        borderTopColor: "#E2E8F0",
-        shadowColor: "#4F6DF5",
+        borderTopColor: "#E8E6E1",
+        shadowColor: "#FFE500",
         shadowOffset: { width: 0, height: -4 },
         shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 6,
     },
     nextButton: {
-        backgroundColor: "#4F6DF5",
+        backgroundColor: "#FFE500",
         paddingVertical: 18,
         borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
         flexDirection: "row",
         gap: 10,
-        shadowColor: "#4F6DF5",
+        shadowColor: "#FFE500",
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -1095,7 +1095,7 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     nextButtonText: {
-        color: "white",
+        color: "#1A1A1A",
         fontSize: 17,
         fontWeight: "700",
     },
@@ -1103,7 +1103,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
+        backgroundColor: "#FAF9F6",
         padding: 24,
     },
     loadingLogo: {
@@ -1114,13 +1114,13 @@ const styles = StyleSheet.create({
         marginTop: 16,
         fontSize: 26,
         fontWeight: "800",
-        color: "#1A2433",
+        color: "#1A1A1A",
         textAlign: "center",
     },
     loadingSubtext: {
         marginTop: 8,
         fontSize: 16,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         textAlign: "center",
         lineHeight: 24,
         fontWeight: "500",
@@ -1137,22 +1137,22 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         padding: 18,
         borderWidth: 2,
-        borderColor: "#E2E8F0",
-        shadowColor: "#1A2433",
+        borderColor: "#E8E6E1",
+        shadowColor: "#1A1A1A",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 3,
     },
     dateCardActive: {
-        borderColor: "#4F6DF5",
+        borderColor: "#FFE500",
         borderWidth: 3,
     },
     dateCardIcon: {
         width: 48,
         height: 48,
         borderRadius: 14,
-        backgroundColor: "#E0E7FF",
+        backgroundColor: "#FFF8E1",
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 12,
@@ -1160,20 +1160,20 @@ const styles = StyleSheet.create({
     dateCardLabel: {
         fontSize: 11,
         fontWeight: "700",
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         letterSpacing: 1,
         marginBottom: 4,
     },
     dateCardValue: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     durationSummary: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#E0E7FF",
+        backgroundColor: "#FFF8E1",
         paddingVertical: 16,
         paddingHorizontal: 24,
         borderRadius: 14,
@@ -1182,12 +1182,12 @@ const styles = StyleSheet.create({
     durationText: {
         fontSize: 17,
         fontWeight: "700",
-        color: "#4F6DF5",
+        color: "#1A1A1A",
     },
     // Calendar Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(26, 36, 51, 0.2)",
+        backgroundColor: "rgba(26, 26, 26, 0.2)",
         justifyContent: "flex-end",
     },
     calendarModal: {
@@ -1202,12 +1202,12 @@ const styles = StyleSheet.create({
         alignItems: "center",
         padding: 20,
         borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
+        borderBottomColor: "#E8E6E1",
     },
     calendarTitle: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     calendar: {
         marginHorizontal: 10,
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
     },
     legendText: {
         fontSize: 13,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         fontWeight: "500",
     },
     // Skip Flights Toggle Styles
@@ -1241,7 +1241,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         backgroundColor: "white",
         borderWidth: 2,
-        borderColor: "#E2E8F0",
+        borderColor: "#E8E6E1",
         borderRadius: 16,
         paddingHorizontal: 16,
         paddingVertical: 14,
@@ -1255,12 +1255,12 @@ const styles = StyleSheet.create({
     skipFlightsText: {
         fontSize: 15,
         fontWeight: "600",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     skipFlightsInfo: {
         flexDirection: "row",
         alignItems: "flex-start",
-        backgroundColor: "#E0E7FF",
+        backgroundColor: "#FFF8E1",
         borderRadius: 12,
         padding: 14,
         marginTop: 16,
@@ -1269,7 +1269,7 @@ const styles = StyleSheet.create({
     skipFlightsInfoText: {
         flex: 1,
         fontSize: 13,
-        color: "#4F6DF5",
+        color: "#1A1A1A",
         lineHeight: 18,
     },
     // Flight Time Preference Styles
@@ -1285,22 +1285,22 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: "white",
         borderWidth: 2,
-        borderColor: "#E2E8F0",
+        borderColor: "#E8E6E1",
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
     },
     flightTimeOptionSelected: {
-        backgroundColor: "#4F6DF5",
-        borderColor: "#4F6DF5",
+        backgroundColor: "#FFE500",
+        borderColor: "#FFE500",
     },
     flightTimeText: {
         fontSize: 13,
-        color: "#1A2433",
+        color: "#1A1A1A",
         fontWeight: "600",
     },
     flightTimeTextSelected: {
-        color: "white",
+        color: "#1A1A1A",
         fontWeight: "700",
     },
     // Airport Suggestions Styles
@@ -1311,11 +1311,11 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         borderRadius: 16,
         borderWidth: 2,
-        borderColor: "#E2E8F0",
+        borderColor: "#E8E6E1",
         marginTop: 8,
         maxHeight: 280,
         overflow: "hidden",
-        shadowColor: "#1A2433",
+        shadowColor: "#1A1A1A",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
-        borderBottomColor: "#F0F4F8",
+        borderBottomColor: "#F5F5F3",
     },
     suggestionItemLast: {
         borderBottomWidth: 0,
@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: "#E0E7FF",
+        backgroundColor: "#FFF8E1",
         justifyContent: "center",
         alignItems: "center",
         marginRight: 12,
@@ -1349,12 +1349,12 @@ const styles = StyleSheet.create({
     suggestionCity: {
         fontSize: 15,
         fontWeight: "700",
-        color: "#1A2433",
+        color: "#1A1A1A",
         marginBottom: 2,
     },
     suggestionDetails: {
         fontSize: 13,
-        color: "#A1AEC6",
+        color: "#9B9B9B",
         fontWeight: "500",
     },
 });

@@ -1,20 +1,38 @@
-import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform, Dimensions } from "react-native";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { authClient } from "@/lib/auth-client";
 import { Redirect } from "expo-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// Import the new logo
-import logoImage from "@/assets/images/image.png";
+const { width } = Dimensions.get("window");
+
+// Planora Colors
+const COLORS = {
+    primary: "#FFE500", // Bright Yellow
+    primaryDark: "#E6CF00",
+    background: "#FAF9F6", // Cream/Off-white
+    backgroundDark: "#F5F3EE",
+    text: "#1A1A1A", // Near black
+    textSecondary: "#6B6B6B",
+    textMuted: "#9B9B9B",
+    white: "#FFFFFF",
+    border: "#E8E6E1",
+    success: "#4CAF50",
+    error: "#EF4444",
+};
 
 export default function Index() {
+    const [currentStep, setCurrentStep] = useState(0); // 0: splash, 1: onboarding, 2: auth
+    const [onboardingPage, setOnboardingPage] = useState(0);
     const [isEmailAuth, setIsEmailAuth] = useState(false);
-    const [isSignUp, setIsSignUp] = useState(false);
+    const [isSignUp, setIsSignUp] = useState(true);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
+    const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
     const handleEmailAuth = async () => {
         if (!email || !password || (isSignUp && !name)) {
@@ -37,156 +55,275 @@ export default function Index() {
     };
 
     const handleGoogleSignIn = async () => {
+        setOauthLoading("google");
         try {
             await authClient.signIn.social({ provider: "google" });
         } catch (error: any) {
             Alert.alert("Error", "Google sign in failed");
+        } finally {
+            setOauthLoading(null);
         }
     };
 
     const handleAppleSignIn = async () => {
+        setOauthLoading("apple");
         try {
             await authClient.signIn.social({ provider: "apple" });
         } catch (error: any) {
             Alert.alert("Error", "Apple sign in failed");
+        } finally {
+            setOauthLoading(null);
         }
     };
+
+    const onboardingData = [
+        {
+            title: "Plan Smarter,\nTravel Further",
+            subtitle: "Experience the future of travel planning with our intelligent tools.",
+            features: [
+                { icon: "help-circle", title: "AI Trip Planner", desc: "Generate personalized itineraries in seconds based on your unique interests." },
+                { icon: "git-compare", title: "Multi-City Routing", desc: "Seamlessly connect destinations with the most efficient travel paths." },
+                { icon: "star", title: "Smart Recommendations", desc: "Discover hidden gems and top-rated spots curated just for you." },
+            ]
+        }
+    ];
+
+    // Splash Screen
+    const renderSplash = () => (
+        <View style={styles.splashContainer}>
+            <View style={styles.splashContent}>
+                <View style={styles.logoContainer}>
+                    <View style={styles.logoIconWrapper}>
+                        <Ionicons name="globe-outline" size={48} color={COLORS.primary} />
+                        <View style={styles.logoSparkle}>
+                            <Ionicons name="sparkles" size={16} color={COLORS.primary} />
+                        </View>
+                    </View>
+                </View>
+                <Text style={styles.splashTitle}>PLANERA</Text>
+                <Text style={styles.splashSubtitle}>AI-Powered Journeys, tailored{"\n"}just for you.</Text>
+            </View>
+            
+            <View style={styles.splashBottom}>
+                <TouchableOpacity 
+                    style={styles.getStartedButton}
+                    onPress={() => setCurrentStep(1)}
+                >
+                    <Text style={styles.getStartedText}>Get Started</Text>
+                    <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity onPress={() => setCurrentStep(2)}>
+                    <Text style={styles.loginLink}>
+                        Already have an account? <Text style={styles.loginLinkBold}>Log in</Text>
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    // Onboarding Screen
+    const renderOnboarding = () => (
+        <View style={styles.onboardingContainer}>
+            <Text style={styles.onboardingBrand}>PLANERA</Text>
+            
+            <View style={styles.onboardingContent}>
+                <Text style={styles.onboardingTitle}>{onboardingData[0].title}</Text>
+                <Text style={styles.onboardingSubtitle}>{onboardingData[0].subtitle}</Text>
+                
+                <View style={styles.featuresContainer}>
+                    {onboardingData[0].features.map((feature, index) => (
+                        <View key={index} style={styles.featureCard}>
+                            <View style={styles.featureIconWrapper}>
+                                <Ionicons name={feature.icon as any} size={24} color={COLORS.text} />
+                            </View>
+                            <View style={styles.featureTextContainer}>
+                                <Text style={styles.featureTitle}>{feature.title}</Text>
+                                <Text style={styles.featureDesc}>{feature.desc}</Text>
+                            </View>
+                        </View>
+                    ))}
+                </View>
+            </View>
+            
+            <View style={styles.onboardingBottom}>
+                <View style={styles.dotsContainer}>
+                    <View style={[styles.dot, styles.dotInactive]} />
+                    <View style={[styles.dot, styles.dotActive]} />
+                    <View style={[styles.dot, styles.dotInactive]} />
+                </View>
+                
+                <TouchableOpacity 
+                    style={styles.nextButton}
+                    onPress={() => setCurrentStep(2)}
+                >
+                    <Text style={styles.nextButtonText}>Next</Text>
+                    <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    // Auth Screen
+    const renderAuth = () => (
+        <KeyboardAvoidingView 
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.authKeyboard}
+        >
+            <ScrollView contentContainerStyle={styles.authScrollContent}>
+                <Text style={styles.authBrand}>PLANERA</Text>
+                
+                {/* Hero Image */}
+                <View style={styles.authHeroContainer}>
+                    <View style={styles.authHeroImage}>
+                        <View style={styles.wavesContainer}>
+                            {[...Array(8)].map((_, i) => (
+                                <View 
+                                    key={i} 
+                                    style={[
+                                        styles.wave, 
+                                        { 
+                                            top: i * 35,
+                                            backgroundColor: i % 2 === 0 ? '#7BA3A3' : '#8FB5B5',
+                                            opacity: 0.7 + (i * 0.03)
+                                        }
+                                    ]} 
+                                />
+                            ))}
+                        </View>
+                    </View>
+                </View>
+                
+                <Text style={styles.authTitle}>Unlock Smart Travel</Text>
+                <Text style={styles.authSubtitle}>Plan complex trips in seconds with AI-powered routing.</Text>
+                
+                {isEmailAuth ? (
+                    <View style={styles.formContainer}>
+                        {isSignUp && (
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Full Name"
+                                placeholderTextColor={COLORS.textMuted}
+                                value={name}
+                                onChangeText={setName}
+                                autoCapitalize="words"
+                            />
+                        )}
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            placeholderTextColor={COLORS.textMuted}
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Password"
+                            placeholderTextColor={COLORS.textMuted}
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                        />
+                        
+                        <TouchableOpacity 
+                            style={styles.primaryButton} 
+                            onPress={handleEmailAuth}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color={COLORS.text} />
+                            ) : (
+                                <Text style={styles.primaryButtonText}>
+                                    {isSignUp ? "Create Account" : "Sign In"}
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)} style={styles.switchButton}>
+                            <Text style={styles.switchText}>
+                                {isSignUp ? "Already have an account? " : "Don't have an account? "}
+                                <Text style={styles.switchTextBold}>{isSignUp ? "Sign In" : "Sign Up"}</Text>
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setIsEmailAuth(false)} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={16} color={COLORS.textSecondary} />
+                            <Text style={styles.backText}>Back to options</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={styles.authOptionsContainer}>
+                        <TouchableOpacity 
+                            style={styles.socialButton} 
+                            onPress={handleGoogleSignIn}
+                            disabled={oauthLoading !== null}
+                        >
+                            {oauthLoading === "google" ? (
+                                <ActivityIndicator color={COLORS.text} />
+                            ) : (
+                                <>
+                                    <View style={styles.googleIcon}>
+                                        <Text style={styles.googleG}>G</Text>
+                                    </View>
+                                    <Text style={styles.socialButtonText}>Continue with Google</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.socialButton} 
+                            onPress={handleAppleSignIn}
+                            disabled={oauthLoading !== null}
+                        >
+                            {oauthLoading === "apple" ? (
+                                <ActivityIndicator color={COLORS.text} />
+                            ) : (
+                                <>
+                                    <Ionicons name="logo-apple" size={20} color={COLORS.text} style={styles.socialIcon} />
+                                    <Text style={styles.socialButtonText}>Continue with Apple</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.primaryButton} 
+                            onPress={() => setIsEmailAuth(true)}
+                        >
+                            <Ionicons name="mail-outline" size={20} color={COLORS.text} style={styles.socialIcon} />
+                            <Text style={styles.primaryButtonText}>Sign Up with Email</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => { setIsEmailAuth(true); setIsSignUp(false); }}>
+                            <Text style={styles.memberText}>
+                                Already a member? <Text style={styles.memberTextBold}>Log In</Text>
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+                
+                <Text style={styles.termsText}>
+                    By continuing, you agree to our <Text style={styles.termsLink}>Terms of Service</Text> and{"\n"}<Text style={styles.termsLink}>Privacy Policy</Text>.
+                </Text>
+            </ScrollView>
+        </KeyboardAvoidingView>
+    );
 
     return (
         <View style={styles.container}>
             <AuthLoading>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4F6DF5" />
+                    <ActivityIndicator size="large" color={COLORS.primary} />
                 </View>
             </AuthLoading>
 
             <Unauthenticated>
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={styles.keyboardView}
-                >
-                    <ScrollView contentContainerStyle={styles.scrollContent}>
-                        <View style={styles.authContainer}>
-                            {/* Hero Section with Logo */}
-                            <View style={styles.heroSection}>
-                                <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-                                <Text style={styles.title}>Planora</Text>
-                                <Text style={styles.subtitle}>Your AI-powered travel companion.{"\n"}Plan your dream vacation in seconds.</Text>
-                            </View>
-                            
-                            {isEmailAuth ? (
-                                <View style={styles.formContainer}>
-                                    {isSignUp && (
-                                        <View style={styles.inputContainer}>
-                                            <Ionicons name="person-outline" size={20} color="#4F6DF5" style={styles.inputIcon} />
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Full Name"
-                                                placeholderTextColor="#90A4AE"
-                                                value={name}
-                                                onChangeText={setName}
-                                                autoCapitalize="words"
-                                            />
-                                        </View>
-                                    )}
-                                    <View style={styles.inputContainer}>
-                                        <Ionicons name="mail-outline" size={20} color="#4F6DF5" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Email"
-                                            placeholderTextColor="#90A4AE"
-                                            value={email}
-                                            onChangeText={setEmail}
-                                            autoCapitalize="none"
-                                            keyboardType="email-address"
-                                        />
-                                    </View>
-                                    <View style={styles.inputContainer}>
-                                        <Ionicons name="lock-closed-outline" size={20} color="#4F6DF5" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Password"
-                                            placeholderTextColor="#90A4AE"
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            secureTextEntry
-                                        />
-                                    </View>
-                                    
-                                    <TouchableOpacity 
-                                        style={styles.primaryButton} 
-                                        onPress={handleEmailAuth}
-                                        disabled={loading}
-                                    >
-                                        {loading ? (
-                                            <ActivityIndicator color="white" />
-                                        ) : (
-                                            <Text style={styles.primaryButtonText}>
-                                                {isSignUp ? "Create Account" : "Sign In"}
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)} style={styles.switchButton}>
-                                        <Text style={styles.switchText}>
-                                            {isSignUp ? "Already have an account? " : "Don't have an account? "}
-                                            <Text style={styles.switchTextBold}>{isSignUp ? "Sign In" : "Sign Up"}</Text>
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity onPress={() => setIsEmailAuth(false)} style={styles.backButton}>
-                                        <Ionicons name="arrow-back" size={16} color="#78909C" />
-                                        <Text style={styles.backText}>Back to options</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <View style={styles.optionsContainer}>
-                                    <TouchableOpacity 
-                                        style={styles.socialButton} 
-                                        onPress={handleGoogleSignIn}
-                                    >
-                                        <Ionicons name="logo-google" size={20} color="#DB4437" style={styles.buttonIcon} />
-                                        <Text style={styles.socialButtonText}>Continue with Google</Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity 
-                                        style={styles.appleButton} 
-                                        onPress={handleAppleSignIn}
-                                    >
-                                        <Ionicons name="logo-apple" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                                        <Text style={styles.appleButtonText}>Continue with Apple</Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity 
-                                        style={styles.primaryButton} 
-                                        onPress={() => setIsEmailAuth(true)}
-                                    >
-                                        <Ionicons name="mail" size={20} color="white" style={styles.buttonIcon} />
-                                        <Text style={styles.primaryButtonText}>Continue with Email</Text>
-                                    </TouchableOpacity>
-
-                                    <View style={styles.divider}>
-                                        <View style={styles.dividerLine} />
-                                        <Text style={styles.dividerText}>or</Text>
-                                        <View style={styles.dividerLine} />
-                                    </View>
-
-                                    <TouchableOpacity 
-                                        style={styles.guestButton} 
-                                        onPress={() => authClient.signIn.anonymous()}
-                                    >
-                                        <Ionicons name="compass-outline" size={20} color="#4F6DF5" style={styles.buttonIcon} />
-                                        <Text style={styles.guestButtonText}>Explore as Guest</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-
-                            <Text style={styles.termsText}>
-                                By continuing, you agree to our Terms of Service and Privacy Policy
-                            </Text>
-                        </View>
-                    </ScrollView>
-                </KeyboardAvoidingView>
+                <SafeAreaView style={styles.safeArea}>
+                    {currentStep === 0 && renderSplash()}
+                    {currentStep === 1 && renderOnboarding()}
+                    {currentStep === 2 && renderAuth()}
+                </SafeAreaView>
             </Unauthenticated>
 
             <Authenticated>
@@ -199,186 +336,333 @@ export default function Index() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.background,
+    },
+    safeArea: {
+        flex: 1,
+        backgroundColor: COLORS.background,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.background,
     },
-    keyboardView: {
+    
+    // Splash Styles
+    splashContainer: {
         flex: 1,
+        justifyContent: "space-between",
+        paddingHorizontal: 24,
+        paddingVertical: 40,
     },
-    scrollContent: {
-        flexGrow: 1,
+    splashContent: {
+        flex: 1,
         justifyContent: "center",
-    },
-    authContainer: {
-        width: "100%",
-        padding: 24,
         alignItems: "center",
     },
-    heroSection: {
-        alignItems: "center",
-        marginBottom: 40,
+    logoContainer: {
+        marginBottom: 24,
     },
-    logo: {
-        width: 180,
-        height: 180,
+    logoIconWrapper: {
+        width: 100,
+        height: 100,
+        borderRadius: 24,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    logoSparkle: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+    },
+    splashTitle: {
+        fontSize: 36,
+        fontWeight: "900",
+        color: COLORS.text,
+        letterSpacing: 4,
         marginBottom: 16,
     },
-    title: {
-        fontSize: 32,
-        fontWeight: "800",
-        marginBottom: 12,
-        color: "#1A2433",
-        textAlign: "center",
-        letterSpacing: 1,
-    },
-    subtitle: {
+    splashSubtitle: {
         fontSize: 16,
-        color: "#4F6DF5",
+        color: COLORS.textSecondary,
         textAlign: "center",
         lineHeight: 24,
-        fontWeight: "500",
     },
-    optionsContainer: {
-        width: "100%",
-        gap: 14,
+    splashBottom: {
+        gap: 20,
     },
-    formContainer: {
-        width: "100%",
-        gap: 14,
-    },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        borderWidth: 2,
-        borderColor: "#E2E8F0",
-        paddingHorizontal: 16,
-    },
-    inputIcon: {
-        marginRight: 12,
-    },
-    input: {
-        flex: 1,
-        paddingVertical: 16,
-        fontSize: 16,
-        color: "#1A2433",
-    },
-    primaryButton: {
-        backgroundColor: "#4F6DF5",
-        paddingHorizontal: 24,
+    getStartedButton: {
+        backgroundColor: COLORS.primary,
         paddingVertical: 18,
+        paddingHorizontal: 32,
         borderRadius: 16,
-        width: "100%",
-        alignItems: "center",
         flexDirection: "row",
+        alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 6,
+        gap: 8,
     },
-    primaryButtonText: {
-        color: "white",
-        fontSize: 17,
+    getStartedText: {
+        fontSize: 18,
         fontWeight: "700",
-        letterSpacing: 0.5,
+        color: COLORS.text,
     },
-    appleButton: {
-        backgroundColor: "#1A2433",
+    loginLink: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        textAlign: "center",
+    },
+    loginLinkBold: {
+        fontWeight: "700",
+        color: COLORS.text,
+    },
+    
+    // Onboarding Styles
+    onboardingContainer: {
+        flex: 1,
         paddingHorizontal: 24,
-        paddingVertical: 18,
-        borderRadius: 16,
-        width: "100%",
-        alignItems: "center",
-        flexDirection: "row",
-        justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 4,
+        paddingTop: 20,
     },
-    appleButtonText: {
-        color: "#FFFFFF",
+    onboardingBrand: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: COLORS.textSecondary,
+        letterSpacing: 3,
+        textAlign: "center",
+        marginBottom: 32,
+    },
+    onboardingContent: {
+        flex: 1,
+    },
+    onboardingTitle: {
+        fontSize: 32,
+        fontWeight: "800",
+        color: COLORS.text,
+        marginBottom: 12,
+        lineHeight: 40,
+    },
+    onboardingSubtitle: {
         fontSize: 16,
-        fontWeight: "600",
+        color: COLORS.textSecondary,
+        marginBottom: 32,
+        lineHeight: 24,
     },
-    socialButton: {
-        backgroundColor: "#FFFFFF",
-        paddingHorizontal: 24,
-        paddingVertical: 18,
+    featuresContainer: {
+        gap: 16,
+    },
+    featureCard: {
+        backgroundColor: COLORS.white,
         borderRadius: 16,
-        width: "100%",
-        alignItems: "center",
+        padding: 20,
         flexDirection: "row",
-        justifyContent: "center",
-        borderWidth: 2,
-        borderColor: "#E2E8F0",
+        alignItems: "flex-start",
+        gap: 16,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
+        shadowRadius: 8,
         elevation: 2,
     },
-    socialButtonText: {
-        color: "#1A2433",
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    buttonIcon: {
-        marginRight: 10,
-    },
-    divider: {
-        flexDirection: "row",
+    featureIconWrapper: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: COLORS.primary,
+        justifyContent: "center",
         alignItems: "center",
-        marginVertical: 8,
     },
-    dividerLine: {
+    featureTextContainer: {
         flex: 1,
-        height: 1,
-        backgroundColor: "#E2E8F0",
     },
-    dividerText: {
-        color: "#A1AEC6",
+    featureTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: COLORS.text,
+        marginBottom: 4,
+    },
+    featureDesc: {
         fontSize: 14,
-        marginHorizontal: 16,
-        fontWeight: "500",
+        color: COLORS.textSecondary,
+        lineHeight: 20,
     },
-    guestButton: {
-        backgroundColor: "transparent",
-        paddingHorizontal: 24,
-        paddingVertical: 18,
-        borderRadius: 16,
-        width: "100%",
-        alignItems: "center",
+    onboardingBottom: {
+        paddingVertical: 24,
+        gap: 24,
+    },
+    dotsContainer: {
         flexDirection: "row",
         justifyContent: "center",
-        borderWidth: 2,
-        borderColor: "#4F6DF5",
-        borderStyle: "dashed",
+        gap: 8,
     },
-    guestButtonText: {
-        color: "#4F6DF5",
+    dot: {
+        height: 8,
+        borderRadius: 4,
+    },
+    dotActive: {
+        width: 24,
+        backgroundColor: COLORS.primary,
+    },
+    dotInactive: {
+        width: 8,
+        backgroundColor: COLORS.border,
+    },
+    nextButton: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 18,
+        borderRadius: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+    },
+    nextButtonText: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.text,
+    },
+    
+    // Auth Styles
+    authKeyboard: {
+        flex: 1,
+    },
+    authScrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 24,
+        paddingTop: 20,
+        paddingBottom: 40,
+    },
+    authBrand: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: COLORS.textSecondary,
+        letterSpacing: 3,
+        textAlign: "center",
+        marginBottom: 24,
+    },
+    authHeroContainer: {
+        marginBottom: 24,
+    },
+    authHeroImage: {
+        height: 200,
+        borderRadius: 20,
+        overflow: "hidden",
+        backgroundColor: "#5A8A8A",
+    },
+    wavesContainer: {
+        flex: 1,
+        position: "relative",
+    },
+    wave: {
+        position: "absolute",
+        left: -20,
+        right: -20,
+        height: 60,
+        borderRadius: 30,
+    },
+    authTitle: {
+        fontSize: 28,
+        fontWeight: "800",
+        color: COLORS.text,
+        textAlign: "center",
+        marginBottom: 8,
+    },
+    authSubtitle: {
+        fontSize: 16,
+        color: COLORS.textSecondary,
+        textAlign: "center",
+        marginBottom: 32,
+        lineHeight: 24,
+    },
+    authOptionsContainer: {
+        gap: 12,
+    },
+    formContainer: {
+        gap: 12,
+    },
+    input: {
+        backgroundColor: COLORS.white,
+        borderRadius: 14,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        fontSize: 16,
+        color: COLORS.text,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    socialButton: {
+        backgroundColor: COLORS.white,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    googleIcon: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 12,
+    },
+    googleG: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#4285F4",
+    },
+    socialIcon: {
+        marginRight: 12,
+    },
+    socialButtonText: {
         fontSize: 16,
         fontWeight: "600",
+        color: COLORS.text,
+    },
+    primaryButton: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    primaryButtonText: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: COLORS.text,
+    },
+    memberText: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        textAlign: "center",
+        marginTop: 8,
+    },
+    memberTextBold: {
+        fontWeight: "700",
+        color: COLORS.text,
+        textDecorationLine: "underline",
     },
     switchButton: {
         alignItems: "center",
         marginTop: 8,
     },
     switchText: {
-        color: "#A1AEC6",
+        color: COLORS.textSecondary,
         fontSize: 14,
     },
     switchTextBold: {
-        color: "#1A2433",
+        color: COLORS.text,
         fontWeight: "700",
     },
     backButton: {
@@ -389,14 +673,18 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     backText: {
-        color: "#A1AEC6",
+        color: COLORS.textSecondary,
         fontSize: 14,
     },
     termsText: {
-        color: "#A1AEC6",
+        color: COLORS.textMuted,
         fontSize: 12,
         textAlign: "center",
         marginTop: 32,
         lineHeight: 18,
+    },
+    termsLink: {
+        color: COLORS.textSecondary,
+        textDecorationLine: "underline",
     },
 });

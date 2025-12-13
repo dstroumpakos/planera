@@ -4,6 +4,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+// Planora Colors
+const COLORS = {
+    primary: "#FFE500",
+    background: "#FAF9F6",
+    text: "#1A1A1A",
+    textSecondary: "#6B6B6B",
+    textMuted: "#9B9B9B",
+    white: "#FFFFFF",
+    border: "#E8E6E1",
+    success: "#4CAF50",
+    error: "#EF4444",
+};
 
 export default function SubscriptionScreen() {
     const router = useRouter();
@@ -12,15 +26,14 @@ export default function SubscriptionScreen() {
     const cancelSubscription = useMutation(api.users.cancelSubscription);
     const userPlan = useQuery(api.users.getPlan);
     const [loading, setLoading] = useState<string | null>(null);
-    const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
+    const [selectedPlan, setSelectedPlan] = useState<"yearly" | "monthly" | "single">("yearly");
 
     const handleUpgrade = async (planType: "monthly" | "yearly") => {
         setLoading(planType);
         try {
             await upgradeToPremium({ planType });
             if (Platform.OS !== "web") {
-                const duration = planType === "yearly" ? "1 year" : "30 days";
-                Alert.alert("Success", `You are now a Premium member! Enjoy unlimited trips for ${duration}.`);
+                Alert.alert("Success", "You are now a Premium member!");
             }
             router.back();
         } catch (error) {
@@ -33,677 +46,413 @@ export default function SubscriptionScreen() {
         }
     };
 
-    const handleCancelSubscription = async () => {
-        if (Platform.OS !== "web") {
-            Alert.alert(
-                "Cancel Subscription",
-                "Are you sure you want to cancel your subscription? You will still have access until your current billing period ends.",
-                [
-                    { text: "Keep Subscription", style: "cancel" },
-                    { 
-                        text: "Cancel Subscription", 
-                        style: "destructive",
-                        onPress: async () => {
-                            setLoading("cancel");
-                            try {
-                                await cancelSubscription({});
-                                Alert.alert("Subscription Cancelled", "Your subscription has been cancelled. You can resubscribe anytime.");
-                            } catch (error) {
-                                console.error("Cancel failed:", error);
-                                Alert.alert("Error", "Failed to cancel subscription");
-                            } finally {
-                                setLoading(null);
-                            }
-                        }
-                    },
-                ]
-            );
-        } else {
-            setLoading("cancel");
-            try {
-                await cancelSubscription({});
-            } catch (error) {
-                console.error("Cancel failed:", error);
-            } finally {
-                setLoading(null);
-            }
-        }
-    };
-
-    const handlePurchasePack = async (pack: "single" | "triple" | "ten") => {
-        setLoading(pack);
+    const handlePurchasePack = async () => {
+        setLoading("single");
         try {
-            const result = await purchaseTripPack({ pack });
+            await purchaseTripPack({ pack: "single" });
             if (Platform.OS !== "web") {
-                Alert.alert("Success", `Added ${result.creditsAdded} trip credit${result.creditsAdded > 1 ? "s" : ""} to your account!`);
+                Alert.alert("Success", "Trip credit added!");
             }
             router.back();
         } catch (error) {
             console.error("Purchase failed:", error);
             if (Platform.OS !== "web") {
-                Alert.alert("Error", "Failed to purchase trip pack");
+                Alert.alert("Error", "Failed to purchase");
             }
         } finally {
             setLoading(null);
         }
     };
 
-    const premiumFeatures = [
-        { icon: "infinite", text: "Unlimited trip generation" },
-        { icon: "map", text: "Route optimization" },
-        { icon: "pricetag", text: "Best-price alerts" },
-        { icon: "calendar", text: "Personalized itineraries" },
-        { icon: "heart", text: "Saved trips" },
-        { icon: "airplane", text: "Multi-city planning" },
-    ];
-
-    const tripPacks = [
-        { id: "single" as const, trips: 1, price: "€4", pricePerTrip: "€4/trip", popular: false },
-        { id: "triple" as const, trips: 3, price: "€7", pricePerTrip: "€2.33/trip", popular: true },
-        { id: "ten" as const, trips: 10, price: "€10", pricePerTrip: "€1/trip", popular: false },
-    ];
-
     const isSubscriptionActive = userPlan?.isSubscriptionActive;
-    const tripCredits = userPlan?.tripCredits ?? 0;
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color="#0D9488" />
-            </TouchableOpacity>
-
+        <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Choose Your Plan</Text>
-                <Text style={styles.subtitle}>Unlock AI-powered travel planning</Text>
-            </View>
-
-            {/* Current Status */}
-            <View style={styles.statusCard}>
-                <View style={styles.statusRow}>
-                    <Ionicons name="ticket-outline" size={24} color="#14B8A6" />
-                    <Text style={styles.statusText}>
-                        Trip Credits: <Text style={styles.statusValue}>{tripCredits}</Text>
-                    </Text>
-                </View>
-                <View style={styles.statusRow}>
-                    <Ionicons name="star-outline" size={24} color={isSubscriptionActive ? "#F59E0B" : "#999"} />
-                    <Text style={styles.statusText}>
-                        Status: <Text style={[styles.statusValue, isSubscriptionActive ? styles.premiumStatus : undefined]}>
-                            {isSubscriptionActive ? "Premium Active" : "Free Plan"}
-                        </Text>
-                    </Text>
-                </View>
-            </View>
-
-            {/* Premium Plans Section */}
-            <Text style={styles.sectionTitle}>Premium Subscription</Text>
-            <Text style={styles.sectionSubtitle}>Choose your billing cycle</Text>
-
-            {/* Plan Toggle */}
-            <View style={styles.planToggle}>
-                <TouchableOpacity 
-                    style={[styles.toggleOption, selectedPlan === "monthly" && styles.toggleOptionActive]}
-                    onPress={() => setSelectedPlan("monthly")}
-                >
-                    <Text style={[styles.toggleText, selectedPlan === "monthly" && styles.toggleTextActive]}>Monthly</Text>
+                <Text style={styles.brandText}>PLANERA</Text>
+                <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color={COLORS.text} />
                 </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+                <Text style={styles.title}>Unlock your next{"\n"}era of travel.</Text>
+                <Text style={styles.subtitle}>
+                    AI-powered itineraries, unlimited inspiration, and smart recommendations.
+                </Text>
+
+                {/* Yearly Plan - Best Value */}
                 <TouchableOpacity 
-                    style={[styles.toggleOption, selectedPlan === "yearly" && styles.toggleOptionActive]}
+                    style={[
+                        styles.planCard, 
+                        selectedPlan === "yearly" && styles.planCardSelected
+                    ]}
                     onPress={() => setSelectedPlan("yearly")}
                 >
-                    <Text style={[styles.toggleText, selectedPlan === "yearly" && styles.toggleTextActive]}>Yearly</Text>
-                    <View style={styles.saveBadge}>
-                        <Text style={styles.saveBadgeText}>SAVE 39%</Text>
-                    </View>
-                </TouchableOpacity>
-            </View>
-
-            {/* Yearly Plan Card */}
-            {selectedPlan === "yearly" && (
-                <View style={styles.premiumCard}>
                     <View style={styles.bestValueBadge}>
-                        <Ionicons name="diamond" size={14} color="#FFF" />
                         <Text style={styles.bestValueText}>BEST VALUE</Text>
                     </View>
+                    <View style={styles.planHeader}>
+                        <View>
+                            <Text style={styles.planName}>Yearly Era</Text>
+                            <Text style={styles.planBilled}>Billed $59.99 yearly</Text>
+                        </View>
+                        <View style={styles.planPriceContainer}>
+                            <Text style={styles.planPrice}>$4.99</Text>
+                            <Text style={styles.planPeriod}>/ mo</Text>
+                        </View>
+                        <View style={[
+                            styles.radioButton,
+                            selectedPlan === "yearly" && styles.radioButtonSelected
+                        ]}>
+                            {selectedPlan === "yearly" && (
+                                <Ionicons name="checkmark" size={16} color={COLORS.text} />
+                            )}
+                        </View>
+                    </View>
                     
-                    <View style={styles.planHeader}>
-                        <Text style={styles.planName}>Yearly Premium</Text>
-                        <View style={styles.priceContainer}>
-                            <View style={styles.priceRow}>
-                                <Text style={styles.price}>€2.91</Text>
-                                <Text style={styles.period}>/month</Text>
+                    {selectedPlan === "yearly" && (
+                        <View style={styles.planFeatures}>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Unlimited AI Planning</Text>
                             </View>
-                            <Text style={styles.billedText}>Billed €34.99/year</Text>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Smart Recommendations</Text>
+                            </View>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Full Multi-City Routing</Text>
+                            </View>
                         </View>
-                    </View>
-
-                    <View style={styles.featuresList}>
-                        {premiumFeatures.map((feature, index) => (
-                            <View key={index} style={styles.featureItem}>
-                                <Ionicons name={feature.icon as any} size={20} color="#14B8A6" />
-                                <Text style={styles.featureText}>{feature.text}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {isSubscriptionActive ? (
-                        <View style={styles.subscribedActions}>
-                            <View style={styles.currentPlanButton}>
-                                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-                                <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
-                            </View>
-                            <TouchableOpacity 
-                                style={[styles.cancelButton, loading === "cancel" && styles.loadingButton]}
-                                onPress={handleCancelSubscription}
-                                disabled={loading !== null}
-                            >
-                                <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
-                                <Text style={styles.cancelButtonText}>
-                                    {loading === "cancel" ? "Cancelling..." : "Cancel Subscription"}
-                                </Text>
-                            </TouchableOpacity>
-                            <Text style={styles.flexibleNote}>Flexible - Cancel anytime</Text>
-                        </View>
-                    ) : (
-                        <TouchableOpacity 
-                            style={[styles.upgradeButton, loading === "yearly" && styles.loadingButton]} 
-                            onPress={() => handleUpgrade("yearly")}
-                            disabled={loading !== null}
-                        >
-                            <Text style={styles.upgradeButtonText}>
-                                {loading === "yearly" ? "Processing..." : "Subscribe Yearly - €34.99"}
-                            </Text>
-                        </TouchableOpacity>
                     )}
-                </View>
-            )}
+                </TouchableOpacity>
 
-            {/* Monthly Plan Card */}
-            {selectedPlan === "monthly" && (
-                <View style={styles.monthlyCard}>
+                {/* Monthly Plan */}
+                <TouchableOpacity 
+                    style={[
+                        styles.planCard, 
+                        styles.planCardSimple,
+                        selectedPlan === "monthly" && styles.planCardSelected
+                    ]}
+                    onPress={() => setSelectedPlan("monthly")}
+                >
                     <View style={styles.planHeader}>
-                        <Text style={styles.planName}>Monthly Premium</Text>
-                        <View style={styles.priceContainer}>
-                            <View style={styles.priceRow}>
-                                <Text style={styles.price}>€3.99</Text>
-                                <Text style={styles.period}>/month</Text>
-                            </View>
-                            <Text style={styles.billedText}>Billed monthly</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.featuresList}>
-                        {premiumFeatures.map((feature, index) => (
-                            <View key={index} style={styles.featureItem}>
-                                <Ionicons name={feature.icon as any} size={20} color="#14B8A6" />
-                                <Text style={styles.featureText}>{feature.text}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {isSubscriptionActive ? (
-                        <View style={styles.subscribedActions}>
-                            <View style={styles.currentPlanButton}>
-                                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-                                <Text style={styles.currentPlanText}>Active Until {new Date(userPlan?.subscriptionExpiresAt || 0).toLocaleDateString()}</Text>
-                            </View>
-                            <TouchableOpacity 
-                                style={[styles.cancelButton, loading === "cancel" && styles.loadingButton]}
-                                onPress={handleCancelSubscription}
-                                disabled={loading !== null}
-                            >
-                                <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
-                                <Text style={styles.cancelButtonText}>
-                                    {loading === "cancel" ? "Cancelling..." : "Cancel Subscription"}
-                                </Text>
-                            </TouchableOpacity>
-                            <Text style={styles.flexibleNote}>Flexible - Cancel anytime</Text>
-                        </View>
-                    ) : (
-                        <TouchableOpacity 
-                            style={[styles.upgradeButton, loading === "monthly" && styles.loadingButton]} 
-                            onPress={() => handleUpgrade("monthly")}
-                            disabled={loading !== null}
-                        >
-                            <Text style={styles.upgradeButtonText}>
-                                {loading === "monthly" ? "Processing..." : "Subscribe Monthly - €3.99"}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-            )}
-
-            {/* Trip Packs */}
-            <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Or Buy Trip Packs</Text>
-            <Text style={styles.sectionSubtitle}>Pay per trip, use your credits anytime</Text>
-
-            <View style={styles.packsContainer}>
-                {tripPacks.map((pack) => (
-                    <TouchableOpacity 
-                        key={pack.id}
-                        style={[styles.packCard, pack.popular && styles.popularPack]}
-                        onPress={() => handlePurchasePack(pack.id)}
-                        disabled={loading !== null}
-                    >
-                        {pack.popular && (
-                            <View style={styles.popularBadge}>
-                                <Text style={styles.popularBadgeText}>POPULAR</Text>
-                            </View>
-                        )}
-                        <Text style={styles.packTrips}>{pack.trips}</Text>
-                        <Text style={styles.packLabel}>Trip{pack.trips > 1 ? "s" : ""}</Text>
-                        <Text style={styles.packPrice}>{pack.price}</Text>
-                        <Text style={styles.packPerTrip}>{pack.pricePerTrip}</Text>
-                        <View style={[styles.packButton, loading === pack.id && styles.loadingButton]}>
-                            <Text style={styles.packButtonText}>
-                                {loading === pack.id ? "..." : "Buy"}
+                        <View>
+                            <Text style={styles.planName}>Monthly Era</Text>
+                            <Text style={styles.cancelAnytime}>
+                                <Ionicons name="close-circle" size={12} color={COLORS.error} /> Cancel anytime
                             </Text>
                         </View>
-                    </TouchableOpacity>
-                ))}
-            </View>
+                        <View style={styles.planPriceContainer}>
+                            <Text style={styles.planPrice}>$9.99</Text>
+                            <Text style={styles.planPeriod}>/ mo</Text>
+                        </View>
+                        <View style={[
+                            styles.radioButton,
+                            selectedPlan === "monthly" && styles.radioButtonSelected
+                        ]}>
+                            {selectedPlan === "monthly" && (
+                                <Ionicons name="checkmark" size={16} color={COLORS.text} />
+                            )}
+                        </View>
+                    </View>
+                </TouchableOpacity>
 
-            {/* Credits Info */}
-            {tripCredits > 0 && (
-                <View style={styles.creditsInfo}>
-                    <Ionicons name="information-circle" size={20} color="#14B8A6" />
-                    <Text style={styles.creditsInfoText}>
-                        You have <Text style={styles.creditsHighlight}>{tripCredits} trip credit{tripCredits > 1 ? "s" : ""}</Text> available. 
-                        Each trip generation uses 1 credit.
-                    </Text>
-                </View>
-            )}
+                {/* Single Trip */}
+                <TouchableOpacity 
+                    style={[
+                        styles.planCard, 
+                        styles.planCardSimple,
+                        selectedPlan === "single" && styles.planCardSelected
+                    ]}
+                    onPress={() => setSelectedPlan("single")}
+                >
+                    <View style={styles.planHeader}>
+                        <View>
+                            <Text style={styles.planName}>Single Trip</Text>
+                            <Text style={styles.planSubtext}>One-time AI planning</Text>
+                        </View>
+                        <View style={styles.planPriceContainer}>
+                            <Text style={styles.planPrice}>$2.99</Text>
+                        </View>
+                        <View style={[
+                            styles.radioButton,
+                            selectedPlan === "single" && styles.radioButtonSelected
+                        ]}>
+                            {selectedPlan === "single" && (
+                                <Ionicons name="checkmark" size={16} color={COLORS.text} />
+                            )}
+                        </View>
+                    </View>
+                </TouchableOpacity>
 
-            {/* Free Plan Info */}
-            <View style={styles.freePlan}>
-                <Ionicons name="gift-outline" size={24} color="#14B8A6" />
-                <Text style={styles.freePlanTitle}>Free Trial</Text>
-                <Text style={styles.freePlanText}>
-                    New users get 1 free trip to try our AI travel planner!
+                {/* Continue with Free */}
+                <TouchableOpacity onPress={() => router.back()}>
+                    <Text style={styles.freePlanLink}>Continue with Free Plan</Text>
+                </TouchableOpacity>
+
+                {/* Terms */}
+                <Text style={styles.termsText}>
+                    Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Your account will be charged for renewal within 24-hours prior to the end of the current period. You can manage and cancel your subscriptions by going to your App Store account settings after purchase.
                 </Text>
+
+                <View style={styles.linksRow}>
+                    <TouchableOpacity>
+                        <Text style={styles.linkText}>Privacy Policy</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.linkDot}>•</Text>
+                    <TouchableOpacity>
+                        <Text style={styles.linkText}>Terms of Service</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity>
+                    <Text style={styles.restoreText}>Restore Purchases</Text>
+                </TouchableOpacity>
+            </ScrollView>
+
+            {/* Bottom CTA */}
+            <View style={styles.bottomCTA}>
+                <TouchableOpacity 
+                    style={[styles.ctaButton, loading && styles.ctaButtonLoading]}
+                    onPress={() => {
+                        if (selectedPlan === "single") {
+                            handlePurchasePack();
+                        } else {
+                            handleUpgrade(selectedPlan);
+                        }
+                    }}
+                    disabled={loading !== null}
+                >
+                    <Text style={styles.ctaButtonText}>
+                        {loading ? "Processing..." : "Start my next era"}
+                    </Text>
+                </TouchableOpacity>
+                <View style={styles.securedRow}>
+                    <Ionicons name="lock-closed" size={14} color={COLORS.textMuted} />
+                    <Text style={styles.securedText}>Secured with App Store</Text>
+                </View>
             </View>
-        </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
-    },
-    content: {
-        padding: 20,
-        paddingTop: 60,
-        paddingBottom: 40,
-    },
-    backButton: {
-        marginBottom: 20,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#FFFFFF",
-        alignItems: "center",
-        justifyContent: "center",
-        shadowColor: "#1A2433",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
+        backgroundColor: COLORS.background,
     },
     header: {
-        marginBottom: 24,
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        position: "relative",
+    },
+    brandText: {
+        fontSize: 16,
+        fontWeight: "800",
+        color: COLORS.text,
+        letterSpacing: 2,
+    },
+    closeButton: {
+        position: "absolute",
+        right: 20,
+    },
+    content: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 40,
     },
     title: {
         fontSize: 32,
         fontWeight: "800",
-        color: "#1A2433",
-        marginBottom: 8,
+        color: COLORS.text,
+        textAlign: "center",
+        marginBottom: 12,
+        lineHeight: 40,
     },
     subtitle: {
         fontSize: 16,
-        color: "#A1AEC6",
-        fontWeight: "500",
-    },
-    statusCard: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 16,
-        marginBottom: 24,
-        gap: 12,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        shadowColor: "#1A2433",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-    statusRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    statusText: {
-        fontSize: 16,
-        color: "#A1AEC6",
-    },
-    statusValue: {
-        fontWeight: "bold",
-        color: "#1A2433",
-    },
-    premiumStatus: {
-        color: "#4F6DF5",
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: "800",
-        color: "#1A2433",
-        marginBottom: 4,
-    },
-    sectionSubtitle: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        marginBottom: 16,
-        fontWeight: "500",
-    },
-    planToggle: {
-        flexDirection: "row",
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        padding: 4,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-    },
-    toggleOption: {
-        flex: 1,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        alignItems: "center",
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 8,
-    },
-    toggleOptionActive: {
-        backgroundColor: "#4F6DF5",
-    },
-    toggleText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#A1AEC6",
-    },
-    toggleTextActive: {
-        color: "#FFFFFF",
-    },
-    saveBadge: {
-        backgroundColor: "#6CE4FF",
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-    },
-    saveBadgeText: {
-        fontSize: 10,
-        fontWeight: "bold",
-        color: "#1A2433",
-    },
-    premiumCard: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 24,
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
-        elevation: 6,
-        marginBottom: 8,
-        borderWidth: 2,
-        borderColor: "#6CE4FF",
-        position: "relative",
-        overflow: "hidden",
-    },
-    monthlyCard: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 24,
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 4,
-        marginBottom: 8,
-        borderWidth: 2,
-        borderColor: "#E2E8F0",
-        position: "relative",
-        overflow: "hidden",
-    },
-    subscribedActions: {
-        gap: 12,
-    },
-    cancelButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#FEF2F2",
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 14,
-        gap: 8,
-        borderWidth: 2,
-        borderColor: "#FECACA",
-    },
-    cancelButtonText: {
-        color: "#EF4444",
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    flexibleNote: {
+        color: COLORS.textSecondary,
         textAlign: "center",
-        color: "#4F6DF5",
-        fontSize: 13,
-        fontWeight: "500",
+        marginBottom: 32,
+        lineHeight: 24,
+    },
+    planCard: {
+        backgroundColor: COLORS.white,
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 12,
+        borderWidth: 2,
+        borderColor: COLORS.border,
+        position: "relative",
+        overflow: "hidden",
+    },
+    planCardSimple: {
+        paddingVertical: 16,
+    },
+    planCardSelected: {
+        borderColor: COLORS.primary,
     },
     bestValueBadge: {
         position: "absolute",
-        top: 16,
-        right: -35,
-        backgroundColor: "#6CE4FF",
+        top: -1,
+        left: "50%",
+        transform: [{ translateX: -50 }],
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 16,
         paddingVertical: 6,
-        paddingHorizontal: 45,
-        transform: [{ rotate: "45deg" }],
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
+        borderBottomLeftRadius: 8,
+        borderBottomRightRadius: 8,
     },
     bestValueText: {
-        color: "#1A2433",
         fontSize: 11,
-        fontWeight: "bold",
+        fontWeight: "800",
+        color: COLORS.text,
+        letterSpacing: 1,
     },
     planHeader: {
-        marginBottom: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 16,
     },
     planName: {
-        fontSize: 22,
-        fontWeight: "800",
-        color: "#1A2433",
-        marginBottom: 8,
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.text,
     },
-    priceContainer: {
-        gap: 4,
+    planBilled: {
+        fontSize: 13,
+        color: COLORS.textMuted,
+        marginTop: 2,
     },
-    priceRow: {
+    planSubtext: {
+        fontSize: 13,
+        color: COLORS.textMuted,
+        marginTop: 2,
+    },
+    cancelAnytime: {
+        fontSize: 13,
+        color: COLORS.error,
+        marginTop: 2,
+    },
+    planPriceContainer: {
         flexDirection: "row",
         alignItems: "baseline",
+        marginLeft: "auto",
+        marginRight: 16,
     },
-    price: {
-        fontSize: 40,
+    planPrice: {
+        fontSize: 24,
         fontWeight: "800",
-        color: "#4F6DF5",
+        color: COLORS.text,
     },
-    period: {
-        fontSize: 16,
-        color: "#A1AEC6",
-        marginLeft: 4,
-        fontWeight: "500",
-    },
-    billedText: {
+    planPeriod: {
         fontSize: 14,
-        color: "#A1AEC6",
-        fontWeight: "500",
+        color: COLORS.textMuted,
+        marginLeft: 2,
     },
-    featuresList: {
+    radioButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: COLORS.border,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    radioButtonSelected: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    planFeatures: {
+        marginTop: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
         gap: 12,
-        marginBottom: 24,
     },
     featureItem: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
+        gap: 10,
     },
     featureText: {
         fontSize: 15,
-        color: "#1A2433",
+        color: COLORS.text,
         fontWeight: "500",
     },
-    upgradeButton: {
-        backgroundColor: "#4F6DF5",
-        paddingVertical: 16,
-        borderRadius: 14,
-        alignItems: "center",
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    loadingButton: {
-        opacity: 0.7,
-    },
-    upgradeButtonText: {
-        color: "#FFF",
-        fontSize: 18,
-        fontWeight: "700",
-    },
-    currentPlanButton: {
-        backgroundColor: "#E0E7FF",
-        paddingVertical: 16,
-        borderRadius: 14,
-        alignItems: "center",
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 8,
-    },
-    currentPlanText: {
-        color: "#4F6DF5",
+    freePlanLink: {
         fontSize: 16,
+        color: COLORS.textSecondary,
+        textAlign: "center",
+        marginTop: 8,
+        marginBottom: 24,
         fontWeight: "600",
     },
-    packsContainer: {
-        flexDirection: "row",
-        gap: 12,
-        marginBottom: 20,
-    },
-    packCard: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 16,
-        alignItems: "center",
-        borderWidth: 2,
-        borderColor: "#E2E8F0",
-        position: "relative",
-        overflow: "hidden",
-    },
-    popularPack: {
-        borderColor: "#6CE4FF",
-        borderWidth: 2,
-    },
-    popularBadge: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: "#6CE4FF",
-        paddingVertical: 4,
-    },
-    popularBadgeText: {
-        color: "#1A2433",
-        fontSize: 10,
-        fontWeight: "bold",
+    termsText: {
+        fontSize: 11,
+        color: COLORS.textMuted,
         textAlign: "center",
+        lineHeight: 16,
+        marginBottom: 16,
     },
-    packTrips: {
-        fontSize: 36,
-        fontWeight: "800",
-        color: "#1A2433",
-        marginTop: 16,
-    },
-    packLabel: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        marginBottom: 8,
-        fontWeight: "500",
-    },
-    packPrice: {
-        fontSize: 24,
-        fontWeight: "800",
-        color: "#4F6DF5",
-    },
-    packPerTrip: {
-        fontSize: 12,
-        color: "#A1AEC6",
-        marginBottom: 12,
-        fontWeight: "500",
-    },
-    packButton: {
-        backgroundColor: "#4F6DF5",
-        paddingVertical: 10,
-        paddingHorizontal: 24,
-        borderRadius: 10,
-    },
-    packButtonText: {
-        color: "#FFF",
-        fontSize: 14,
-        fontWeight: "bold",
-    },
-    creditsInfo: {
+    linksRow: {
         flexDirection: "row",
-        alignItems: "flex-start",
-        backgroundColor: "#E0E7FF",
-        padding: 16,
-        borderRadius: 16,
-        gap: 12,
-        marginBottom: 20,
-    },
-    creditsInfoText: {
-        flex: 1,
-        fontSize: 14,
-        color: "#1A2433",
-        lineHeight: 20,
-    },
-    creditsHighlight: {
-        fontWeight: "bold",
-        color: "#4F6DF5",
-    },
-    freePlan: {
+        justifyContent: "center",
         alignItems: "center",
-        padding: 24,
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
         gap: 8,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
+        marginBottom: 12,
     },
-    freePlanTitle: {
+    linkText: {
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        fontWeight: "500",
+    },
+    linkDot: {
+        color: COLORS.textMuted,
+    },
+    restoreText: {
+        fontSize: 14,
+        color: COLORS.text,
+        textAlign: "center",
+        fontWeight: "600",
+    },
+    bottomCTA: {
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        paddingBottom: 32,
+        backgroundColor: COLORS.background,
+    },
+    ctaButton: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 18,
+        borderRadius: 14,
+        alignItems: "center",
+    },
+    ctaButtonLoading: {
+        opacity: 0.7,
+    },
+    ctaButtonText: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#1A2433",
+        color: COLORS.text,
     },
-    freePlanText: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        textAlign: "center",
-        fontWeight: "500",
+    securedRow: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 6,
+        marginTop: 12,
+    },
+    securedText: {
+        fontSize: 12,
+        color: COLORS.textMuted,
     },
 });

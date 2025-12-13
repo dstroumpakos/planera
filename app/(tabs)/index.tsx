@@ -1,320 +1,553 @@
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Image } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Image, ScrollView, TextInput } from "react-native";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { authClient } from "@/lib/auth-client";
 
-import logoImage from "@/assets/images/image.png";
+// Planora Colors
+const COLORS = {
+    primary: "#FFE500",
+    primaryDark: "#E6CF00",
+    background: "#FAF9F6",
+    backgroundDark: "#F5F3EE",
+    text: "#1A1A1A",
+    textSecondary: "#6B6B6B",
+    textMuted: "#9B9B9B",
+    white: "#FFFFFF",
+    border: "#E8E6E1",
+    cardBg: "#FFFFFF",
+};
 
-export default function TripListScreen() {
+// Sample trending destinations
+const trendingDestinations = [
+    { id: "1", name: "Tokyo", country: "Japan", price: "$1,250", rating: 4.9, image: "🗼" },
+    { id: "2", name: "Paris", country: "France", price: "$980", rating: 4.8, image: "🗼" },
+    { id: "3", name: "Bali", country: "Indonesia", price: "$750", rating: 4.7, image: "🏝️" },
+    { id: "4", name: "New York", country: "USA", price: "$1,100", rating: 4.6, image: "🗽" },
+];
+
+export default function HomeScreen() {
     const router = useRouter();
     const { isAuthenticated } = useConvexAuth();
+    const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
-    const deleteTrip = useMutation(api.trips.deleteTrip);
 
-    const handleDelete = (tripId: Id<"trips">) => {
-        Alert.alert(
-            "Delete Trip",
-            "Are you sure you want to delete this trip?",
-            [
-                { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Delete", 
-                    style: "destructive", 
-                    onPress: () => deleteTrip({ tripId }) 
-                }
-            ]
-        );
+    const user = session?.user;
+    const userName = user?.name?.split(" ")[0] || "Traveler";
+    
+    // Get greeting based on time
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Good Morning";
+        if (hour < 18) return "Good Afternoon";
+        return "Good Evening";
     };
 
-    if (trips === undefined) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#4F6DF5" />
-            </View>
-        );
-    }
+    const quickActions = [
+        { id: "ai", icon: "sparkles", label: "AI", sublabel: "Trip Planner", color: COLORS.primary, onPress: () => router.push("/create-trip") },
+        { id: "multi", icon: "git-compare-outline", label: "Multi-City", sublabel: "Route", color: COLORS.white, onPress: () => router.push("/create-trip") },
+        { id: "deals", icon: "pricetag-outline", label: "Explore", sublabel: "Deals", color: COLORS.white, onPress: () => router.push("/(tabs)/deals") },
+    ];
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
-                    <View>
-                        <Text style={styles.headerSubtitle}>Welcome to</Text>
-                        <Text style={styles.headerTitle}>Planora</Text>
+            <ScrollView 
+                style={styles.scrollView} 
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <View style={styles.avatarContainer}>
+                            <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
+                            <View style={styles.onlineIndicator} />
+                        </View>
+                        <View>
+                            <Text style={styles.greeting}>{getGreeting()},</Text>
+                            <Text style={styles.userName}>{userName}</Text>
+                        </View>
                     </View>
-                </View>
-                <TouchableOpacity 
-                    style={styles.addButton}
-                    onPress={() => router.push("/create-trip")}
-                >
-                    <Ionicons name="add" size={28} color="white" />
-                </TouchableOpacity>
-            </View>
-
-            {trips.length === 0 ? (
-                <View style={styles.emptyState}>
-                    <View style={styles.emptyIconContainer}>
-                        <Ionicons name="airplane-outline" size={48} color="#4F6DF5" />
-                    </View>
-                    <Text style={styles.emptyText}>No trips yet</Text>
-                    <Text style={styles.emptySubtext}>Tap the + button to plan your first adventure!</Text>
-                    <TouchableOpacity 
-                        style={styles.createTripButton}
-                        onPress={() => router.push("/create-trip")}
-                    >
-                        <Ionicons name="add-circle" size={20} color="white" />
-                        <Text style={styles.createTripButtonText}>Create Your First Trip</Text>
+                    <TouchableOpacity style={styles.notificationButton}>
+                        <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
+                        <View style={styles.notificationBadge} />
                     </TouchableOpacity>
                 </View>
-            ) : (
-                <FlatList
-                    data={trips}
-                    keyExtractor={(item) => item._id}
-                    contentContainerStyle={styles.listContent}
-                    renderItem={({ item }) => (
+
+                {/* Hero Text */}
+                <View style={styles.heroSection}>
+                    <Text style={styles.heroTitle}>Ready for your</Text>
+                    <Text style={styles.heroTitleHighlight}>next journey?</Text>
+                </View>
+
+                {/* Search Bar */}
+                <TouchableOpacity 
+                    style={styles.searchBar}
+                    onPress={() => router.push("/create-trip")}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="search" size={20} color={COLORS.textMuted} />
+                    <Text style={styles.searchPlaceholder}>Where do you want to go?</Text>
+                    <View style={styles.searchButton}>
+                        <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+                    </View>
+                </TouchableOpacity>
+
+                {/* Quick Actions */}
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.quickActionsContainer}
+                >
+                    {quickActions.map((action) => (
                         <TouchableOpacity 
-                            style={styles.card} 
-                            onPress={() => router.push(`/trip/${item._id}`)}
-                            activeOpacity={0.9}
+                            key={action.id}
+                            style={[
+                                styles.quickActionCard,
+                                { backgroundColor: action.color }
+                            ]}
+                            onPress={action.onPress}
                         >
-                            <View style={styles.cardImagePlaceholder}>
-                                <Ionicons name="airplane" size={32} color="white" />
+                            <View style={styles.quickActionIcon}>
+                                <Ionicons 
+                                    name={action.icon as any} 
+                                    size={20} 
+                                    color={action.color === COLORS.primary ? COLORS.text : COLORS.text} 
+                                />
                             </View>
-                            <View style={styles.cardContent}>
-                                <View style={styles.cardHeader}>
-                                    <Text style={styles.destination}>{item.destination}</Text>
-                                    <StatusBadge status={item.status} />
+                            <Text style={styles.quickActionLabel}>{action.label}</Text>
+                            <Text style={styles.quickActionSublabel}>{action.sublabel}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                {/* Trending Now */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Trending Now</Text>
+                    <TouchableOpacity>
+                        <Text style={styles.viewAllText}>View All</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.trendingContainer}
+                >
+                    {trendingDestinations.map((dest) => (
+                        <TouchableOpacity 
+                            key={dest.id}
+                            style={styles.trendingCard}
+                            onPress={() => router.push("/create-trip")}
+                        >
+                            <View style={styles.trendingImageContainer}>
+                                <View style={styles.trendingImagePlaceholder}>
+                                    <Text style={styles.trendingEmoji}>{dest.image}</Text>
                                 </View>
-                                <Text style={styles.dates}>
-                                    {new Date(item.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(item.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </Text>
-                                <View style={styles.cardFooter}>
-                                    <View style={styles.detailItem}>
-                                        <Ionicons name="people-outline" size={16} color="#607D8B" />
-                                        <Text style={styles.details}>{item.travelers}</Text>
-                                    </View>
-                                    <View style={styles.detailItem}>
-                                        <Ionicons name="wallet-outline" size={16} color="#607D8B" />
-                                        <Text style={styles.details}>{item.budget}</Text>
-                                    </View>
-                                    <TouchableOpacity 
-                                        onPress={() => handleDelete(item._id)}
-                                        style={styles.deleteBtn}
-                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    >
-                                        <Ionicons name="trash-outline" size={18} color="#B0BEC5" />
-                                    </TouchableOpacity>
+                                <View style={styles.ratingBadge}>
+                                    <Ionicons name="star" size={12} color={COLORS.primary} />
+                                    <Text style={styles.ratingText}>{dest.rating}</Text>
                                 </View>
+                                <TouchableOpacity style={styles.arrowButton}>
+                                    <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                                </TouchableOpacity>
+                            </View>
+                            <View style={styles.trendingInfo}>
+                                <Text style={styles.trendingName}>{dest.name}</Text>
+                                <View style={styles.trendingLocation}>
+                                    <Ionicons name="location" size={12} color={COLORS.textMuted} />
+                                    <Text style={styles.trendingCountry}>{dest.country}</Text>
+                                </View>
+                                <Text style={styles.trendingPrice}>{dest.price}</Text>
                             </View>
                         </TouchableOpacity>
-                    )}
-                />
-            )}
+                    ))}
+                </ScrollView>
+
+                {/* My Trips Section */}
+                {trips && trips.length > 0 && (
+                    <>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>My Trips</Text>
+                            <TouchableOpacity onPress={() => router.push("/(tabs)/trips")}>
+                                <Text style={styles.viewAllText}>View All</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {trips.slice(0, 2).map((trip) => (
+                            <TouchableOpacity 
+                                key={trip._id}
+                                style={styles.tripCard}
+                                onPress={() => router.push(`/trip/${trip._id}`)}
+                            >
+                                <View style={styles.tripIconContainer}>
+                                    <Ionicons name="airplane" size={24} color={COLORS.white} />
+                                </View>
+                                <View style={styles.tripInfo}>
+                                    <Text style={styles.tripDestination}>{trip.destination}</Text>
+                                    <Text style={styles.tripDates}>
+                                        {new Date(trip.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(trip.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.tripStatusBadge,
+                                    trip.status === "completed" && styles.tripStatusCompleted,
+                                    trip.status === "generating" && styles.tripStatusGenerating,
+                                ]}>
+                                    <Text style={styles.tripStatusText}>{trip.status}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </>
+                )}
+
+                {/* Empty State for No Trips */}
+                {trips && trips.length === 0 && (
+                    <View style={styles.emptyState}>
+                        <View style={styles.emptyIconContainer}>
+                            <Ionicons name="airplane-outline" size={40} color={COLORS.primary} />
+                        </View>
+                        <Text style={styles.emptyTitle}>No trips yet</Text>
+                        <Text style={styles.emptySubtitle}>Start planning your next adventure!</Text>
+                        <TouchableOpacity 
+                            style={styles.createTripButton}
+                            onPress={() => router.push("/create-trip")}
+                        >
+                            <Text style={styles.createTripButtonText}>Create Your First Trip</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Bottom Spacing for Tab Bar */}
+                <View style={{ height: 100 }} />
+            </ScrollView>
         </SafeAreaView>
-    );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    const colors: Record<string, string> = {
-        generating: "#F59E0B",
-        completed: "#4F6DF5",
-
-        failed: "#EF4444",
-    };
-    
-    return (
-        <View style={[styles.badge, { backgroundColor: colors[status] || "#94A3B8" }]}>
-            <Text style={styles.badgeText}>{status.toUpperCase()}</Text>
-
-        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: COLORS.background,
     },
-    center: {
+    scrollView: {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+    },
+    scrollContent: {
+        paddingHorizontal: 20,
     },
     header: {
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 20,
-        backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
         flexDirection: "row",
-        alignItems: "center",
         justifyContent: "space-between",
+        alignItems: "center",
+        paddingTop: 8,
+        paddingBottom: 16,
     },
     headerLeft: {
         flexDirection: "row",
         alignItems: "center",
-        flex: 1,
+        gap: 12,
     },
-    headerLogo: {
-        width: 50,
-        height: 50,
-        marginRight: 12,
-    },
-    headerSubtitle: {
-        fontSize: 12,
-        color: "#A1AEC6",
-        fontWeight: "500",
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: "800",
-        color: "#1A2433",
-        flex: 1,
-        marginLeft: 12,
-    },
-    addButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 14,
-        backgroundColor: "#4F6DF5",
+    avatarContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: "#FFD6CC",
         justifyContent: "center",
         alignItems: "center",
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 4,
+        position: "relative",
     },
-    listContent: {
-        padding: 16,
-        paddingBottom: 100,
-    },
-    card: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        marginBottom: 16,
-        shadowColor: "#1A2433",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 4,
-        flexDirection: "row",
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-    },
-    cardImagePlaceholder: {
-        width: 85,
-        backgroundColor: "#4F6DF5",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    cardContent: {
-        flex: 1,
-        padding: 16,
-    },
-    cardHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        marginBottom: 4,
-    },
-    destination: {
+    avatarText: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#1A2433",
-        flex: 1,
-        marginRight: 8,
+        color: COLORS.text,
     },
-    dates: {
+    onlineIndicator: {
+        position: "absolute",
+        bottom: 2,
+        right: 2,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: "#4CAF50",
+        borderWidth: 2,
+        borderColor: COLORS.background,
+    },
+    greeting: {
         fontSize: 14,
-        color: "#A1AEC6",
-        marginBottom: 12,
-        fontWeight: "500",
+        color: COLORS.textSecondary,
     },
-    cardFooter: {
+    userName: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.text,
+    },
+    notificationButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        position: "relative",
+    },
+    notificationBadge: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#EF4444",
+    },
+    heroSection: {
+        marginBottom: 20,
+    },
+    heroTitle: {
+        fontSize: 32,
+        fontWeight: "800",
+        color: COLORS.text,
+    },
+    heroTitleHighlight: {
+        fontSize: 32,
+        fontWeight: "800",
+        color: COLORS.textMuted,
+    },
+    searchBar: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        marginTop: 4,
+        backgroundColor: COLORS.white,
+        borderRadius: 16,
+        paddingLeft: 16,
+        paddingRight: 6,
+        paddingVertical: 6,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
-    detailItem: {
+    searchPlaceholder: {
+        flex: 1,
+        fontSize: 16,
+        color: COLORS.textMuted,
+        marginLeft: 12,
+    },
+    searchButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: COLORS.primary,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    quickActionsContainer: {
+        paddingBottom: 24,
+        gap: 12,
+    },
+    quickActionCard: {
+        width: 140,
+        padding: 16,
+        borderRadius: 20,
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    quickActionIcon: {
+        marginBottom: 12,
+    },
+    quickActionLabel: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: COLORS.text,
+    },
+    quickActionSublabel: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+    },
+    sectionHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: COLORS.text,
+    },
+    viewAllText: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        fontWeight: "600",
+    },
+    trendingContainer: {
+        paddingBottom: 24,
+    },
+    trendingCard: {
+        width: 220,
+        marginRight: 16,
+        borderRadius: 20,
+        overflow: "hidden",
+        backgroundColor: COLORS.white,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    trendingImageContainer: {
+        height: 180,
+        position: "relative",
+    },
+    trendingImagePlaceholder: {
+        flex: 1,
+        backgroundColor: "#1A1A2E",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    trendingEmoji: {
+        fontSize: 48,
+    },
+    ratingBadge: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.95)",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+    },
+    ratingText: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: COLORS.text,
+    },
+    arrowButton: {
+        position: "absolute",
+        bottom: 12,
+        right: 12,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    trendingInfo: {
+        padding: 16,
+    },
+    trendingName: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.white,
+        position: "absolute",
+        bottom: 60,
+        left: 16,
+    },
+    trendingLocation: {
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        marginRight: 16,
-    },
-    details: {
-        fontSize: 13,
-        color: "#4F6DF5",
-        fontWeight: "600",
-    },
-    badge: {
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 8,
-    },
-    badgeText: {
-        color: "white",
-        fontSize: 10,
-        fontWeight: "700",
-        letterSpacing: 0.5,
-    },
-    deleteBtn: {
-        padding: 4,
-        marginLeft: "auto",
-    },
-    emptyState: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 32,
-    },
-    emptyIconContainer: {
-        width: 110,
-        height: 110,
-        borderRadius: 55,
-        backgroundColor: "#E0E7FF",
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 24,
-    },
-    emptyText: {
-        fontSize: 24,
-        fontWeight: "800",
-        color: "#1A2433",
         marginBottom: 8,
     },
-    emptySubtext: {
-        fontSize: 16,
-        color: "#A1AEC6",
-        textAlign: "center",
-        marginBottom: 32,
-        lineHeight: 24,
-        fontWeight: "500",
+    trendingCountry: {
+        fontSize: 14,
+        color: COLORS.textMuted,
     },
-    createTripButton: {
+    trendingPrice: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: COLORS.primary,
+    },
+    tripCard: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#4F6DF5",
-        paddingHorizontal: 28,
-        paddingVertical: 16,
+        backgroundColor: COLORS.white,
         borderRadius: 16,
-        gap: 10,
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    tripIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: COLORS.text,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 12,
+    },
+    tripInfo: {
+        flex: 1,
+    },
+    tripDestination: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: COLORS.text,
+        marginBottom: 4,
+    },
+    tripDates: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+    },
+    tripStatusBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        backgroundColor: COLORS.backgroundDark,
+    },
+    tripStatusCompleted: {
+        backgroundColor: "#E8F5E9",
+    },
+    tripStatusGenerating: {
+        backgroundColor: "#FFF8E1",
+    },
+    tripStatusText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.text,
+        textTransform: "capitalize",
+    },
+    emptyState: {
+        alignItems: "center",
+        paddingVertical: 40,
+    },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: COLORS.text,
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        marginBottom: 24,
+    },
+    createTripButton: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 24,
+        paddingVertical: 14,
+        borderRadius: 12,
     },
     createTripButtonText: {
-        color: "white",
-        fontSize: 17,
+        fontSize: 16,
         fontWeight: "700",
+        color: COLORS.text,
     },
 });
