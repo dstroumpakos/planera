@@ -106,6 +106,26 @@ export const create = authMutation({
 // Internal query to get trip details
 export const getTripDetails = internalQuery({
     args: { tripId: v.id("trips") },
+    returns: v.union(
+        v.null(),
+        v.object({
+            _id: v.id("trips"),
+            _creationTime: v.number(),
+            userId: v.string(),
+            destination: v.string(),
+            origin: v.optional(v.string()),
+            startDate: v.number(),
+            endDate: v.number(),
+            budget: v.union(v.number(), v.string()),
+            travelers: v.number(),
+            interests: v.array(v.string()),
+            skipFlights: v.optional(v.boolean()),
+            skipHotel: v.optional(v.boolean()),
+            preferredFlightTime: v.optional(v.string()),
+            status: v.string(),
+            itinerary: v.optional(v.any()),
+        })
+    ),
     handler: async (ctx, args) => {
         return await ctx.db.get(args.tripId);
     },
@@ -117,16 +137,37 @@ export const updateItinerary = internalMutation({
         itinerary: v.any(),
         status: v.union(v.literal("generating"), v.literal("completed"), v.literal("failed")),
     },
+    returns: v.null(),
     handler: async (ctx, args) => {
         await ctx.db.patch(args.tripId, {
             itinerary: args.itinerary,
             status: args.status,
         });
+        return null;
     },
 });
 
 export const list = authQuery({
     args: {},
+    returns: v.array(
+        v.object({
+            _id: v.id("trips"),
+            _creationTime: v.number(),
+            userId: v.string(),
+            destination: v.string(),
+            origin: v.optional(v.string()),
+            startDate: v.number(),
+            endDate: v.number(),
+            budget: v.union(v.number(), v.string()),
+            travelers: v.number(),
+            interests: v.array(v.string()),
+            skipFlights: v.optional(v.boolean()),
+            skipHotel: v.optional(v.boolean()),
+            preferredFlightTime: v.optional(v.string()),
+            status: v.string(),
+            itinerary: v.optional(v.any()),
+        })
+    ),
     handler: async (ctx) => {
         return await ctx.db
             .query("trips")
