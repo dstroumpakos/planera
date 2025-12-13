@@ -245,11 +245,25 @@ const DESTINATIONS = [
     { city: "Fiji", country: "Fiji", emoji: "🇫🇯" },
 ];
 
+const TRAVEL_TYPES = [
+    { id: "solo", label: "Solo", icon: "person" },
+    { id: "couple", label: "Couple", icon: "heart" },
+    { id: "friends", label: "Friends", icon: "people" },
+    { id: "family", label: "Family", icon: "people" },
+];
+
+const BUDGET_RANGES = [
+    { id: "budget", label: "Budget", range: "$1k - $3k" },
+    { id: "moderate", label: "Moderate", range: "$3k - $7k" },
+    { id: "luxury", label: "Luxury", range: "$7k+" },
+];
+
+const INTERESTS = ["Adventure", "Culinary", "Culture"];
+
 export default function CreateTrip() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
     const userPlan = useQuery(api.users.getPlan);
-    const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
@@ -261,11 +275,13 @@ export default function CreateTrip() {
 
     const [formData, setFormData] = useState({
         destination: "",
-        origin: "",
+        origin: "San Francisco, CA",
         startDate: new Date().getTime(),
-        endDate: new Date().getTime() + 7 * 24 * 60 * 60 * 1000, // Default 1 week
+        endDate: new Date().getTime() + 7 * 24 * 60 * 60 * 1000,
         budget: 2000,
         travelers: 1,
+        travelType: "solo" as string,
+        budgetRange: "moderate" as string,
         interests: [] as string[],
         skipFlights: false,
         skipHotel: false,
@@ -282,7 +298,6 @@ export default function CreateTrip() {
         });
     };
 
-    // Search airports by query (city, country, code, or name)
     const searchAirports = (query: string) => {
         if (!query || query.length < 2) {
             setAirportSuggestions([]);
@@ -296,19 +311,18 @@ export default function CreateTrip() {
             airport.country.toLowerCase().includes(lowerQuery) ||
             airport.code.toLowerCase().includes(lowerQuery) ||
             airport.name.toLowerCase().includes(lowerQuery)
-        ).slice(0, 10); // Limit to 10 results
+        ).slice(0, 10);
         
         setAirportSuggestions(results);
         setShowAirportSuggestions(results.length > 0);
     };
 
     const selectAirport = (airport: typeof AIRPORTS[0]) => {
-        setFormData({ ...formData, origin: `${airport.city} (${airport.code})` });
+        setFormData({ ...formData, origin: `${airport.city}, ${airport.code}` });
         setShowAirportSuggestions(false);
         setAirportSuggestions([]);
     };
 
-    // Search destinations by query
     const searchDestinations = (query: string) => {
         if (query.length < 2) {
             setShowDestinationSuggestions(false);
@@ -326,7 +340,6 @@ export default function CreateTrip() {
         setShowDestinationSuggestions(filtered.length > 0);
     };
 
-    // Select a destination from suggestions
     const selectDestination = (destination: typeof DESTINATIONS[0]) => {
         setFormData({ ...formData, destination: `${destination.city}, ${destination.country}` });
         setShowDestinationSuggestions(false);
@@ -344,21 +357,18 @@ export default function CreateTrip() {
         
         const marked: any = {};
         
-        // Mark start date
         marked[startStr] = {
             startingDay: true,
             color: '#FFE500',
             textColor: 'white',
         };
         
-        // Mark end date
         marked[endStr] = {
             endingDay: true,
             color: '#FFE500',
             textColor: 'white',
         };
         
-        // Mark dates in between
         const start = new Date(formData.startDate);
         const end = new Date(formData.endDate);
         const current = new Date(start);
@@ -380,7 +390,6 @@ export default function CreateTrip() {
         const selectedTimestamp = new Date(day.dateString).getTime();
         
         if (selectingDate === 'start') {
-            // If selected start is after current end, adjust end
             if (selectedTimestamp >= formData.endDate) {
                 setFormData({
                     ...formData,
@@ -391,7 +400,6 @@ export default function CreateTrip() {
                 setFormData({ ...formData, startDate: selectedTimestamp });
             }
         } else {
-            // If selected end is before current start, don't allow
             if (selectedTimestamp <= formData.startDate) {
                 Alert.alert("Invalid Date", "End date must be after start date");
                 return;
@@ -401,41 +409,22 @@ export default function CreateTrip() {
         setShowCalendar(false);
     };
 
-    const handleNext = () => {
-        if (step === 1) {
-            if (!formData.destination) {
-                Alert.alert("Required", "Please enter a destination");
-                return;
-            }
-            if (!formData.skipFlights && !formData.origin) {
-                Alert.alert("Required", "Please enter where you are flying from");
-                return;
-            }
-        }
-        if (step < 4) {
-            setStep(step + 1);
-        } else {
-            handleSubmit();
-        }
-    };
-
-    const handleBack = () => {
-        if (step > 1) {
-            setStep(step - 1);
-        } else {
-            router.back();
-        }
-    };
-
     const handleSubmit = async () => {
-        // Check if user has credits or subscription
+        if (!formData.destination) {
+            Alert.alert("Required", "Please enter a destination");
+            return;
+        }
+        if (!formData.skipFlights && !formData.origin) {
+            Alert.alert("Required", "Please enter where you are flying from");
+            return;
+        }
+
         const isSubscriptionActive = userPlan?.isSubscriptionActive;
         const tripCredits = userPlan?.tripCredits ?? 0;
         const tripsGenerated = userPlan?.tripsGenerated ?? 0;
         const hasFreeTrial = tripsGenerated < 1;
 
         if (!isSubscriptionActive && tripCredits <= 0 && !hasFreeTrial) {
-            // Redirect to subscription page with message
             if (Platform.OS !== "web") {
                 Alert.alert(
                     "No Trip Credits",
@@ -465,7 +454,6 @@ export default function CreateTrip() {
                 skipHotel: formData.skipHotel,
                 preferredFlightTime: formData.skipFlights ? undefined : formData.preferredFlightTime,
             });
-            // Wait a bit to show the animation
             setTimeout(() => {
                 router.replace(`/trip/${tripId}`);
             }, 2000);
@@ -483,8 +471,6 @@ export default function CreateTrip() {
             setFormData({ ...formData, interests: [...formData.interests, interest] });
         }
     };
-
-    const tripDuration = Math.round((formData.endDate - formData.startDate) / (24 * 60 * 60 * 1000));
 
     if (showLoadingScreen) {
         return (
@@ -504,31 +490,52 @@ export default function CreateTrip() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Step {step} of 4</Text>
-                <View style={{ width: 40 }} />
-            </View>
-
-            <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${(step / 4) * 100}%` }]} />
-            </View>
-
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-                {step === 1 && (
-                    <View>
-                        <Text style={styles.question}>Where is your adventure?</Text>
-                        
-                        <View style={{ zIndex: 200 }}>
-                            <Text style={styles.label}>Destination</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons name="location-outline" size={20} color="#FFE500" style={styles.inputIcon} />
+                {/* Header */}
+                <View style={styles.headerSection}>
+                    <View style={styles.headerTop}>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                        </TouchableOpacity>
+                        <View style={styles.logoContainer}>
+                            <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
+                            <Text style={styles.headerLogoText}>PLANERA</Text>
+                        </View>
+                        <TouchableOpacity style={styles.settingsButton}>
+                            <Ionicons name="settings-outline" size={24} color="#9B9B9B" />
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.titleSection}>
+                        <Text style={styles.titleMain}>Design your</Text>
+                        <Text style={styles.titleHighlight}>perfect escape</Text>
+                        <Text style={styles.subtitle}>Let AI craft your itinerary.</Text>
+                    </View>
+                </View>
+
+                {/* From/To Section */}
+                <View style={styles.card}>
+                    <View style={styles.locationSection}>
+                        <View style={styles.locationItem}>
+                            <Text style={styles.locationLabel}>FROM</Text>
+                            <View style={styles.locationContent}>
+                                <Ionicons name="location" size={24} color="#1A1A1A" />
+                                <Text style={styles.locationText}>{formData.origin}</Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity style={styles.swapButton}>
+                            <Ionicons name="swap-vertical" size={20} color="#9B9B9B" />
+                        </TouchableOpacity>
+
+                        <View style={styles.locationItem}>
+                            <Text style={styles.locationLabel}>TO</Text>
+                            <View style={styles.locationContent}>
+                                <Ionicons name="location" size={24} color="#FF4444" />
                                 <TextInput
-                                    style={styles.input}
-                                    placeholder="Search city or country..."
-                                    placeholderTextColor="#90A4AE"
+                                    style={styles.destinationInput}
+                                    placeholder="Where to?"
+                                    placeholderTextColor="#9B9B9B"
                                     value={formData.destination}
                                     onChangeText={(text) => {
                                         setFormData({ ...formData, destination: text });
@@ -539,397 +546,205 @@ export default function CreateTrip() {
                                             searchDestinations(formData.destination);
                                         }
                                     }}
-                                    autoFocus
                                 />
-                                {formData.destination.length > 0 && (
-                                    <TouchableOpacity 
-                                        onPress={() => {
-                                            setFormData({ ...formData, destination: "" });
-                                            setShowDestinationSuggestions(false);
-                                        }}
-                                        style={styles.clearButton}
-                                    >
-                                        <Ionicons name="close-circle" size={20} color="#90A4AE" />
-                                    </TouchableOpacity>
-                                )}
                             </View>
                             
-                            {/* Destination Suggestions Dropdown */}
                             {showDestinationSuggestions && destinationSuggestions.length > 0 && (
                                 <View style={styles.suggestionsContainer}>
-                                    <ScrollView 
-                                        nestedScrollEnabled={true}
-                                        keyboardShouldPersistTaps="handled"
-                                        showsVerticalScrollIndicator={true}
-                                    >
+                                    <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
                                         {destinationSuggestions.map((dest, index) => (
                                             <TouchableOpacity
                                                 key={`${dest.city}-${dest.country}-${index}`}
-                                                style={[
-                                                    styles.suggestionItem,
-                                                    index === destinationSuggestions.length - 1 && styles.suggestionItemLast
-                                                ]}
+                                                style={styles.suggestionItem}
                                                 onPress={() => selectDestination(dest)}
                                             >
-                                                <View style={styles.suggestionIcon}>
-                                                    <Text style={{ fontSize: 18 }}>{dest.emoji}</Text>
-                                                </View>
-                                                <View style={styles.suggestionTextContainer}>
-                                                    <Text style={styles.suggestionCity}>
-                                                        {dest.city}
-                                                    </Text>
-                                                    <Text style={styles.suggestionDetails}>
-                                                        {dest.country}
-                                                    </Text>
+                                                <Text style={{ fontSize: 18, marginRight: 12 }}>{dest.emoji}</Text>
+                                                <View>
+                                                    <Text style={styles.suggestionCity}>{dest.city}</Text>
+                                                    <Text style={styles.suggestionDetails}>{dest.country}</Text>
                                                 </View>
                                             </TouchableOpacity>
                                         ))}
                                     </ScrollView>
                                 </View>
                             )}
-                            
-                            <Text style={styles.helperText}>Type to search popular destinations.</Text>
                         </View>
-                        
-                        {/* Skip Flights Toggle */}
-                        <View style={styles.skipFlightsContainer}>
-                            <View style={styles.skipFlightsTextContainer}>
-                                <Ionicons name="airplane" size={20} color="#FFE500" />
-                                <Text style={styles.skipFlightsText}>I already have flights booked</Text>
-                            </View>
-                            <Switch
-                                value={formData.skipFlights}
-                                onValueChange={(value) => setFormData({ ...formData, skipFlights: value })}
-                                trackColor={{ false: "#E8E6E1", true: "#FFE500" }}
-                                thumbColor={formData.skipFlights ? "#FFE500" : "#E6CF00"}
-                                ios_backgroundColor="#E8E6E1"
-                            />
-                        </View>
-                        
-                        {!formData.skipFlights && (
-                            <>
-                                <View style={{ zIndex: 100 }}>
-                                    <Text style={[styles.label, { marginTop: 24 }]}>Flying from</Text>
-                                    <View style={styles.inputContainer}>
-                                        <Ionicons name="airplane-outline" size={20} color="#FFE500" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Search city, country or airport..."
-                                            placeholderTextColor="#90A4AE"
-                                            value={formData.origin}
-                                            onChangeText={(text) => {
-                                                setFormData({ ...formData, origin: text });
-                                                searchAirports(text);
-                                            }}
-                                            onFocus={() => {
-                                                if (formData.origin.length >= 2) {
-                                                    searchAirports(formData.origin);
-                                                }
-                                            }}
-                                        />
-                                        {formData.origin.length > 0 && (
-                                            <TouchableOpacity 
-                                                onPress={() => {
-                                                    setFormData({ ...formData, origin: "" });
-                                                    setShowAirportSuggestions(false);
-                                                }}
-                                                style={styles.clearButton}
-                                            >
-                                                <Ionicons name="close-circle" size={20} color="#90A4AE" />
-                                            </TouchableOpacity>
-                                        )}
-                                    </View>
-                                    
-                                    {/* Airport Suggestions Dropdown */}
-                                    {showAirportSuggestions && airportSuggestions.length > 0 && (
-                                        <View style={styles.suggestionsContainer}>
-                                            <ScrollView 
-                                                nestedScrollEnabled={true}
-                                                keyboardShouldPersistTaps="handled"
-                                                showsVerticalScrollIndicator={true}
-                                            >
-                                                {airportSuggestions.map((airport, index) => (
-                                                    <TouchableOpacity
-                                                        key={`${airport.code}-${index}`}
-                                                        style={[
-                                                            styles.suggestionItem,
-                                                            index === airportSuggestions.length - 1 && styles.suggestionItemLast
-                                                        ]}
-                                                        onPress={() => selectAirport(airport)}
-                                                    >
-                                                        <View style={styles.suggestionIcon}>
-                                                            <Ionicons name="airplane" size={16} color="#FFE500" />
-                                                        </View>
-                                                        <View style={styles.suggestionTextContainer}>
-                                                            <Text style={styles.suggestionCity}>
-                                                                {airport.city} ({airport.code})
-                                                            </Text>
-                                                            <Text style={styles.suggestionDetails}>
-                                                                {airport.name} • {airport.country}
-                                                            </Text>
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </ScrollView>
-                                        </View>
-                                    )}
-                                    
-                                    <Text style={styles.helperText}>Type to search airports by city, country, or code.</Text>
-                                </View>
-                                
-                                {/* Flight Time Preference */}
-                                <Text style={[styles.label, { marginTop: 24 }]}>Preferred flight time</Text>
-                                <View style={styles.flightTimeContainer}>
-                                    {[
-                                        { value: "any", label: "Any Time", icon: "time-outline" },
-                                        { value: "morning", label: "Morning", icon: "sunny-outline" },
-                                        { value: "afternoon", label: "Afternoon", icon: "partly-sunny-outline" },
-                                        { value: "evening", label: "Evening", icon: "moon-outline" },
-                                        { value: "night", label: "Night", icon: "cloudy-night-outline" },
-                                    ].map((option) => (
-                                        <TouchableOpacity
-                                            key={option.value}
-                                            style={[
-                                                styles.flightTimeOption,
-                                                formData.preferredFlightTime === option.value && styles.flightTimeOptionSelected,
-                                            ]}
-                                            onPress={() => setFormData({ ...formData, preferredFlightTime: option.value as any })}
-                                        >
-                                            <Ionicons 
-                                                name={option.icon as any} 
-                                                size={20} 
-                                                color={formData.preferredFlightTime === option.value ? "#1A1A1A" : "#FFE500"} 
-                                            />
-                                            <Text style={[
-                                                styles.flightTimeText,
-                                                formData.preferredFlightTime === option.value && styles.flightTimeTextSelected,
-                                            ]}>
-                                                {option.label}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                                <Text style={styles.helperText}>We'll show you multiple flight options with the best prices.</Text>
-                            </>
-                        )}
-                        
-                        {formData.skipFlights && (
-                            <View style={styles.skipFlightsInfo}>
-                                <Ionicons name="information-circle-outline" size={18} color="#FFE500" />
-                                <Text style={styles.skipFlightsInfoText}>
-                                    We'll skip flight recommendations and focus on hotels, activities, and restaurants for your trip.
+                    </View>
+                </View>
+
+                {/* Dates Section */}
+                <View style={styles.card}>
+                    <Text style={styles.sectionLabel}>DATES</Text>
+                    <TouchableOpacity 
+                        style={styles.dateButton}
+                        onPress={() => {
+                            setSelectingDate('start');
+                            setShowCalendar(true);
+                        }}
+                    >
+                        <Ionicons name="calendar-outline" size={24} color="#1A1A1A" />
+                        <Text style={styles.dateButtonText}>Select Dates</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.dateRange}>
+                        {formatDate(formData.startDate)} - {formatDate(formData.endDate)}
+                    </Text>
+                </View>
+
+                {/* Who's Going Section */}
+                <View style={styles.card}>
+                    <Text style={styles.sectionLabel}>WHO'S GOING?</Text>
+                    <View style={styles.travelTypeContainer}>
+                        {TRAVEL_TYPES.map((type) => (
+                            <TouchableOpacity
+                                key={type.id}
+                                style={[
+                                    styles.travelTypeButton,
+                                    formData.travelType === type.id && styles.travelTypeButtonActive,
+                                ]}
+                                onPress={() => setFormData({ ...formData, travelType: type.id })}
+                            >
+                                <Ionicons 
+                                    name={type.icon as any} 
+                                    size={24} 
+                                    color={formData.travelType === type.id ? "white" : "#1A1A1A"}
+                                />
+                                <Text style={[
+                                    styles.travelTypeText,
+                                    formData.travelType === type.id && styles.travelTypeTextActive,
+                                ]}>
+                                    {type.label}
                                 </Text>
-                            </View>
-                        )}
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                )}
+                </View>
 
-                {step === 2 && (
-                    <View>
-                        <Text style={styles.question}>When are you traveling?</Text>
-                        
-                        {/* Date Selection Cards */}
-                        <View style={styles.dateCardsContainer}>
-                            <TouchableOpacity 
-                                style={[styles.dateCard, selectingDate === 'start' && styles.dateCardActive]}
-                                onPress={() => {
-                                    setSelectingDate('start');
-                                    setShowCalendar(true);
-                                }}
-                            >
-                                <View style={styles.dateCardIcon}>
-                                    <Ionicons name="airplane" size={20} color="#FFE500" />
-                                </View>
-                                <Text style={styles.dateCardLabel}>DEPARTURE</Text>
-                                <Text style={styles.dateCardValue}>{formatDate(formData.startDate)}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity 
-                                style={[styles.dateCard, selectingDate === 'end' && styles.dateCardActive]}
-                                onPress={() => {
-                                    setSelectingDate('end');
-                                    setShowCalendar(true);
-                                }}
-                            >
-                                <View style={styles.dateCardIcon}>
-                                    <Ionicons name="airplane" size={20} color="#FFE500" style={{ transform: [{ rotate: '180deg' }] }} />
-                                </View>
-                                <Text style={styles.dateCardLabel}>RETURN</Text>
-                                <Text style={styles.dateCardValue}>{formatDate(formData.endDate)}</Text>
-                            </TouchableOpacity>
+                {/* Budget Range Section */}
+                <View style={styles.card}>
+                    <View style={styles.budgetHeader}>
+                        <Text style={styles.sectionLabel}>Budget Range</Text>
+                        <View style={styles.budgetBadge}>
+                            <Text style={styles.budgetBadgeText}>$1k - $3k</Text>
                         </View>
-
-                        {/* Trip Duration Summary */}
-                        <View style={styles.durationSummary}>
-                            <Ionicons name="time-outline" size={20} color="#FFE500" />
-                            <Text style={styles.durationText}>
-                                {tripDuration} {tripDuration === 1 ? 'day' : 'days'} trip
-                            </Text>
-                        </View>
-
-                        {/* Calendar Modal */}
-                        <Modal
-                            visible={showCalendar}
-                            animationType="slide"
-                            transparent={true}
-                            onRequestClose={() => setShowCalendar(false)}
-                        >
-                            <View style={styles.modalOverlay}>
-                                <View style={styles.calendarModal}>
-                                    <View style={styles.calendarHeader}>
-                                        <Text style={styles.calendarTitle}>
-                                            Select {selectingDate === 'start' ? 'Departure' : 'Return'} Date
-                                        </Text>
-                                        <TouchableOpacity onPress={() => setShowCalendar(false)}>
-                                            <Ionicons name="close" size={24} color="#1A1A1A" />
-                                        </TouchableOpacity>
-                                    </View>
-                                    
-                                    <Calendar
-                                        current={formatDateForCalendar(selectingDate === 'start' ? formData.startDate : formData.endDate)}
-                                        minDate={selectingDate === 'start' ? formatDateForCalendar(Date.now()) : formatDateForCalendar(formData.startDate + 24 * 60 * 60 * 1000)}
-                                        onDayPress={handleDayPress}
-                                        markingType={'period'}
-                                        markedDates={getMarkedDates()}
-                                        theme={{
-                                            backgroundColor: '#ffffff',
-                                            calendarBackground: '#ffffff',
-                                            textSectionTitleColor: '#FFE500',
-                                            selectedDayBackgroundColor: '#FFE500',
-                                            selectedDayTextColor: '#1A1A1A',
-                                            todayTextColor: '#FFE500',
-                                            dayTextColor: '#1A1A1A',
-                                            textDisabledColor: '#E8E6E1',
-                                            dotColor: '#FFE500',
-                                            selectedDotColor: '#1A1A1A',
-                                            arrowColor: '#FFE500',
-                                            monthTextColor: '#1A1A1A',
-                                            textDayFontWeight: '500',
-                                            textMonthFontWeight: '700',
-                                            textDayHeaderFontWeight: '600',
-                                            textDayFontSize: 16,
-                                            textMonthFontSize: 18,
-                                            textDayHeaderFontSize: 14,
-                                        }}
-                                        style={styles.calendar}
-                                    />
-                                    
-                                    <View style={styles.calendarLegend}>
-                                        <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#FFE500' }]} />
-                                            <Text style={styles.legendText}>Selected dates</Text>
-                                        </View>
-                                        <View style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: '#FFF8E1' }]} />
-                                            <Text style={styles.legendText}>Trip duration</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            </View>
-                        </Modal>
                     </View>
-                )}
-
-                {step === 3 && (
-                    <View>
-                        <Text style={styles.question}>Travel Style</Text>
-                        
-                        <Text style={styles.label}>Budget (€)</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="wallet-outline" size={20} color="#FFE500" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g. 2000"
-                                placeholderTextColor="#90A4AE"
-                                value={formData.budget.toString()}
-                                onChangeText={(text) => {
-                                    const numValue = parseInt(text) || 0;
-                                    setFormData({ ...formData, budget: numValue });
-                                }}
-                                keyboardType="numeric"
-                            />
-                        </View>
-                        <Text style={styles.helperText}>Enter your total budget in euros.</Text>
-
-                        <Text style={[styles.label, { marginTop: 24 }]}>Travelers</Text>
-                        <View style={styles.row}>
-                            <TouchableOpacity 
-                                style={styles.counterBtn}
-                                onPress={() => setFormData({ ...formData, travelers: Math.max(1, formData.travelers - 1) })}
+                    <View style={styles.budgetButtonsContainer}>
+                        {BUDGET_RANGES.map((range) => (
+                            <TouchableOpacity
+                                key={range.id}
+                                style={[
+                                    styles.budgetButton,
+                                    formData.budgetRange === range.id && styles.budgetButtonActive,
+                                ]}
+                                onPress={() => setFormData({ ...formData, budgetRange: range.id })}
                             >
-                                <Ionicons name="remove" size={24} color="#FFE500" />
-                            </TouchableOpacity>
-                            <Text style={styles.counterText}>{formData.travelers}</Text>
-                            <TouchableOpacity 
-                                style={styles.counterBtn}
-                                onPress={() => setFormData({ ...formData, travelers: formData.travelers + 1 })}
-                            >
-                                <Ionicons name="add" size={24} color="#FFE500" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Skip Hotel Toggle */}
-                        <View style={[styles.skipFlightsContainer, { marginTop: 24 }]}>
-                            <View style={styles.skipFlightsTextContainer}>
-                                <Ionicons name="bed" size={20} color="#FFE500" />
-                                <Text style={styles.skipFlightsText}>I already have accommodation</Text>
-                            </View>
-                            <Switch
-                                value={formData.skipHotel}
-                                onValueChange={(value) => setFormData({ ...formData, skipHotel: value })}
-                                trackColor={{ false: "#FFF8E1", true: "#FFE500" }}
-                                thumbColor={formData.skipHotel ? "#E6CF00" : "#E8E6E1"}
-                                ios_backgroundColor="#FFF8E1"
-                            />
-                        </View>
-                        
-                        {formData.skipHotel && (
-                            <View style={styles.skipFlightsInfo}>
-                                <Ionicons name="information-circle-outline" size={18} color="#FFE500" />
-                                <Text style={styles.skipFlightsInfoText}>
-                                    We'll skip hotel recommendations and focus on activities and restaurants for your trip.
+                                <Text style={[
+                                    styles.budgetButtonText,
+                                    formData.budgetRange === range.id && styles.budgetButtonTextActive,
+                                ]}>
+                                    {range.label}
                                 </Text>
-                            </View>
-                        )}
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                )}
+                </View>
 
-                {step === 4 && (
-                    <View>
-                        <Text style={styles.question}>What are you interested in?</Text>
-                        <View style={styles.tagsContainer}>
-                            {["Food", "History", "Art", "Nature", "Adventure", "Relaxation", "Nightlife", "Shopping", "Culture", "Sports"].map((interest) => (
-                                <TouchableOpacity
-                                    key={interest}
-                                    style={[styles.tag, formData.interests.includes(interest) && styles.tagSelected]}
-                                    onPress={() => toggleInterest(interest)}
-                                >
-                                    <Text style={[styles.tagText, formData.interests.includes(interest) && styles.tagTextSelected]}>
-                                        {interest}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                {/* Travel Style Section */}
+                <View style={styles.card}>
+                    <Text style={styles.sectionLabel}>Travel Style</Text>
+                    <View style={styles.interestsContainer}>
+                        {INTERESTS.map((interest) => (
+                            <TouchableOpacity
+                                key={interest}
+                                style={[
+                                    styles.interestTag,
+                                    formData.interests.includes(interest) && styles.interestTagActive,
+                                ]}
+                                onPress={() => toggleInterest(interest)}
+                            >
+                                <Ionicons 
+                                    name={interest === "Adventure" ? "trail-sign" : interest === "Culinary" ? "restaurant" : "library"} 
+                                    size={20} 
+                                    color={formData.interests.includes(interest) ? "white" : "#FFE500"}
+                                />
+                                <Text style={[
+                                    styles.interestTagText,
+                                    formData.interests.includes(interest) && styles.interestTagTextActive,
+                                ]}>
+                                    {interest}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                )}
-            </ScrollView>
+                </View>
 
-            <View style={styles.footer}>
+                {/* Generate Button */}
                 <TouchableOpacity 
-                    style={[styles.nextButton, loading && styles.disabledButton]} 
-                    onPress={handleNext}
+                    style={[styles.generateButton, loading && styles.disabledButton]}
+                    onPress={handleSubmit}
                     disabled={loading}
                 >
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
                         <>
-                            <Text style={styles.nextButtonText}>{step === 4 ? "Generate Trip" : "Next"}</Text>
-                            <Ionicons name={step === 4 ? "sparkles" : "arrow-forward"} size={20} color="white" />
+                            <Text style={styles.generateButtonText}>Generate with Planera AI</Text>
+                            <View style={styles.sparkleIcon}>
+                                <Ionicons name="sparkles" size={20} color="#1A1A1A" />
+                            </View>
                         </>
                     )}
                 </TouchableOpacity>
-            </View>
+
+                {/* Calendar Modal */}
+                <Modal
+                    visible={showCalendar}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setShowCalendar(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.calendarModal}>
+                            <View style={styles.calendarHeader}>
+                                <Text style={styles.calendarTitle}>
+                                    Select {selectingDate === 'start' ? 'Departure' : 'Return'} Date
+                                </Text>
+                                <TouchableOpacity onPress={() => setShowCalendar(false)}>
+                                    <Ionicons name="close" size={24} color="#1A1A1A" />
+                                </TouchableOpacity>
+                            </View>
+                            
+                            <Calendar
+                                current={formatDateForCalendar(selectingDate === 'start' ? formData.startDate : formData.endDate)}
+                                minDate={selectingDate === 'start' ? formatDateForCalendar(Date.now()) : formatDateForCalendar(formData.startDate + 24 * 60 * 60 * 1000)}
+                                onDayPress={handleDayPress}
+                                markingType={'period'}
+                                markedDates={getMarkedDates()}
+                                theme={{
+                                    backgroundColor: '#ffffff',
+                                    calendarBackground: '#ffffff',
+                                    textSectionTitleColor: '#FFE500',
+                                    selectedDayBackgroundColor: '#FFE500',
+                                    selectedDayTextColor: '#1A1A1A',
+                                    todayTextColor: '#FFE500',
+                                    dayTextColor: '#1A1A1A',
+                                    textDisabledColor: '#E8E6E1',
+                                    dotColor: '#FFE500',
+                                    selectedDotColor: '#1A1A1A',
+                                    arrowColor: '#FFE500',
+                                    monthTextColor: '#1A1A1A',
+                                    textDayFontWeight: '500',
+                                    textMonthFontWeight: '700',
+                                    textDayHeaderFontWeight: '600',
+                                    textDayFontSize: 16,
+                                    textMonthFontSize: 18,
+                                    textDayHeaderFontSize: 14,
+                                }}
+                                style={styles.calendar}
+                            />
+                        </View>
+                    </View>
+                </Modal>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -939,20 +754,19 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#FAF9F6",
     },
-    header: {
+    content: {
+        paddingBottom: 40,
+    },
+    headerSection: {
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 24,
+    },
+    headerTop: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: "white",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E8E6E1",
-        shadowColor: "#1A1A1A",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        marginBottom: 24,
     },
     backButton: {
         width: 44,
@@ -962,129 +776,261 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    headerTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: "#1A1A1A",
-        letterSpacing: 0.5,
-    },
-    progressBar: {
-        height: 5,
-        backgroundColor: "#E8E6E1",
-        width: "100%",
-    },
-    progressFill: {
-        height: "100%",
-        backgroundColor: "#FFE500",
-    },
-    content: {
-        padding: 24,
-    },
-    question: {
-        fontSize: 28,
-        fontWeight: "800",
-        color: "#1A1A1A",
-        marginBottom: 32,
-    },
-    inputContainer: {
+    logoContainer: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "white",
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        marginBottom: 8,
+        gap: 8,
     },
-    inputIcon: {
-        marginRight: 12,
+    headerLogo: {
+        width: 28,
+        height: 28,
     },
-    input: {
-        flex: 1,
+    headerLogoText: {
         fontSize: 16,
-        paddingVertical: 18,
-        color: "#1A1A1A",
-    },
-    helperText: {
-        fontSize: 14,
-        color: "#9B9B9B",
-        marginTop: 4,
-        fontWeight: "500",
-    },
-    label: {
-        fontSize: 12,
         fontWeight: "700",
-        marginBottom: 10,
-        color: "#9B9B9B",
-        textTransform: "uppercase",
+        color: "#1A1A1A",
         letterSpacing: 1,
     },
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 24,
-        marginBottom: 16,
-    },
-    counterBtn: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
-        backgroundColor: "white",
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
+    settingsButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: "#FFF8E1",
         justifyContent: "center",
         alignItems: "center",
     },
-    counterText: {
-        fontSize: 36,
+    titleSection: {
+        marginBottom: 8,
+    },
+    titleMain: {
+        fontSize: 32,
+        fontWeight: "400",
+        color: "#1A1A1A",
+        lineHeight: 40,
+    },
+    titleHighlight: {
+        fontSize: 40,
         fontWeight: "800",
         color: "#1A1A1A",
+        lineHeight: 48,
+        marginBottom: 8,
+        borderBottomWidth: 4,
+        borderBottomColor: "#FFE500",
+        paddingBottom: 4,
+        alignSelf: "flex-start",
     },
-    tagsContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
+    subtitle: {
+        fontSize: 16,
+        color: "#9B9B9B",
+        fontWeight: "500",
+    },
+    card: {
+        backgroundColor: "white",
+        borderRadius: 20,
+        padding: 20,
+        marginHorizontal: 20,
+        marginBottom: 16,
+        shadowColor: "#1A1A1A",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    sectionLabel: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#9B9B9B",
+        letterSpacing: 1,
+        marginBottom: 12,
+        textTransform: "uppercase",
+    },
+    locationSection: {
         gap: 12,
     },
-    tag: {
-        paddingHorizontal: 20,
-        paddingVertical: 14,
+    locationItem: {
+        gap: 8,
+    },
+    locationLabel: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#9B9B9B",
+        letterSpacing: 1,
+        textTransform: "uppercase",
+    },
+    locationContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    locationText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    destinationInput: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        padding: 0,
+    },
+    swapButton: {
+        alignSelf: "center",
+        padding: 8,
+    },
+    suggestionsContainer: {
+        backgroundColor: "#FFF8E1",
+        borderRadius: 12,
+        marginTop: 8,
+        maxHeight: 200,
+        overflow: "hidden",
+    },
+    suggestionItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: "#F5F5F3",
+    },
+    suggestionCity: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    suggestionDetails: {
+        fontSize: 13,
+        color: "#9B9B9B",
+        marginTop: 2,
+    },
+    dateButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        backgroundColor: "#FFF8E1",
+        borderRadius: 14,
+        marginBottom: 12,
+    },
+    dateButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    dateRange: {
+        fontSize: 14,
+        color: "#9B9B9B",
+        fontWeight: "500",
+    },
+    travelTypeContainer: {
+        flexDirection: "row",
+        gap: 12,
+    },
+    travelTypeButton: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 16,
+        borderRadius: 16,
+        backgroundColor: "#FFF8E1",
+        borderWidth: 2,
+        borderColor: "#E8E6E1",
+    },
+    travelTypeButtonActive: {
+        backgroundColor: "#1A1A1A",
+        borderColor: "#1A1A1A",
+    },
+    travelTypeText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        marginTop: 8,
+    },
+    travelTypeTextActive: {
+        color: "white",
+    },
+    budgetHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    budgetBadge: {
+        backgroundColor: "#FFF8E1",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    budgetBadgeText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#1A1A1A",
+    },
+    budgetButtonsContainer: {
+        flexDirection: "row",
+        gap: 12,
+    },
+    budgetButton: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
         borderRadius: 14,
         backgroundColor: "white",
         borderWidth: 2,
         borderColor: "#E8E6E1",
+        alignItems: "center",
     },
-    tagSelected: {
+    budgetButtonActive: {
+        backgroundColor: "#1A1A1A",
+        borderColor: "#1A1A1A",
+    },
+    budgetButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    budgetButtonTextActive: {
+        color: "white",
+    },
+    interestsContainer: {
+        flexDirection: "row",
+        gap: 12,
+        flexWrap: "wrap",
+    },
+    interestTag: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 14,
+        backgroundColor: "#FFF8E1",
+        borderWidth: 2,
+        borderColor: "#FFE500",
+    },
+    interestTagActive: {
         backgroundColor: "#FFE500",
         borderColor: "#FFE500",
     },
-    tagText: {
-        fontSize: 16,
-        color: "#9B9B9B",
+    interestTagText: {
+        fontSize: 14,
         fontWeight: "600",
-    },
-    tagTextSelected: {
         color: "#1A1A1A",
-        fontWeight: "700",
     },
-    footer: {
-        padding: 24,
-        backgroundColor: "white",
-        borderTopWidth: 1,
-        borderTopColor: "#E8E6E1",
-        shadowColor: "#FFE500",
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 6,
+    interestTagTextActive: {
+        color: "#1A1A1A",
     },
-    nextButton: {
-        backgroundColor: "#FFE500",
-        paddingVertical: 18,
-        borderRadius: 16,
+    generateButton: {
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        flexDirection: "row",
-        gap: 10,
+        gap: 12,
+        marginHorizontal: 20,
+        marginTop: 24,
+        paddingVertical: 18,
+        backgroundColor: "#1A1A1A",
+        borderRadius: 18,
         shadowColor: "#FFE500",
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
@@ -1094,10 +1040,18 @@ const styles = StyleSheet.create({
     disabledButton: {
         opacity: 0.7,
     },
-    nextButtonText: {
-        color: "#1A1A1A",
+    generateButtonText: {
         fontSize: 17,
         fontWeight: "700",
+        color: "white",
+    },
+    sparkleIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: "#FFE500",
+        justifyContent: "center",
+        alignItems: "center",
     },
     loadingContainer: {
         flex: 1,
@@ -1125,66 +1079,6 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         fontWeight: "500",
     },
-    // Date Picker Styles
-    dateCardsContainer: {
-        flexDirection: "row",
-        gap: 12,
-        marginBottom: 24,
-    },
-    dateCard: {
-        flex: 1,
-        backgroundColor: "white",
-        borderRadius: 18,
-        padding: 18,
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
-        shadowColor: "#1A1A1A",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-    dateCardActive: {
-        borderColor: "#FFE500",
-        borderWidth: 3,
-    },
-    dateCardIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        backgroundColor: "#FFF8E1",
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    dateCardLabel: {
-        fontSize: 11,
-        fontWeight: "700",
-        color: "#9B9B9B",
-        letterSpacing: 1,
-        marginBottom: 4,
-    },
-    dateCardValue: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#1A1A1A",
-    },
-    durationSummary: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#FFF8E1",
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        borderRadius: 14,
-        gap: 10,
-    },
-    durationText: {
-        fontSize: 17,
-        fontWeight: "700",
-        color: "#1A1A1A",
-    },
-    // Calendar Modal Styles
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(26, 26, 26, 0.2)",
@@ -1211,150 +1105,5 @@ const styles = StyleSheet.create({
     },
     calendar: {
         marginHorizontal: 10,
-    },
-    calendarLegend: {
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 24,
-        paddingTop: 16,
-        paddingHorizontal: 20,
-    },
-    legendItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    legendDot: {
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-    },
-    legendText: {
-        fontSize: 13,
-        color: "#9B9B9B",
-        fontWeight: "500",
-    },
-    // Skip Flights Toggle Styles
-    skipFlightsContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "white",
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        marginTop: 20,
-    },
-    skipFlightsTextContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-    },
-    skipFlightsText: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#1A1A1A",
-    },
-    skipFlightsInfo: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        backgroundColor: "#FFF8E1",
-        borderRadius: 12,
-        padding: 14,
-        marginTop: 16,
-        gap: 10,
-    },
-    skipFlightsInfoText: {
-        flex: 1,
-        fontSize: 13,
-        color: "#1A1A1A",
-        lineHeight: 18,
-    },
-    // Flight Time Preference Styles
-    flightTimeContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10,
-    },
-    flightTimeOption: {
-        flexDirection: "row",
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        borderRadius: 12,
-        backgroundColor: "white",
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-    },
-    flightTimeOptionSelected: {
-        backgroundColor: "#FFE500",
-        borderColor: "#FFE500",
-    },
-    flightTimeText: {
-        fontSize: 13,
-        color: "#1A1A1A",
-        fontWeight: "600",
-    },
-    flightTimeTextSelected: {
-        color: "#1A1A1A",
-        fontWeight: "700",
-    },
-    // Airport Suggestions Styles
-    clearButton: {
-        padding: 4,
-    },
-    suggestionsContainer: {
-        backgroundColor: "white",
-        borderRadius: 16,
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
-        marginTop: 8,
-        maxHeight: 280,
-        overflow: "hidden",
-        shadowColor: "#1A1A1A",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 5,
-        zIndex: 1000,
-        position: "relative",
-    },
-    suggestionItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#F5F5F3",
-    },
-    suggestionItemLast: {
-        borderBottomWidth: 0,
-    },
-    suggestionIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        backgroundColor: "#FFF8E1",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 12,
-    },
-    suggestionTextContainer: {
-        flex: 1,
-    },
-    suggestionCity: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#1A1A1A",
-        marginBottom: 2,
-    },
-    suggestionDetails: {
-        fontSize: 13,
-        color: "#9B9B9B",
-        fontWeight: "500",
     },
 });
