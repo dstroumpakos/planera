@@ -248,19 +248,6 @@ const DESTINATIONS = [
     { city: "Fiji", country: "Fiji", emoji: "🇫🇯" },
 ];
 
-const TRAVEL_TYPES = [
-    { id: "solo", label: "Solo", icon: "person" },
-    { id: "couple", label: "Couple", icon: "heart" },
-    { id: "friends", label: "Friends", icon: "people" },
-    { id: "family", label: "Family", icon: "people" },
-];
-
-const BUDGET_RANGES = [
-    { id: "budget", label: "Budget", range: "€1k - €3k" },
-    { id: "moderate", label: "Moderate", range: "€3k - €7k" },
-    { id: "luxury", label: "Luxury", range: "€7k+" },
-];
-
 const INTERESTS = [
     "Adventure", 
     "Culinary", 
@@ -1054,96 +1041,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#9B9B9B",
         marginTop: 2,
-    },
-    dateButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        backgroundColor: "#FFF8E1",
-        borderRadius: 14,
-        marginBottom: 12,
-    },
-    dateButtonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#1A1A1A",
-    },
-    dateRange: {
-        fontSize: 14,
-        color: "#9B9B9B",
-        fontWeight: "500",
-    },
-    travelTypeContainer: {
-        flexDirection: "row",
-        gap: 12,
-    },
-    travelTypeButton: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 16,
-        borderRadius: 16,
-        backgroundColor: "#FFF8E1",
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
-    },
-    travelTypeButtonActive: {
-        backgroundColor: "#1A1A1A",
-        borderColor: "#1A1A1A",
-    },
-    travelTypeText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A1A1A",
-        marginTop: 8,
-    },
-    travelTypeTextActive: {
-        color: "white",
-    },
-    budgetHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    budgetBadge: {
-        backgroundColor: "#FFF8E1",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-    },
-    budgetBadgeText: {
-        fontSize: 13,
-        fontWeight: "700",
-        color: "#1A1A1A",
-    },
-    budgetButtonsContainer: {
-        flexDirection: "row",
-        gap: 12,
-    },
-    budgetButton: {
-        flex: 1,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 14,
-        backgroundColor: "white",
-        borderWidth: 2,
-        borderColor: "#E8E6E1",
-        alignItems: "center",
-    },
-    budgetButtonActive: {
-        backgroundColor: "#1A1A1A",
-        borderColor: "#1A1A1A",
-    },
-    budgetButtonText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A1A1A",
-    },
-    budgetButtonTextActive: {
-        color: "white",
     },
     interestsContainer: {
         flexDirection: "row",

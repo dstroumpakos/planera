@@ -99,7 +99,7 @@ export default function SubscriptionScreen() {
                                 <Text style={styles.saveText}>SAVE 40%</Text>
                             </View>
                         </View>
-                        <View style={styles.priceContainer}>
+                        <View style={styles.planPriceContainer}>
                             <Text style={styles.planPrice}>€4.99</Text>
                             <Text style={styles.planPeriod}>/mo</Text>
                         </View>
@@ -134,7 +134,7 @@ export default function SubscriptionScreen() {
                         <View>
                             <Text style={styles.planName}>Monthly</Text>
                         </View>
-                        <View style={styles.priceContainer}>
+                        <View style={styles.planPriceContainer}>
                             <Text style={styles.planPrice}>€9.99</Text>
                             <Text style={styles.planPeriod}>/mo</Text>
                         </View>
@@ -168,7 +168,7 @@ export default function SubscriptionScreen() {
                         <View>
                             <Text style={styles.planName}>Single Trip</Text>
                         </View>
-                        <View style={styles.priceContainer}>
+                        <View style={styles.planPriceContainer}>
                             <Text style={styles.planPrice}>€2.99</Text>
                             <Text style={styles.planPeriod}>/trip</Text>
                         </View>
@@ -301,6 +301,19 @@ const styles = StyleSheet.create({
     planCardSelected: {
         borderColor: COLORS.primary,
     },
+    saveBadge: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+        marginTop: 4,
+    },
+    saveText: {
+        fontSize: 10,
+        fontWeight: "800",
+        color: COLORS.text,
+    },
     bestValueBadge: {
         position: "absolute",
         top: -1,
@@ -322,16 +335,20 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         marginTop: 16,
+        flexWrap: "wrap",
     },
     planName: {
         fontSize: 18,
         fontWeight: "700",
         color: COLORS.text,
+        width: "100%",
+        marginBottom: 8,
     },
     planBilled: {
         fontSize: 13,
         color: COLORS.textMuted,
         marginTop: 2,
+        width: "100%",
     },
     planSubtext: {
         fontSize: 13,
@@ -346,8 +363,9 @@ const styles = StyleSheet.create({
     planPriceContainer: {
         flexDirection: "row",
         alignItems: "baseline",
-        marginLeft: "auto",
-        marginRight: 16,
+        position: "absolute",
+        right: 0,
+        top: 0,
     },
     planPrice: {
         fontSize: 24,
@@ -371,6 +389,11 @@ const styles = StyleSheet.create({
     radioButtonSelected: {
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primary,
+    },
+    featuresList: {
+        marginTop: 16,
+        width: "100%",
+        gap: 8,
     },
     planFeatures: {
         marginTop: 20,
