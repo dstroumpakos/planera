@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import logoImage from "@/assets/images/image.png";
 
@@ -512,13 +513,62 @@ export default function CreateTripScreen() {
     if (showLoadingScreen) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
-                <View style={styles.loadingContent}>
-                    <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 24 }} />
-                    <Text style={styles.loadingTitle}>Generating your dream trip...</Text>
-                    <Text style={styles.loadingSubtitle}>
-                        This usually takes a few seconds.
-                    </Text>
+                <View style={styles.loadingHeader}>
+                    <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
+                    <Text style={styles.headerLogoText}>PLANERA</Text>
                 </View>
+
+                <View style={styles.loadingContent}>
+                    <View style={styles.globeContainer}>
+                        <View style={styles.globeOuter}>
+                            <LinearGradient
+                                colors={['#2C74B3', '#5BA4E6', '#A3D5FF']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.globeInner}
+                            >
+                                <View style={styles.planeCircle}>
+                                    <Ionicons name="airplane" size={40} color="#FFE500" />
+                                </View>
+                                {/* Decorative dots/lines to simulate the network effect */}
+                                <View style={[styles.orbitDot, { top: '20%', left: '20%', backgroundColor: 'rgba(255, 255, 255, 0.8)' }]} />
+                                <View style={[styles.orbitDot, { top: '15%', right: '30%', backgroundColor: '#FFE500' }]} />
+                                <View style={[styles.orbitDot, { bottom: '30%', right: '25%', backgroundColor: '#FFE500' }]} />
+                                <View style={[styles.orbitDot, { bottom: '20%', left: '30%', backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} />
+                                <View style={[styles.orbitDot, { top: '50%', right: '10%', backgroundColor: 'rgba(255, 255, 255, 0.9)' }]} />
+                            </LinearGradient>
+                        </View>
+                    </View>
+
+                    <Text style={styles.loadingTitle}>Generating your next{"\n"}era...</Text>
+                    <Text style={styles.loadingSubtitle}>
+                        Optimizing multi-city routes and checking availability based on your preferences.
+                    </Text>
+
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressHeader}>
+                            <View style={styles.progressLabelContainer}>
+                                <Ionicons name="sync" size={16} color="#6B7280" style={{ marginRight: 6 }} />
+                                <Text style={styles.progressLabel}>AI Processing</Text>
+                            </View>
+                            <Text style={styles.progressPercent}>{Math.round(loadingProgress)}%</Text>
+                        </View>
+                        <View style={styles.progressBarBg}>
+                            <View style={[styles.progressBarFill, { width: `${loadingProgress}%` }]} />
+                        </View>
+                        <Text style={styles.progressDetail}>Analysing 12,400+ routes</Text>
+                    </View>
+                </View>
+
+                <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => {
+                        setLoading(false);
+                        setShowLoadingScreen(false);
+                    }}
+                >
+                    <Text style={styles.cancelButtonText}>Cancel Generation</Text>
+                </TouchableOpacity>
             </SafeAreaView>
         );
     }
@@ -1058,29 +1108,87 @@ const styles = StyleSheet.create({
     loadingContainer: {
         flex: 1,
         backgroundColor: "#FAF9F6",
-        justifyContent: "center",
+    },
+    loadingHeader: {
+        flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingTop: 20,
     },
     loadingContent: {
+        flex: 1,
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 24,
     },
+    globeContainer: {
+        width: 300,
+        height: 300,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 40,
+    },
+    globeOuter: {
+        width: 280,
+        height: 280,
+        borderRadius: 140,
+        backgroundColor: "#FFFFFF",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20,
+        elevation: 5,
+    },
+    globeInner: {
+        width: 240,
+        height: 240,
+        borderRadius: 120,
+        justifyContent: "center",
+        alignItems: "center",
+        position: 'relative',
+    },
+    planeCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: "#1A1A1A",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    orbitDot: {
+        position: 'absolute',
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+    },
     loadingTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#FFE500",
+        fontSize: 28,
+        fontWeight: "800",
+        color: "#1A1A1A",
         textAlign: "center",
-        marginBottom: 8,
+        marginBottom: 16,
+        lineHeight: 36,
     },
     loadingSubtitle: {
         fontSize: 16,
-        color: "#9B9B9B",
+        color: "#6B7280",
         textAlign: "center",
+        lineHeight: 24,
+        marginBottom: 40,
+        paddingHorizontal: 10,
     },
     progressContainer: {
         width: '100%',
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
     },
     progressHeader: {
         flexDirection: "row",
@@ -1121,6 +1229,7 @@ const styles = StyleSheet.create({
     cancelButton: {
         paddingVertical: 20,
         alignItems: "center",
+        marginBottom: 10,
     },
     cancelButtonText: {
         fontSize: 16,
