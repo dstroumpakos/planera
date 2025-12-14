@@ -560,7 +560,7 @@ function getActivitiesWithPrices(destination: string) {
         { title: `City Highlights Tour`, description: "Guided tour of main attractions", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
         { title: "Main Museum", description: "Discover local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
         { title: "Walking Tour", description: "Explore the old town", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
-        { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1-2 hours", bookingUrl: null, tips: "Best in the morning" },
+        { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "2-3 hours", bookingUrl: null, tips: "Best in the morning" },
         { title: "Sunset Viewpoint", description: "Best views of the city", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: null, tips: "Arrive 30 min before sunset" },
     ];
 }
@@ -648,12 +648,30 @@ async function searchFlights(
         if (!response.ok) {
             console.error("❌ Amadeus API error:", data);
             console.warn("⚠️ Falling back to AI-generated flight data");
-            return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults, preferredFlightTime);
+            return generateRealisticFlights(
+                origin,
+                originCode,
+                destination,
+                destCode,
+                departureDate,
+                returnDate,
+                adults,
+                preferredFlightTime
+            );
         }
         
         if (!data.data || data.data.length === 0) {
             console.warn("⚠️ No flights found in Amadeus. Generating realistic flight data with AI...");
-            return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults, preferredFlightTime);
+            return generateRealisticFlights(
+                origin,
+                originCode,
+                destination,
+                destCode,
+                departureDate,
+                returnDate,
+                adults,
+                preferredFlightTime
+            );
         }
 
         console.log(`✅ Found ${data.data.length} flight offers from Amadeus`);
@@ -704,6 +722,12 @@ async function searchFlights(
             else if (departureHour >= 17 && departureHour < 21) timeCategory = "evening";
             else if (departureHour >= 21 || departureHour < 6) timeCategory = "night";
             
+            // Generate a booking URL (Skyscanner deep link)
+            // Format: YYMMDD
+            const depDateStr = departureDate.slice(2).replace(/-/g, '');
+            const retDateStr = returnDate.slice(2).replace(/-/g, '');
+            const bookingUrl = `https://www.skyscanner.com/transport/flights/${originCode}/${destCode}/${depDateStr}/${retDateStr}`;
+
             flightOptions.push({
                 id: i + 1,
                 outbound: {
@@ -734,6 +758,7 @@ async function searchFlights(
                 isBestPrice: totalPrice === bestPrice,
                 timeCategory,
                 matchesPreference: preferredFlightTime === "any" || timeCategory === preferredFlightTime,
+                bookingUrl,
             });
         }
 
@@ -753,7 +778,16 @@ async function searchFlights(
     } catch (error: any) {
         console.error("❌ Error searching flights:", error);
         console.warn("⚠️ Falling back to AI-generated flight data");
-        return generateRealisticFlights(origin, originCode, destination, destCode, departureDate, returnDate, adults, preferredFlightTime);
+        return generateRealisticFlights(
+            origin,
+            originCode,
+            destination,
+            destCode,
+            departureDate,
+            returnDate,
+            adults,
+            preferredFlightTime
+        );
     }
 }
 
@@ -789,6 +823,11 @@ async function generateRealisticFlights(
     // Calculate base price
     const basePrice = calculateRealisticPrice(originCode, destCode);
     
+    // Generate a booking URL (Skyscanner deep link)
+    const depDateStr = departureDate.slice(2).replace(/-/g, '');
+    const retDateStr = returnDate.slice(2).replace(/-/g, '');
+    const bookingUrl = `https://www.skyscanner.com/transport/flights/${originCode}/${destCode}/${depDateStr}/${retDateStr}`;
+
     // Generate multiple flight options
     const flightOptions = [];
     
@@ -859,6 +898,7 @@ async function generateRealisticFlights(
             timeCategory: slot.name,
             matchesPreference: preferredFlightTime === "any" || slot.name === preferredFlightTime,
             label: slot.label,
+            bookingUrl,
         });
     }
     
@@ -1664,23 +1704,23 @@ function getFallbackActivities(destination: string) {
         "barcelona": [
             { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
             { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
-            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
-            { title: "La Rambla", price: "Free", duration: "1h", description: "Famous tree-lined street" },
+            { title: "Casa Batlló", price: "€35", duration: "1.5h", description: "Gaudí's stunning modernist building" },
             { title: "La Pedrera", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
+            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
         ],
         "athens": [
             { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
-            { title: "Acropolis Museum", price: "€10", duration: "2h", description: "Archaeological museum" },
+            { title: "Acropolis Museum", price: "€15", duration: "2h", description: "Archaeological museum" },
             { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
-            { title: "Plaka Walking Tour", price: "Free", duration: "2h", description: "Historic neighborhood" },
-            { title: "Temple of Olympian Zeus", price: "€8", duration: "1h", description: "Ancient Greek temple ruins" },
+            { title: "National Archaeological Museum", price: "€12", duration: "2h", description: "Greek art collection" },
+            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2h", description: "Historic neighborhoods" },
         ],
         "amsterdam": [
             { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
             { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
-            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
             { title: "Rijksmuseum", price: "€22", duration: "3h", description: "Dutch art and history" },
-            { title: "Vondelpark", price: "Free", duration: "1-2h", description: "Large public park" },
+            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
+            { title: "Heineken Experience", price: "€23", duration: "1.5h", description: "Interactive brewery tour" },
         ],
     };
     

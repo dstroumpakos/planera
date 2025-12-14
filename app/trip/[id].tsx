@@ -1102,6 +1102,16 @@ export default function TripDetails() {
                                         <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
                                     </View>
                                     <Text style={styles.flightDuration}>{flight.return.duration} • {flight.return.stops === 0 ? 'Direct' : `${flight.return.stops} Stop(s)`}</Text>
+                                    
+                                    {flight.bookingUrl && (
+                                        <TouchableOpacity 
+                                            style={styles.bookFlightButton}
+                                            onPress={() => Linking.openURL(flight.bookingUrl)}
+                                        >
+                                            <Text style={styles.bookFlightButtonText}>Book Flight</Text>
+                                            <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             ))}
                             {(!trip.itinerary?.flights?.options || trip.itinerary.flights.options.length === 0) && (
@@ -2339,6 +2349,21 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
         textAlign: 'center',
+    },
+    bookFlightButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#1A2433',
+        paddingVertical: 12,
+        borderRadius: 8,
+        marginTop: 16,
+        gap: 8,
+    },
+    bookFlightButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
     },
     activityThumbnailPlaceholder: {
         width: 80,
