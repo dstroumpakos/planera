@@ -466,11 +466,29 @@ export default function CreateTripScreen() {
         }, 500);
 
         try {
+            // Map travelType to travelers count if not manually set
+            let travelersCount = formData.travelers;
+            if (formData.travelType === "couple") travelersCount = 2;
+            if (formData.travelType === "friends") travelersCount = 4;
+            if (formData.travelType === "family") travelersCount = 4;
+
+            // Map budgetRange to budget value
+            let budgetValue = formData.budget;
+            if (formData.budgetRange === "budget") budgetValue = 1000;
+            if (formData.budgetRange === "moderate") budgetValue = 3000;
+            if (formData.budgetRange === "luxury") budgetValue = 8000;
+
             const tripId = await createTrip({
-                ...formData,
-                travelers: Number(formData.travelers),
-                startDate: formData.startDate,
-                endDate: formData.endDate,
+                destination: formData.destination,
+                origin: formData.origin,
+                startDate: Number(formData.startDate),
+                endDate: Number(formData.endDate),
+                budget: budgetValue,
+                travelers: Number(travelersCount),
+                interests: formData.interests,
+                skipFlights: formData.skipFlights,
+                skipHotel: formData.skipHotel,
+                preferredFlightTime: formData.preferredFlightTime,
             });
             
             clearInterval(progressInterval);

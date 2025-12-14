@@ -1650,7 +1650,7 @@ function getFallbackActivities(destination: string) {
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
             { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "Roman Forum", price: "€16", duration: "2h", description: "Ancient Roman ruins" },
+            { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
             { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
         ],
@@ -2307,6 +2307,11 @@ function getAirbnbOptions(destination: string) {
 
 // Helper function to extract IATA code from city name (simplified)
 function extractIATACode(cityName: string): string {
+    if (!cityName) {
+        console.warn("⚠️ extractIATACode called with empty city name");
+        return "ATH"; // Default fallback
+    }
+
     const cityMap: Record<string, string> = {
         // Europe
         "athens": "ATH",
@@ -2400,7 +2405,7 @@ function extractIATACode(cityName: string): string {
     const code = cityMap[normalized];
     
     if (!code) {
-        console.warn(`⚠️ Unknown city/airport: "${cityName}". Using ATH as fallback. Please add "${normalized}" to the city map.`);
+        console.warn(`⚠️ Unknown city/airport: "${cityName}" (normalized: "${normalized}"). Using ATH as fallback.`);
         return "ATH"; // Default fallback
     }
     

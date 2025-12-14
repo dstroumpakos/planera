@@ -18,6 +18,13 @@ export const create = authMutation({
     },
     returns: v.id("trips"),
     handler: async (ctx, args) => {
+        console.log("🚀 Creating trip with args:", JSON.stringify(args, null, 2));
+
+        // Validate numeric fields
+        if (isNaN(args.startDate)) throw new Error("Invalid startDate: NaN");
+        if (isNaN(args.endDate)) throw new Error("Invalid endDate: NaN");
+        if (isNaN(args.travelers)) throw new Error("Invalid travelers: NaN");
+
         // Check if user can generate a trip
         const userPlan = await ctx.db
             .query("userPlans")
