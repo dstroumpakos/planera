@@ -451,6 +451,11 @@ export default function CreateTripScreen() {
             return;
         }
 
+        if (!formData.budget || isNaN(Number(formData.budget)) || Number(formData.budget) <= 0) {
+            Alert.alert("Error", "Please enter a valid budget amount");
+            return;
+        }
+
         setLoading(true);
         setShowLoadingScreen(true);
         setLoadingProgress(0);
@@ -493,10 +498,16 @@ export default function CreateTripScreen() {
                     setLoadingProgress(0);
                 }, 500);
             }, 500);
-        } catch (error) {
+        } catch (error: any) {
             clearInterval(progressInterval);
             console.error("Error creating trip:", error);
-            Alert.alert("Error", "Failed to create trip. Please try again.");
+            
+            // Extract error message
+            const errorMessage = error.message || "Failed to create trip. Please try again.";
+            // Clean up Convex error prefix if present
+            const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
+            
+            Alert.alert("Error", cleanMessage);
             setLoading(false);
             setShowLoadingScreen(false);
         }
@@ -1305,7 +1316,8 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         backgroundColor: "#FFF8E1",
         borderRadius: 14,
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
     inputLabel: {
         fontSize: 16,
