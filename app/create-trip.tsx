@@ -710,6 +710,16 @@ export default function CreateTripScreen() {
                         </View>
                         <Text style={styles.skipFlightsText}>I already have flights (Skip flight search)</Text>
                     </TouchableOpacity>
+
+                    <View style={styles.multiCityContainer}>
+                        <View style={styles.multiCityContent}>
+                            <Ionicons name="git-merge-outline" size={20} color="#9B9B9B" />
+                            <Text style={styles.multiCityText}>Multi-City Trip</Text>
+                        </View>
+                        <View style={styles.comingSoonBadge}>
+                            <Text style={styles.comingSoonText}>Coming Soon</Text>
+                        </View>
+                    </View>
                 </View>
 
                 {/* Dates Section */}
@@ -1396,5 +1406,36 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#1A1A1A',
         fontWeight: '500',
+    },
+    multiCityContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+    },
+    multiCityContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    multiCityText: {
+        fontSize: 14,
+        color: '#9B9B9B',
+        fontWeight: '500',
+    },
+    comingSoonBadge: {
+        backgroundColor: '#F5F5F5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    comingSoonText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#9B9B9B',
+        textTransform: 'uppercase',
     },
 });
