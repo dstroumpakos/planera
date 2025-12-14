@@ -249,7 +249,7 @@ export default function TripDetails() {
     const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
     const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0);
     const [checkedBaggageSelected, setCheckedBaggageSelected] = useState<boolean>(false);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'food' | 'sights' | 'stays' | 'transportation'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'flights' | 'food' | 'sights' | 'stays' | 'transportation'>('all');
 
     const [editForm, setEditForm] = useState({
         destination: "",
@@ -926,8 +926,13 @@ export default function TripDetails() {
                         style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
                         onPress={() => setActiveFilter('all')}
                     >
-                        <Ionicons name="calendar" size={18} color={activeFilter === 'all' ? "#1A1A1A" : "#64748B"} />
-                        <Text style={[styles.filterText, activeFilter === 'all' && styles.filterTextActive]}>All Days</Text>
+                        <Text style={[styles.filterText, activeFilter === 'all' && styles.filterTextActive]}>All</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.filterChip, activeFilter === 'flights' && styles.filterChipActive]}
+                        onPress={() => setActiveFilter('flights')}
+                    >
+                        <Text style={[styles.filterText, activeFilter === 'flights' && styles.filterTextActive]}>Flights</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.filterChip, activeFilter === 'food' && styles.filterChipActive]}
@@ -1022,7 +1027,16 @@ export default function TripDetails() {
                                 <View key={index} style={styles.card}>
                                     <View style={styles.row}>
                                         <View style={styles.flightInfo}>
-                                            <Text style={styles.cardTitle}>{restaurant.name}</Text>
+                                            <View style={styles.restaurantHeader}>
+                                                <Text style={styles.cardTitle}>{restaurant.name}</Text>
+                                                {restaurant.tripAdvisorUrl && (
+                                                    <Image 
+                                                        source={{ uri: "https://static.tacdn.com/img2/brand_refresh/Tripadvisor_lockup_horizontal_secondary_registered.svg" }} 
+                                                        style={styles.tripAdvisorLogo}
+                                                        resizeMode="contain"
+                                                    />
+                                                )}
+                                            </View>
                                             <Text style={styles.cardSubtitle}>{restaurant.cuisine} • {restaurant.priceRange}</Text>
                                             <View style={styles.ratingContainer}>
                                                 <Ionicons name="star" size={14} color="#F59E0B" />
@@ -1040,6 +1054,58 @@ export default function TripDetails() {
                             ))}
                             {(!trip.itinerary?.restaurants || trip.itinerary.restaurants.length === 0) && (
                                 <Text style={styles.emptyText}>No restaurants found.</Text>
+                            )}
+                        </View>
+                    )}
+
+                    {activeFilter === 'flights' && (
+                        <View>
+                            <Text style={styles.sectionTitle}>Available Flights</Text>
+                            {trip.itinerary?.flights?.options?.map((flight: any, index: number) => (
+                                <View key={index} style={[styles.card, flight.isBestPrice && styles.bestPriceCard]}>
+                                    {flight.isBestPrice && (
+                                        <View style={styles.bestPriceBadge}>
+                                            <Text style={styles.bestPriceBadgeText}>Best Price</Text>
+                                        </View>
+                                    )}
+                                    <View style={styles.flightHeader}>
+                                        <View>
+                                            <Text style={styles.airlineName}>{flight.outbound.airline}</Text>
+                                            <Text style={styles.flightTime}>{flight.outbound.departure} - {flight.outbound.arrival}</Text>
+                                        </View>
+                                        <Text style={styles.flightPrice}>€{flight.pricePerPerson}</Text>
+                                    </View>
+                                    <View style={styles.flightRoute}>
+                                        <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
+                                        <View style={styles.flightLineContainer}>
+                                            <View style={styles.flightLine} />
+                                            <Ionicons name="airplane" size={16} color="#64748B" style={styles.flightIcon} />
+                                        </View>
+                                        <Text style={styles.airportCode}>{trip.destination ? trip.destination.substring(0, 3).toUpperCase() : 'DST'}</Text>
+                                    </View>
+                                    <Text style={styles.flightDuration}>{flight.outbound.duration} • {flight.outbound.stops === 0 ? 'Direct' : `${flight.outbound.stops} Stop(s)`}</Text>
+                                    
+                                    <View style={styles.divider} />
+                                    
+                                    <View style={styles.flightHeader}>
+                                        <View>
+                                            <Text style={styles.airlineName}>{flight.return.airline}</Text>
+                                            <Text style={styles.flightTime}>{flight.return.departure} - {flight.return.arrival}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.flightRoute}>
+                                        <Text style={styles.airportCode}>{trip.destination ? trip.destination.substring(0, 3).toUpperCase() : 'DST'}</Text>
+                                        <View style={styles.flightLineContainer}>
+                                            <View style={styles.flightLine} />
+                                            <Ionicons name="airplane" size={16} color="#64748B" style={[styles.flightIcon, { transform: [{ rotate: '180deg' }] }]} />
+                                        </View>
+                                        <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
+                                    </View>
+                                    <Text style={styles.flightDuration}>{flight.return.duration} • {flight.return.stops === 0 ? 'Direct' : `${flight.return.stops} Stop(s)`}</Text>
+                                </View>
+                            ))}
+                            {(!trip.itinerary?.flights?.options || trip.itinerary.flights.options.length === 0) && (
+                                <Text style={styles.emptyText}>No flights found.</Text>
                             )}
                         </View>
                     )}
@@ -1063,8 +1129,12 @@ export default function TripDetails() {
                                                 )}
                                             </View>
                                         </View>
-                                        {activity.image && (
+                                        {activity.image ? (
                                             <Image source={{ uri: activity.image }} style={styles.activityThumbnail} />
+                                        ) : (
+                                            <View style={styles.activityThumbnailPlaceholder}>
+                                                <Ionicons name="image-outline" size={24} color="#94A3B8" />
+                                            </View>
                                         )}
                                     </View>
                                     {activity.bookingUrl && (
@@ -2211,5 +2281,71 @@ const styles = StyleSheet.create({
         color: "#64748B",
         fontSize: 16,
         marginTop: 32,
+    },
+    restaurantHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    tripAdvisorLogo: {
+        width: 100,
+        height: 20,
+        marginLeft: 8,
+    },
+    bestPriceCard: {
+        borderColor: '#15803D',
+        borderWidth: 1,
+        backgroundColor: '#F0FDF4',
+    },
+    airlineName: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1A1A1A',
+    },
+    flightTime: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1A1A1A',
+        marginTop: 2,
+    },
+    flightRoute: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 12,
+        marginBottom: 4,
+    },
+    airportCode: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#64748B',
+    },
+    flightLineContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginHorizontal: 12,
+    },
+    flightLine: {
+        height: 1,
+        backgroundColor: '#CBD5E1',
+        flex: 1,
+    },
+    flightIcon: {
+        marginHorizontal: 8,
+    },
+    flightDuration: {
+        fontSize: 12,
+        color: '#64748B',
+        textAlign: 'center',
+    },
+    activityThumbnailPlaceholder: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+        backgroundColor: "#E2E8F0",
+        alignItems: "center",
+        justifyContent: "center",
     },
 });
