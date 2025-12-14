@@ -8,7 +8,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
 import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import logoImage from "@/assets/images/image.png";
 
@@ -513,59 +512,13 @@ export default function CreateTripScreen() {
     if (showLoadingScreen) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
-                <View style={styles.loadingHeader}>
-                    <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
-                    <Text style={styles.headerLogoText}>PLANERA</Text>
-                </View>
-
                 <View style={styles.loadingContent}>
-                    <View style={styles.globeContainer}>
-                        <View style={styles.globeOuter}>
-                            <LinearGradient
-                                colors={['#2C74B3', '#5BA4E6', '#A3D5FF']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.globeInner}
-                            >
-                                <View style={styles.planeCircle}>
-                                    <Ionicons name="airplane" size={40} color="#FFE500" />
-                                </View>
-                            </LinearGradient>
-                            <View style={[styles.orbitDot, { top: '20%', left: '20%', backgroundColor: '#FFE500' }]} />
-                            <View style={[styles.orbitDot, { bottom: '30%', right: '25%', backgroundColor: '#FFE500' }]} />
-                            <View style={[styles.orbitDot, { top: '40%', right: '15%', backgroundColor: '#FFFFFF' }]} />
-                        </View>
-                    </View>
-
-                    <Text style={styles.loadingTitle}>Generating your next{"\n"}era...</Text>
+                    <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 24 }} />
+                    <Text style={styles.loadingTitle}>Generating your dream trip...</Text>
                     <Text style={styles.loadingSubtitle}>
-                        Optimizing multi-city routes and checking availability based on your preferences.
+                        This usually takes a few seconds.
                     </Text>
-
-                    <View style={styles.progressContainer}>
-                        <View style={styles.progressHeader}>
-                            <View style={styles.progressLabelContainer}>
-                                <ActivityIndicator size="small" color="#1A1A1A" style={{ marginRight: 8 }} />
-                                <Text style={styles.progressLabel}>AI Processing</Text>
-                            </View>
-                            <Text style={styles.progressPercent}>{Math.round(loadingProgress)}%</Text>
-                        </View>
-                        <View style={styles.progressBarBg}>
-                            <View style={[styles.progressBarFill, { width: `${loadingProgress}%` }]} />
-                        </View>
-                        <Text style={styles.progressDetail}>Analysing 12,400+ routes</Text>
-                    </View>
                 </View>
-
-                <TouchableOpacity 
-                    style={styles.cancelButton}
-                    onPress={() => {
-                        setLoading(false);
-                        setShowLoadingScreen(false);
-                    }}
-                >
-                    <Text style={styles.cancelButtonText}>Cancel Generation</Text>
-                </TouchableOpacity>
             </SafeAreaView>
         );
     }
@@ -1105,80 +1058,25 @@ const styles = StyleSheet.create({
     loadingContainer: {
         flex: 1,
         backgroundColor: "#FAF9F6",
-    },
-    loadingHeader: {
-        flexDirection: "row",
-        alignItems: "center",
         justifyContent: "center",
-        gap: 8,
-        paddingTop: 20,
+        alignItems: "center",
     },
     loadingContent: {
-        flex: 1,
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 24,
     },
-    globeContainer: {
-        width: 300,
-        height: 300,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 40,
-    },
-    globeOuter: {
-        width: 280,
-        height: 280,
-        borderRadius: 140,
-        backgroundColor: "#FFFFFF",
-        justifyContent: "center",
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.05,
-        shadowRadius: 20,
-        elevation: 5,
-        position: 'relative',
-    },
-    globeInner: {
-        width: 240,
-        height: 240,
-        borderRadius: 120,
-        backgroundColor: "#3B82F6", // Fallback blue
-        justifyContent: "center",
-        alignItems: "center",
-        overflow: 'hidden',
-    },
-    planeCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: "#1A1A1A",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 10,
-    },
-    orbitDot: {
-        position: 'absolute',
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-    },
     loadingTitle: {
-        fontSize: 32,
-        fontWeight: "800",
-        color: "#1A1A1A",
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#FFE500",
         textAlign: "center",
-        marginBottom: 16,
-        lineHeight: 40,
+        marginBottom: 8,
     },
     loadingSubtitle: {
         fontSize: 16,
-        color: "#6B7280",
+        color: "#9B9B9B",
         textAlign: "center",
-        lineHeight: 24,
-        marginBottom: 40,
-        paddingHorizontal: 20,
     },
     progressContainer: {
         width: '100%',
