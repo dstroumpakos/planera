@@ -1,4 +1,5 @@
 import { useState } from "react";
+import React from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image, Switch, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
@@ -6,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
+import * as Location from 'expo-location';
 
 import logoImage from "@/assets/images/image.png";
 
@@ -260,7 +262,7 @@ const BUDGET_RANGES = [
 
 const INTERESTS = ["Adventure", "Culinary", "Culture"];
 
-export default function CreateTrip() {
+export default function CreateTripScreen() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
     const userPlan = useQuery(api.users.getPlan);
@@ -272,6 +274,7 @@ export default function CreateTrip() {
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
     const [destinationSuggestions, setDestinationSuggestions] = useState<typeof DESTINATIONS>([]);
+    const [showOriginInput, setShowOriginInput] = useState(false);
 
     const [formData, setFormData] = useState({
         destination: "",
@@ -287,6 +290,35 @@ export default function CreateTrip() {
         skipHotel: false,
         preferredFlightTime: "any" as "any" | "morning" | "afternoon" | "evening" | "night",
     });
+
+    // Detect device location on mount
+    React.useEffect(() => {
+        const detectLocation = async () => {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                    const location = await Location.getCurrentPositionAsync({});
+                    const { latitude, longitude } = location.coords;
+                    
+                    // Reverse geocode to get city name
+                    const reverseGeocode = await Location.reverseGeocodeAsync({
+                        latitude,
+                        longitude,
+                    });
+                    
+                    if (reverseGeocode.length > 0) {
+                        const { city, region } = reverseGeocode[0];
+                        const locationName = city && region ? `${city}, ${region}` : city || "Current Location";
+                        setFormData(prev => ({ ...prev, origin: locationName }));
+                    }
+                }
+            } catch (error) {
+                console.log("Location detection skipped or failed");
+            }
+        };
+        
+        detectLocation();
+    }, []);
 
     const formatDate = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -320,6 +352,7 @@ export default function CreateTrip() {
     const selectAirport = (airport: typeof AIRPORTS[0]) => {
         setFormData({ ...formData, origin: `${airport.city}, ${airport.code}` });
         setShowAirportSuggestions(false);
+        setShowOriginInput(false);
         setAirportSuggestions([]);
     };
 
@@ -520,8 +553,42 @@ export default function CreateTrip() {
                             <Text style={styles.locationLabel}>FROM</Text>
                             <View style={styles.locationContent}>
                                 <Ionicons name="location" size={24} color="#1A1A1A" />
-                                <Text style={styles.locationText}>{formData.origin}</Text>
+                                <TextInput
+                                    style={styles.locationText}
+                                    placeholder="Where from?"
+                                    placeholderTextColor="#9B9B9B"
+                                    value={formData.origin}
+                                    onChangeText={(text) => {
+                                        setFormData({ ...formData, origin: text });
+                                        searchAirports(text);
+                                    }}
+                                    onFocus={() => {
+                                        if (formData.origin.length >= 2) {
+                                            searchAirports(formData.origin);
+                                        }
+                                    }}
+                                />
                             </View>
+                            
+                            {showAirportSuggestions && airportSuggestions.length > 0 && (
+                                <View style={styles.suggestionsContainer}>
+                                    <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
+                                        {airportSuggestions.map((airport, index) => (
+                                            <TouchableOpacity
+                                                key={`${airport.city}-${airport.country}-${index}`}
+                                                style={styles.suggestionItem}
+                                                onPress={() => selectAirport(airport)}
+                                            >
+                                                <Ionicons name="location" size={20} color="#FFE500" style={{ marginRight: 12 }} />
+                                                <View>
+                                                    <Text style={styles.suggestionCity}>{airport.city}</Text>
+                                                    <Text style={styles.suggestionDetails}>{airport.country}</Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
                         </View>
 
                         <TouchableOpacity style={styles.swapButton}>
