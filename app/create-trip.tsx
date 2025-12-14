@@ -269,7 +269,6 @@ export default function CreateTripScreen() {
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const [showLoadingScreen, setShowLoadingScreen] = useState(false);
-    const [loadingProgress, setLoadingProgress] = useState(0);
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
@@ -458,18 +457,6 @@ export default function CreateTripScreen() {
 
         setLoading(true);
         setShowLoadingScreen(true);
-        setLoadingProgress(0);
-
-        // Simulate progress
-        const progressInterval = setInterval(() => {
-            setLoadingProgress(prev => {
-                if (prev >= 95) {
-                    clearInterval(progressInterval);
-                    return 95;
-                }
-                return prev + Math.random() * 5; // Random increment
-            });
-        }, 500);
 
         try {
             const tripId = await createTrip({
@@ -485,21 +472,13 @@ export default function CreateTripScreen() {
                 preferredFlightTime: formData.preferredFlightTime,
             });
             
-            clearInterval(progressInterval);
-            setLoadingProgress(100);
-            
-            // Small delay to show 100%
+            router.push(`/trip/${tripId}`);
+            // Reset states after navigation
             setTimeout(() => {
-                router.push(`/trip/${tripId}`);
-                // Reset states after navigation
-                setTimeout(() => {
-                    setLoading(false);
-                    setShowLoadingScreen(false);
-                    setLoadingProgress(0);
-                }, 500);
+                setLoading(false);
+                setShowLoadingScreen(false);
             }, 500);
         } catch (error: any) {
-            clearInterval(progressInterval);
             console.error("Error creating trip:", error);
             
             // Extract error message
@@ -524,62 +503,9 @@ export default function CreateTripScreen() {
     if (showLoadingScreen) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
-                <View style={styles.loadingHeader}>
-                    <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
-                    <Text style={styles.headerLogoText}>PLANERA</Text>
-                </View>
-
-                <View style={styles.loadingContent}>
-                    <View style={styles.globeContainer}>
-                        <View style={styles.globeOuter}>
-                            <LinearGradient
-                                colors={['#2C74B3', '#5BA4E6', '#A3D5FF']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.globeInner}
-                            >
-                                <View style={styles.planeCircle}>
-                                    <Ionicons name="airplane" size={40} color="#FFE500" />
-                                </View>
-                                {/* Decorative dots/lines to simulate the network effect */}
-                                <View style={[styles.orbitDot, { top: '20%', left: '20%', backgroundColor: 'rgba(255, 255, 255, 0.8)' }]} />
-                                <View style={[styles.orbitDot, { top: '15%', right: '30%', backgroundColor: '#FFE500' }]} />
-                                <View style={[styles.orbitDot, { bottom: '30%', right: '25%', backgroundColor: '#FFE500' }]} />
-                                <View style={[styles.orbitDot, { bottom: '20%', left: '30%', backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} />
-                                <View style={[styles.orbitDot, { top: '50%', right: '10%', backgroundColor: 'rgba(255, 255, 255, 0.9)' }]} />
-                            </LinearGradient>
-                        </View>
-                    </View>
-
-                    <Text style={styles.loadingTitle}>Generating your next{"\n"}era...</Text>
-                    <Text style={styles.loadingSubtitle}>
-                        Optimizing multi-city routes and checking availability based on your preferences.
-                    </Text>
-
-                    <View style={styles.progressContainer}>
-                        <View style={styles.progressHeader}>
-                            <View style={styles.progressLabelContainer}>
-                                <Ionicons name="sync" size={16} color="#6B7280" style={{ marginRight: 6 }} />
-                                <Text style={styles.progressLabel}>AI Processing</Text>
-                            </View>
-                            <Text style={styles.progressPercent}>{Math.round(loadingProgress)}%</Text>
-                        </View>
-                        <View style={styles.progressBarBg}>
-                            <View style={[styles.progressBarFill, { width: `${loadingProgress}%` }]} />
-                        </View>
-                        <Text style={styles.progressDetail}>Analysing 12,400+ routes</Text>
-                    </View>
-                </View>
-
-                <TouchableOpacity 
-                    style={styles.cancelButton}
-                    onPress={() => {
-                        setLoading(false);
-                        setShowLoadingScreen(false);
-                    }}
-                >
-                    <Text style={styles.cancelButtonText}>Cancel Generation</Text>
-                </TouchableOpacity>
+                <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 20 }} />
+                <Text style={styles.loadingTitle}>Generating your dream trip...</Text>
+                <Text style={styles.loadingSubtitle}>This usually takes a few seconds.</Text>
             </SafeAreaView>
         );
     }
@@ -1066,223 +992,65 @@ const styles = StyleSheet.create({
         color: "#9B9B9B",
         marginTop: 2,
     },
-    interestsContainer: {
-        flexDirection: "row",
-        gap: 12,
-        flexWrap: "wrap",
+    skipFlightsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
     },
-    interestTag: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: '#1A1A1A',
+        marginRight: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxChecked: {
+        backgroundColor: '#FFE500',
+        borderColor: '#FFE500',
+    },
+    skipFlightsText: {
+        fontSize: 14,
+        color: '#1A1A1A',
+        fontWeight: '500',
+    },
+    multiCityButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 16,
         paddingVertical: 12,
         paddingHorizontal: 16,
-        borderRadius: 14,
-        backgroundColor: "#FFF8E1",
-        borderWidth: 2,
-        borderColor: "#FFE500",
+        backgroundColor: '#F9F9F9',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
     },
-    interestTagActive: {
-        backgroundColor: "#FFE500",
-        borderColor: "#FFE500",
+    multiCityContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
     },
-    interestTagText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A1A1A",
+    multiCityText: {
+        fontSize: 15,
+        color: '#1A1A1A',
+        fontWeight: '600',
     },
-    interestTagTextActive: {
-        color: "#1A1A1A",
+    comingSoonBadge: {
+        backgroundColor: '#FFE500',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
     },
-    generateButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        marginHorizontal: 20,
-        marginTop: 24,
-        paddingVertical: 18,
-        backgroundColor: "#1A1A1A",
-        borderRadius: 18,
-        shadowColor: "#FFE500",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    disabledButton: {
-        opacity: 0.7,
-    },
-    generateButtonText: {
-        fontSize: 17,
-        fontWeight: "700",
-        color: "white",
-    },
-    sparkleIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        backgroundColor: "#FFE500",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    loadingContainer: {
-        flex: 1,
-        backgroundColor: "#FAF9F6",
-    },
-    loadingHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        paddingTop: 20,
-    },
-    loadingContent: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 24,
-    },
-    globeContainer: {
-        width: 300,
-        height: 300,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 40,
-    },
-    globeOuter: {
-        width: 280,
-        height: 280,
-        borderRadius: 140,
-        backgroundColor: "#FFFFFF",
-        justifyContent: "center",
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.05,
-        shadowRadius: 20,
-        elevation: 5,
-    },
-    globeInner: {
-        width: 240,
-        height: 240,
-        borderRadius: 120,
-        justifyContent: "center",
-        alignItems: "center",
-        position: 'relative',
-    },
-    planeCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: "#1A1A1A",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    orbitDot: {
-        position: 'absolute',
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-    },
-    loadingTitle: {
-        fontSize: 28,
-        fontWeight: "800",
-        color: "#1A1A1A",
-        textAlign: "center",
-        marginBottom: 16,
-        lineHeight: 36,
-    },
-    loadingSubtitle: {
-        fontSize: 16,
-        color: "#6B7280",
-        textAlign: "center",
-        lineHeight: 24,
-        marginBottom: 40,
-        paddingHorizontal: 10,
-    },
-    progressContainer: {
-        width: '100%',
-        paddingHorizontal: 10,
-    },
-    progressHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    progressLabelContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    progressLabel: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A1A1A",
-    },
-    progressPercent: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#FFE500",
-    },
-    progressBarBg: {
-        height: 8,
-        backgroundColor: "#E5E7EB",
-        borderRadius: 4,
-        overflow: "hidden",
-        marginBottom: 12,
-    },
-    progressBarFill: {
-        height: "100%",
-        backgroundColor: "#FFE500",
-        borderRadius: 4,
-    },
-    progressDetail: {
-        fontSize: 13,
-        color: "#6B7280",
-    },
-    cancelButton: {
-        paddingVertical: 20,
-        alignItems: "center",
-        marginBottom: 10,
-    },
-    cancelButtonText: {
-        fontSize: 16,
-        color: "#6B7280",
-        fontWeight: "500",
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(26, 26, 26, 0.2)",
-        justifyContent: "flex-end",
-    },
-    calendarModal: {
-        backgroundColor: "white",
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        paddingBottom: 40,
-    },
-    calendarHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E8E6E1",
-    },
-    calendarTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#1A1A1A",
-    },
-    calendar: {
-        marginHorizontal: 10,
+    comingSoonText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#1A1A1A',
     },
     datesContainer: {
         flexDirection: "row",
@@ -1380,64 +1148,109 @@ const styles = StyleSheet.create({
         color: '#1A1A1A',
         padding: 0,
     },
-    skipFlightsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
+    interestsContainer: {
+        flexDirection: "row",
+        gap: 12,
+        flexWrap: "wrap",
     },
-    checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 4,
-        borderWidth: 2,
-        borderColor: '#1A1A1A',
-        marginRight: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    checkboxChecked: {
-        backgroundColor: '#FFE500',
-        borderColor: '#FFE500',
-    },
-    skipFlightsText: {
-        fontSize: 14,
-        color: '#1A1A1A',
-        fontWeight: '500',
-    },
-    multiCityButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 16,
+    interestTag: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
         paddingVertical: 12,
         paddingHorizontal: 16,
-        backgroundColor: '#F9F9F9',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#E5E5E5',
+        borderRadius: 14,
+        backgroundColor: "#FFF8E1",
+        borderWidth: 2,
+        borderColor: "#FFE500",
     },
-    multiCityContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
+    interestTagActive: {
+        backgroundColor: "#FFE500",
+        borderColor: "#FFE500",
     },
-    multiCityText: {
-        fontSize: 15,
-        color: '#1A1A1A',
-        fontWeight: '600',
+    interestTagText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1A1A1A",
     },
-    comingSoonBadge: {
-        backgroundColor: '#FFE500',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
+    interestTagTextActive: {
+        color: "#1A1A1A",
     },
-    comingSoonText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#1A1A1A',
+    generateButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        marginHorizontal: 20,
+        marginTop: 24,
+        paddingVertical: 18,
+        backgroundColor: "#1A1A1A",
+        borderRadius: 18,
+        shadowColor: "#FFE500",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 6,
+    },
+    disabledButton: {
+        opacity: 0.7,
+    },
+    generateButtonText: {
+        fontSize: 17,
+        fontWeight: "700",
+        color: "white",
+    },
+    sparkleIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: "#FFE500",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(26, 26, 26, 0.2)",
+        justifyContent: "flex-end",
+    },
+    calendarModal: {
+        backgroundColor: "white",
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        paddingBottom: 40,
+    },
+    calendarHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E8E6E1",
+    },
+    calendarTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#1A1A1A",
+    },
+    calendar: {
+        marginHorizontal: 10,
+    },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: "#FAF9F6",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    loadingTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#FFE500",
+        marginBottom: 8,
+        textAlign: "center",
+    },
+    loadingSubtitle: {
+        fontSize: 16,
+        color: "#9B9B9B",
+        textAlign: "center",
     },
 });
