@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import logoImage from "@/assets/images/image.png";
 
@@ -270,6 +271,7 @@ export default function CreateTripScreen() {
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState(0);
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
@@ -444,55 +446,51 @@ export default function CreateTripScreen() {
 
     const handleSubmit = async () => {
         if (!formData.destination) {
-            Alert.alert("Required", "Please enter a destination");
-            return;
-        }
-        if (!formData.skipFlights && !formData.origin) {
-            Alert.alert("Required", "Please enter where you are flying from");
+            Alert.alert("Error", "Please enter a destination");
             return;
         }
 
-        const isSubscriptionActive = userPlan?.isSubscriptionActive;
-        const tripCredits = userPlan?.tripCredits ?? 0;
-        const tripsGenerated = userPlan?.tripsGenerated ?? 0;
-        const hasFreeTrial = tripsGenerated < 1;
-
-        if (!isSubscriptionActive && tripCredits <= 0 && !hasFreeTrial) {
-            if (Platform.OS !== "web") {
-                Alert.alert(
-                    "No Trip Credits",
-                    "You need Trip Credits or a Premium subscription to generate trips. Would you like to purchase?",
-                    [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "View Plans", onPress: () => router.push("/subscription") }
-                    ]
-                );
-            } else {
-                router.push("/subscription");
-            }
-            return;
-        }
-
+        setLoading(true);
         setShowLoadingScreen(true);
+        setLoadingProgress(0);
+
+        // Simulate progress
+        const progressInterval = setInterval(() => {
+            setLoadingProgress(prev => {
+                if (prev >= 95) {
+                    clearInterval(progressInterval);
+                    return 95;
+                }
+                return prev + Math.random() * 5; // Random increment
+            });
+        }, 500);
+
         try {
             const tripId = await createTrip({
-                destination: formData.destination,
-                origin: formData.skipFlights ? "N/A" : formData.origin,
-                startDate: Number(formData.startDate),
-                endDate: Number(formData.endDate),
-                budget: Number(formData.budget),
+                ...formData,
                 travelers: Number(formData.travelers),
-                interests: formData.interests,
-                skipFlights: formData.skipFlights,
-                skipHotel: formData.skipHotel,
-                preferredFlightTime: formData.skipFlights ? undefined : formData.preferredFlightTime,
+                startDate: formData.startDate,
+                endDate: formData.endDate,
             });
+            
+            clearInterval(progressInterval);
+            setLoadingProgress(100);
+            
+            // Small delay to show 100%
             setTimeout(() => {
-                router.replace(`/trip/${tripId}`);
-            }, 2000);
+                router.push(`/trip/${tripId}`);
+                // Reset states after navigation
+                setTimeout(() => {
+                    setLoading(false);
+                    setShowLoadingScreen(false);
+                    setLoadingProgress(0);
+                }, 500);
+            }, 500);
         } catch (error) {
-            console.error(error);
-            Alert.alert("Error", "Failed to create trip");
+            clearInterval(progressInterval);
+            console.error("Error creating trip:", error);
+            Alert.alert("Error", "Failed to create trip. Please try again.");
+            setLoading(false);
             setShowLoadingScreen(false);
         }
     };
@@ -507,17 +505,61 @@ export default function CreateTripScreen() {
 
     if (showLoadingScreen) {
         return (
-            <View style={styles.loadingContainer}>
-                <Image source={logoImage} style={styles.loadingLogo} resizeMode="contain" />
-                <ActivityIndicator size="large" color="#FFE500" style={{ marginTop: 24 }} />
-                <Text style={styles.loadingText}>Generating your dream trip...</Text>
-                <Text style={styles.loadingSubtext}>
-                    {formData.skipFlights 
-                        ? "Finding the best hotels, activities, and restaurants for you."
-                        : "Finding the best flights, hotels, and activities for you."
-                    }
-                </Text>
-            </View>
+            <SafeAreaView style={styles.loadingContainer}>
+                <View style={styles.loadingHeader}>
+                    <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
+                    <Text style={styles.headerLogoText}>PLANERA</Text>
+                </View>
+
+                <View style={styles.loadingContent}>
+                    <View style={styles.globeContainer}>
+                        <View style={styles.globeOuter}>
+                            <LinearGradient
+                                colors={['#2C74B3', '#5BA4E6', '#A3D5FF']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.globeInner}
+                            >
+                                <View style={styles.planeCircle}>
+                                    <Ionicons name="airplane" size={40} color="#FFE500" />
+                                </View>
+                            </LinearGradient>
+                            <View style={[styles.orbitDot, { top: '20%', left: '20%', backgroundColor: '#FFE500' }]} />
+                            <View style={[styles.orbitDot, { bottom: '30%', right: '25%', backgroundColor: '#FFE500' }]} />
+                            <View style={[styles.orbitDot, { top: '40%', right: '15%', backgroundColor: '#FFFFFF' }]} />
+                        </View>
+                    </View>
+
+                    <Text style={styles.loadingTitle}>Generating your next{"\n"}era...</Text>
+                    <Text style={styles.loadingSubtitle}>
+                        Optimizing multi-city routes and checking availability based on your preferences.
+                    </Text>
+
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressHeader}>
+                            <View style={styles.progressLabelContainer}>
+                                <ActivityIndicator size="small" color="#1A1A1A" style={{ marginRight: 8 }} />
+                                <Text style={styles.progressLabel}>AI Processing</Text>
+                            </View>
+                            <Text style={styles.progressPercent}>{Math.round(loadingProgress)}%</Text>
+                        </View>
+                        <View style={styles.progressBarBg}>
+                            <View style={[styles.progressBarFill, { width: `${loadingProgress}%` }]} />
+                        </View>
+                        <Text style={styles.progressDetail}>Analysing 12,400+ routes</Text>
+                    </View>
+                </View>
+
+                <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => {
+                        setLoading(false);
+                        setShowLoadingScreen(false);
+                    }}
+                >
+                    <Text style={styles.cancelButtonText}>Cancel Generation</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
         );
     }
 
@@ -1122,28 +1164,129 @@ const styles = StyleSheet.create({
     },
     loadingContainer: {
         flex: 1,
+        backgroundColor: "#FAF9F6",
+    },
+    loadingHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingTop: 20,
+    },
+    loadingContent: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 24,
+    },
+    globeContainer: {
+        width: 300,
+        height: 300,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#FAF9F6",
-        padding: 24,
+        marginBottom: 40,
     },
-    loadingLogo: {
-        width: 140,
-        height: 140,
+    globeOuter: {
+        width: 280,
+        height: 280,
+        borderRadius: 140,
+        backgroundColor: "#FFFFFF",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20,
+        elevation: 5,
+        position: 'relative',
     },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 26,
+    globeInner: {
+        width: 240,
+        height: 240,
+        borderRadius: 120,
+        backgroundColor: "#3B82F6", // Fallback blue
+        justifyContent: "center",
+        alignItems: "center",
+        overflow: 'hidden',
+    },
+    planeCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: "#1A1A1A",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 10,
+    },
+    orbitDot: {
+        position: 'absolute',
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+    },
+    loadingTitle: {
+        fontSize: 32,
         fontWeight: "800",
         color: "#1A1A1A",
         textAlign: "center",
+        marginBottom: 16,
+        lineHeight: 40,
     },
-    loadingSubtext: {
-        marginTop: 8,
+    loadingSubtitle: {
         fontSize: 16,
-        color: "#9B9B9B",
+        color: "#6B7280",
         textAlign: "center",
         lineHeight: 24,
+        marginBottom: 40,
+        paddingHorizontal: 20,
+    },
+    progressContainer: {
+        width: '100%',
+        paddingHorizontal: 20,
+    },
+    progressHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    progressLabelContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    progressLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    progressPercent: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#FFE500",
+    },
+    progressBarBg: {
+        height: 8,
+        backgroundColor: "#E5E7EB",
+        borderRadius: 4,
+        overflow: "hidden",
+        marginBottom: 12,
+    },
+    progressBarFill: {
+        height: "100%",
+        backgroundColor: "#FFE500",
+        borderRadius: 4,
+    },
+    progressDetail: {
+        fontSize: 13,
+        color: "#6B7280",
+    },
+    cancelButton: {
+        paddingVertical: 20,
+        alignItems: "center",
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        color: "#6B7280",
         fontWeight: "500",
     },
     modalOverlay: {
