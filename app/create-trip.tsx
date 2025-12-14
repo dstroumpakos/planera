@@ -711,15 +711,15 @@ export default function CreateTripScreen() {
                         <Text style={styles.skipFlightsText}>I already have flights (Skip flight search)</Text>
                     </TouchableOpacity>
 
-                    <View style={styles.multiCityContainer}>
+                    <TouchableOpacity style={styles.multiCityButton} disabled={true}>
                         <View style={styles.multiCityContent}>
-                            <Ionicons name="git-merge-outline" size={20} color="#9B9B9B" />
+                            <Ionicons name="git-merge-outline" size={20} color="#1A1A1A" />
                             <Text style={styles.multiCityText}>Multi-City Trip</Text>
                         </View>
                         <View style={styles.comingSoonBadge}>
-                            <Text style={styles.comingSoonText}>Coming Soon</Text>
+                            <Text style={styles.comingSoonText}>COMING SOON</Text>
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Dates Section */}
@@ -1407,14 +1407,17 @@ const styles = StyleSheet.create({
         color: '#1A1A1A',
         fontWeight: '500',
     },
-    multiCityContainer: {
+    multiCityButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginTop: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: '#F9F9F9',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
     },
     multiCityContent: {
         flexDirection: 'row',
@@ -1422,12 +1425,12 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     multiCityText: {
-        fontSize: 14,
-        color: '#9B9B9B',
-        fontWeight: '500',
+        fontSize: 15,
+        color: '#1A1A1A',
+        fontWeight: '600',
     },
     comingSoonBadge: {
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#FFE500',
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
@@ -1435,7 +1438,6 @@ const styles = StyleSheet.create({
     comingSoonText: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#9B9B9B',
-        textTransform: 'uppercase',
+        color: '#1A1A1A',
     },
 });
