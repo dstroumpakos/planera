@@ -7,6 +7,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from 'expo-linear-gradient';
+
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Cart item type for local state
@@ -247,6 +249,7 @@ export default function TripDetails() {
     const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
     const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0);
     const [checkedBaggageSelected, setCheckedBaggageSelected] = useState<boolean>(false);
+    const [activeFilter, setActiveFilter] = useState<'all' | 'food' | 'sights' | 'stays'>('all');
 
     const [editForm, setEditForm] = useState({
         destination: "",
@@ -880,753 +883,148 @@ export default function TripDetails() {
     const isPremium = trip.hasFullAccess ?? trip.userPlan === "premium";
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="white" />
-                </TouchableOpacity>
-                
-                <View style={styles.headerRightButtons}>
-                    {/* Cart Button with Badge */}
-                    <TouchableOpacity 
-                        onPress={() => {
-                            if (Platform.OS !== 'web') {
-                                const itemCount = getCartItemCount();
-                                const total = cart?.totalAmount || 0;
-                                if (itemCount > 0) {
-                                    Alert.alert(
-                                        "Your Cart",
-                                        `${itemCount} item${itemCount > 1 ? 's' : ''} in cart\nTotal: €${total.toFixed(2)}`,
-                                        [
-                                            { text: "Continue Shopping", style: "cancel" },
-                                            { text: "Clear Cart", style: "destructive", onPress: () => {
-                                                // Clear cart functionality
-                                            }},
-                                        ]
-                                    );
-                                } else {
-                                    Alert.alert("Cart Empty", "Add activities to your cart to book them together.");
-                                }
-                            }
-                        }} 
-                        style={styles.iconButton}
-                    >
-                        <Ionicons name="cart-outline" size={20} color="white" />
-                        {getCartItemCount() > 0 && (
-                            <View style={styles.cartBadge}>
-                                <Text style={styles.cartBadgeText}>{getCartItemCount()}</Text>
-                            </View>
-                        )}
+        <View style={styles.container}>
+            {/* Header */}
+            <SafeAreaView edges={['top']} style={styles.headerContainer}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.iconButton}>
-                        <Ionicons name="pencil" size={20} color="white" />
+                    <View style={styles.headerTitleContainer}>
+                        <Text style={styles.headerTitle}>{trip.destination} Escape</Text>
+                        <View style={styles.aiBadge}>
+                            <Ionicons name="sparkles" size={12} color="#F9F506" />
+                            <Text style={styles.aiBadgeText}>AI Generated</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity style={styles.iconButton}>
+                        <Ionicons name="ellipsis-horizontal" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        onPress={() => regenerateTrip({ tripId: trip._id })} 
-                        style={styles.iconButton}
-                    >
-                        <Ionicons name="refresh" size={20} color="white" />
+                </View>
+            </SafeAreaView>
+
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* Map Preview */}
+                <View style={styles.mapPreviewContainer}>
+                    <Image 
+                        source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
+                        style={styles.mapImage} 
+                    />
+                    <LinearGradient
+                        colors={['transparent', 'rgba(248, 248, 245, 1)']}
+                        style={styles.mapGradient}
+                    />
+                    <TouchableOpacity style={styles.viewMapButton} onPress={() => openMap(trip.destination)}>
+                        <Ionicons name="map" size={20} color="#F9F506" />
+                        <Text style={styles.viewMapText}>View Map</Text>
                     </TouchableOpacity>
                 </View>
 
-                <Image 
-                    source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
-                    style={styles.headerImage} 
-                />
-                <View style={styles.headerOverlay} />
-                <View style={styles.headerContent}>
-                    <Text style={styles.destination}>{trip.destination}</Text>
-                    <Text style={styles.dates}>
-                        {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
-                    </Text>
-                </View>
-            </View>
+                {/* Filter Chips */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
+                    <TouchableOpacity 
+                        style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
+                        onPress={() => setActiveFilter('all')}
+                    >
+                        <Ionicons name="calendar" size={18} color={activeFilter === 'all' ? "#1A1A1A" : "#64748B"} />
+                        <Text style={[styles.filterText, activeFilter === 'all' && styles.filterTextActive]}>All Days</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.filterChip, activeFilter === 'food' && styles.filterChipActive]}
+                        onPress={() => setActiveFilter('food')}
+                    >
+                        <Ionicons name="restaurant" size={18} color={activeFilter === 'food' ? "#1A1A1A" : "#64748B"} />
+                        <Text style={[styles.filterText, activeFilter === 'food' && styles.filterTextActive]}>Food</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.filterChip, activeFilter === 'sights' && styles.filterChipActive]}
+                        onPress={() => setActiveFilter('sights')}
+                    >
+                        <Ionicons name="ticket" size={18} color={activeFilter === 'sights' ? "#1A1A1A" : "#64748B"} />
+                        <Text style={[styles.filterText, activeFilter === 'sights' && styles.filterTextActive]}>Sights</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.filterChip, activeFilter === 'stays' && styles.filterChipActive]}
+                        onPress={() => setActiveFilter('stays')}
+                    >
+                        <Ionicons name="bed" size={18} color={activeFilter === 'stays' ? "#1A1A1A" : "#64748B"} />
+                        <Text style={[styles.filterText, activeFilter === 'stays' && styles.filterTextActive]}>Stays</Text>
+                    </TouchableOpacity>
+                </ScrollView>
 
-            <ScrollView contentContainerStyle={styles.content}>
-                {!trip.skipFlights ? (
-                    <Section title="Flights">
-                        {renderFlights()}
-                    </Section>
-                ) : (
-                    <View style={styles.skippedSection}>
-                        <Ionicons name="airplane-outline" size={24} color="#90A4AE" />
-                        <Text style={styles.skippedText}>Flights skipped - you already have flights</Text>
-                    </View>
-                )}
-
-                {!trip.skipHotel ? (
-                    <Section title="Accommodation Options">
-                        {/* Accommodation Type Filter */}
-                        <View style={styles.accommodationFilter}>
-                            <TouchableOpacity 
-                                style={[styles.filterTab, accommodationType === 'all' && styles.filterTabActive]}
-                                onPress={() => setAccommodationType('all')}
-                            >
-                                <Text style={[styles.filterTabText, accommodationType === 'all' && styles.filterTabTextActive]}>
-                                    All ({allAccommodations.length})
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={[styles.filterTab, accommodationType === 'hotel' && styles.filterTabActive]}
-                                onPress={() => setAccommodationType('hotel')}
-                            >
-                                <Ionicons name="business" size={16} color={accommodationType === 'hotel' ? '#fff' : '#546E7A'} />
-                                <Text style={[styles.filterTabText, accommodationType === 'hotel' && styles.filterTabTextActive]}>
-                                    Hotels ({hotelsCount})
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={[styles.filterTab, accommodationType === 'airbnb' && styles.filterTabActive, accommodationType === 'airbnb' && styles.airbnbTabActive]}
-                                onPress={() => setAccommodationType('airbnb')}
-                            >
-                                <Ionicons name="home" size={16} color={accommodationType === 'airbnb' ? '#fff' : '#FF5A5F'} />
-                                <Text style={[styles.filterTabText, accommodationType === 'airbnb' && styles.filterTabTextActive]}>
-                                    Airbnb ({airbnbsCount})
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotelList}>
-                            {filteredAccommodations.map((accommodation: any, index: number) => {
-                                const isAirbnb = accommodation.type === 'airbnb';
-                                const actualIndex = allAccommodations.indexOf(accommodation);
-                                
-                                return (
-                                    <TouchableOpacity 
-                                        key={index} 
-                                        onPress={() => setSelectedHotelIndex(actualIndex)}
-                                        activeOpacity={0.9}
-                                        style={[
-                                            styles.hotelCard,
-                                            selectedHotelIndex === actualIndex && styles.selectedHotelCard,
-                                            isAirbnb && styles.airbnbCard
-                                        ]}
-                                    >
-                                        {/* Type Badge */}
-                                        <View style={[styles.accommodationTypeBadge, isAirbnb && styles.airbnbBadge]}>
-                                            <Ionicons 
-                                                name={isAirbnb ? "home" : "business"} 
-                                                size={12} 
-                                                color={isAirbnb ? "#FF5A5F" : "#14B8A6"} 
-                                            />
-                                            <Text style={[styles.accommodationTypeText, isAirbnb && styles.airbnbTypeText]}>
-                                                {isAirbnb ? "Airbnb" : "Hotel"}
-                                            </Text>
-                                        </View>
-
-                                        {/* Superhost Badge for Airbnb */}
-                                        {isAirbnb && accommodation.superhost && (
-                                            <View style={styles.superhostBadge}>
-                                                <Ionicons name="shield-checkmark" size={12} color="#FF5A5F" />
-                                                <Text style={styles.superhostText}>Superhost</Text>
-                                            </View>
-                                        )}
-
-                                        <View style={styles.hotelHeader}>
-                                            <Text style={styles.cardTitle} numberOfLines={1}>{accommodation.name}</Text>
-                                            {!isAirbnb && (
-                                                <View style={styles.stars}>
-                                                    {[...Array(accommodation.stars || 0)].map((_, i) => (
-                                                        <Ionicons key={i} name="star" size={12} color="#FFB300" />
-                                                    ))}
-                                                </View>
-                                            )}
-                                            {isAirbnb && (
-                                                <View style={styles.ratingBadge}>
-                                                    <Ionicons name="star" size={12} color="#FFB300" />
-                                                    <Text style={styles.ratingText}>{accommodation.rating}</Text>
-                                                </View>
-                                            )}
-                                        </View>
-
-                                        {/* Airbnb Property Details */}
-                                        {isAirbnb && (
-                                            <View style={styles.propertyDetails}>
-                                                <Text style={styles.propertyType}>{accommodation.propertyType}</Text>
-                                                <View style={styles.propertyStats}>
-                                                    {accommodation.bedrooms > 0 && (
-                                                        <View style={styles.statItem}>
-                                                            <Ionicons name="bed-outline" size={14} color="#546E7A" />
-                                                            <Text style={styles.statText}>{accommodation.bedrooms} bed{accommodation.bedrooms > 1 ? 's' : ''}</Text>
-                                                        </View>
-                                                    )}
-                                                    <View style={styles.statItem}>
-                                                        <Ionicons name="people-outline" size={14} color="#546E7A" />
-                                                        <Text style={styles.statText}>{accommodation.maxGuests} guests</Text>
-                                                    </View>
-                                                    <View style={styles.statItem}>
-                                                        <Ionicons name="water-outline" size={14} color="#546E7A" />
-                                                        <Text style={styles.statText}>{accommodation.bathrooms} bath</Text>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        )}
-
-                                        <Text style={styles.hotelDesc} numberOfLines={2}>{accommodation.description}</Text>
-                                        
-                                        {/* Amenities */}
-                                        <View style={styles.amenitiesRow}>
-                                            {(accommodation.amenities || []).slice(0, 4).map((amenity: string, i: number) => (
-                                                <View key={i} style={[styles.amenityBadge, isAirbnb && styles.airbnbAmenityBadge]}>
-                                                    <Text style={[styles.amenityText, isAirbnb && styles.airbnbAmenityText]}>{amenity}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-
-                                        {/* Price */}
-                                        <View style={styles.accommodationPriceRow}>
-                                            <Text style={[styles.price, isAirbnb && styles.airbnbPrice]}>
-                                                €{accommodation.pricePerNight}
-                                            </Text>
-                                            <Text style={styles.priceNight}>/night</Text>
-                                        </View>
-                                        
-                                        {/* Total for stay */}
-                                        <Text style={styles.totalStayPrice}>
-                                            €{accommodation.pricePerNight * duration} total for {duration} nights
-                                        </Text>
-
-                                        <TouchableOpacity onPress={() => openMap(accommodation.address)}>
-                                            <Text style={styles.address} numberOfLines={1}>
-                                                {accommodation.address} <Ionicons name="map" size={12} color="#14B8A6" />
-                                            </Text>
-                                        </TouchableOpacity>
-                                        
-                                        <TouchableOpacity 
-                                            style={[styles.miniBookButton, isAirbnb && styles.airbnbBookButton]}
-                                            onPress={() => {
-                                                const url = accommodation.bookingUrl || (isAirbnb 
-                                                    ? `https://www.airbnb.com/s/${encodeURIComponent(trip.destination)}/homes`
-                                                    : `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(accommodation.name + " " + trip.destination)}`
-                                                );
-                                                openAffiliateLink('hotel', accommodation.name + " " + trip.destination);
-                                            }}
-                                        >
-                                            <Text style={styles.miniBookButtonText}>
-                                                {isAirbnb ? "View on Airbnb" : "Book Hotel"}
-                                            </Text>
-                                        </TouchableOpacity>
-
-                                        {selectedHotelIndex === actualIndex && (
-                                            <View style={styles.selectedBadge}>
-                                                <Ionicons name="checkmark-circle" size={20} color={isAirbnb ? "#FF5A5F" : "#14B8A6"} />
-                                            </View>
-                                        )}
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </ScrollView>
-                        
-                        {/* Price Summary based on selection */}
-                        {selectedAccommodation && (
-                            <View style={styles.accommodationSummary}>
-                                <View style={styles.summaryHeader}>
-                                    <Ionicons 
-                                        name={selectedAccommodation.type === 'airbnb' ? "home" : "business"} 
-                                        size={20} 
-                                        color={selectedAccommodation.type === 'airbnb' ? "#FF5A5F" : "#14B8A6"} 
-                                    />
-                                    <Text style={styles.summaryTitle}>Selected: {selectedAccommodation.name}</Text>
-                                </View>
-                                <View style={styles.summaryDetails}>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Per night</Text>
-                                        <Text style={styles.summaryValue}>€{accommodationPricePerNight}</Text>
-                                    </View>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>{duration} nights</Text>
-                                        <Text style={styles.summaryValue}>€{totalAccommodationCost}</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        )}
-                    </Section>
-                ) : (
-                    <View style={styles.skippedSection}>
-                        <Ionicons name="home-outline" size={24} color="#90A4AE" />
-                        <Text style={styles.skippedText}>Accommodation skipped - you already have accommodation</Text>
-                    </View>
-                )}
-
-                {/* Transportation Section - Always show */}
-                <Section title="Transportation Options">
-                    {trip.itinerary?.transportation && trip.itinerary.transportation.length > 0 ? (
-                        <>
-                            {/* Car Rentals */}
-                            {trip.itinerary.transportation.filter((t: any) => t.type === "car_rental").length > 0 && (
-                                <>
-                                    <Text style={styles.transportSubtitle}>🚗 Car Rental</Text>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
-                                        {trip.itinerary.transportation
-                                            .filter((t: any) => t.type === "car_rental")
-                                            .map((car: any, index: number) => (
-                                                <View key={index} style={styles.transportCard}>
-                                                    <View style={styles.transportHeader}>
-                                                        <Text style={styles.transportProvider}>{car.provider}</Text>
-                                                        <View style={styles.transportCategoryBadge}>
-                                                            <Text style={styles.transportCategoryText}>{car.category}</Text>
-                                                        </View>
-                                                    </View>
-                                                    <Text style={styles.transportVehicle}>{car.vehicle}</Text>
-                                                    <View style={styles.transportFeatures}>
-                                                        {car.features?.slice(0, 3).map((feature: string, i: number) => (
-                                                            <View key={i} style={styles.featureBadge}>
-                                                                <Text style={styles.featureText}>{feature}</Text>
-                                                            </View>
-                                                        ))}
-                                                    </View>
-                                                    <View style={styles.transportPriceRow}>
-                                                        <Text style={styles.transportPrice}>€{car.pricePerDay}</Text>
-                                                        <Text style={styles.transportPriceUnit}>/day</Text>
-                                                    </View>
-                                                    <Text style={styles.transportNote}>
-                                                        {car.insuranceIncluded ? "✓ Insurance included" : "Insurance extra"}
-                                                    </Text>
-                                                    <TouchableOpacity 
-                                                        style={styles.transportBookButton}
-                                                        onPress={() => {
-                                                            if (car.bookingUrl) {
-                                                                Linking.openURL(car.bookingUrl);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Text style={styles.transportBookButtonText}>Book Now</Text>
-                                                        <Ionicons name="open-outline" size={14} color="white" />
-                                                    </TouchableOpacity>
-                                                </View>
-                                            ))}
-                                    </ScrollView>
-                                </>
-                            )}
-
-                            {/* Taxi & Transfers */}
-                            {trip.itinerary.transportation.filter((t: any) => t.type === "taxi").length > 0 && (
-                                <>
-                                    <Text style={styles.transportSubtitle}>🚕 Taxi & Transfers</Text>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
-                                        {trip.itinerary.transportation
-                                            .filter((t: any) => t.type === "taxi")
-                                            .map((taxi: any, index: number) => (
-                                                <View key={index} style={styles.transportCard}>
-                                                    <View style={styles.transportHeader}>
-                                                        <Text style={styles.transportProvider}>{taxi.provider}</Text>
-                                                    </View>
-                                                    <Text style={styles.transportService}>{taxi.service}</Text>
-                                                    <Text style={styles.transportDesc}>{taxi.description}</Text>
-                                                    <View style={styles.transportFeatures}>
-                                                        {taxi.features?.slice(0, 2).map((feature: string, i: number) => (
-                                                            <View key={i} style={styles.featureBadge}>
-                                                                <Text style={styles.featureText}>{feature}</Text>
-                                                            </View>
-                                                        ))}
-                                                    </View>
-                                                    <View style={styles.transportPriceRow}>
-                                                        <Text style={styles.transportPrice}>~€{taxi.estimatedPrice}</Text>
-                                                    </View>
-                                                    <Text style={styles.transportNote}>
-                                                        Max {taxi.maxPassengers} passengers • {taxi.waitingTime}
-                                                    </Text>
-                                                    {taxi.bookingUrl && (
-                                                        <TouchableOpacity 
-                                                            style={styles.transportBookButton}
-                                                            onPress={() => Linking.openURL(taxi.bookingUrl)}
-                                                        >
-                                                            <Text style={styles.transportBookButtonText}>Book Transfer</Text>
-                                                            <Ionicons name="open-outline" size={14} color="white" />
-                                                        </TouchableOpacity>
-                                                    )}
-                                                </View>
-                                            ))}
-                                    </ScrollView>
-                                </>
-                            )}
-
-                            {/* Ride-sharing */}
-                            {trip.itinerary.transportation.filter((t: any) => t.type === "rideshare").length > 0 && (
-                                <>
-                                    <Text style={styles.transportSubtitle}>📱 Ride-sharing</Text>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.transportList}>
-                                        {trip.itinerary.transportation
-                                            .filter((t: any) => t.type === "rideshare")
-                                            .map((ride: any, index: number) => (
-                                                <View key={index} style={styles.transportCard}>
-                                                    <View style={styles.transportHeader}>
-                                                        <Text style={styles.transportProvider}>{ride.provider}</Text>
-                                                        <View style={[styles.transportCategoryBadge, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}>
-                                                            <Text style={[styles.transportCategoryText, { color: "white" }]}>{ride.service}</Text>
-                                                        </View>
-                                                    </View>
-                                                    <Text style={styles.transportDesc}>{ride.description}</Text>
-                                                    <View style={styles.transportFeatures}>
-                                                        {ride.features?.slice(0, 2).map((feature: string, i: number) => (
-                                                            <View key={i} style={styles.featureBadge}>
-                                                                <Text style={styles.featureText}>{feature}</Text>
-                                                            </View>
-                                                        ))}
-                                                    </View>
-                                                    <View style={styles.transportPriceRow}>
-                                                        <Text style={styles.transportPrice}>€{ride.estimatedPrice}</Text>
-                                                    </View>
-                                                    <Text style={styles.transportNote}>
-                                                        Wait time: {ride.waitingTime} • Max {ride.maxPassengers} passengers
-                                                    </Text>
-                                                    <TouchableOpacity 
-                                                        style={[styles.transportBookButton, { backgroundColor: ride.provider === "Uber" ? "#000" : "#34D186" }]}
-                                                        onPress={() => {
-                                                            if (ride.bookingUrl) {
-                                                                Linking.openURL(ride.bookingUrl);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Text style={styles.transportBookButtonText}>Open {ride.provider}</Text>
-                                                        <Ionicons name="open-outline" size={14} color="white" />
-                                                    </TouchableOpacity>
-                                                </View>
-                                            ))}
-                                    </ScrollView>
-                                </>
-                            )}
-
-                            {/* Public Transport */}
-                            {trip.itinerary.transportation
-                                .filter((t: any) => t.type === "public_transport")
-                                .map((pt: any, index: number) => (
-                                    <View key={index}>
-                                        <Text style={styles.transportSubtitle}>🚇 Public Transport</Text>
-                                        <View style={styles.publicTransportCard}>
-                                            {pt.options?.map((option: any, i: number) => (
-                                                <View key={i} style={styles.publicTransportOption}>
-                                                    <View style={styles.publicTransportHeader}>
-                                                        <Ionicons 
-                                                            name={option.mode === "Metro/Subway" ? "subway" : option.mode === "Bus" ? "bus" : "train"} 
-                                                            size={20} 
-                                                            color="#14B8A6" 
-                                                        />
-                                                        <Text style={styles.publicTransportMode}>{option.mode}</Text>
-                                                    </View>
-                                                    <Text style={styles.publicTransportDesc}>{option.description}</Text>
-                                                    <View style={styles.publicTransportPrices}>
-                                                        {option.singleTicketPrice && (
-                                                            <Text style={styles.publicTransportPrice}>
-                                                                Single: €{option.singleTicketPrice}
-                                                            </Text>
-                                                        )}
-                                                        {option.dayPassPrice && (
-                                                            <Text style={styles.publicTransportPrice}>
-                                                                Day Pass: €{option.dayPassPrice}
-                                                            </Text>
-                                                        )}
-                                                        {option.price && (
-                                                            <Text style={styles.publicTransportPrice}>
-                                                                €{option.price} ({option.duration})
-                                                            </Text>
-                                                        )}
-                                                    </View>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    </View>
-                                ))}
-                        </>
-                    ) : (
-                        <View style={styles.emptyTransportCard}>
-                            <Ionicons name="car-outline" size={48} color="#CFD8DC" />
-                            <Text style={styles.emptyTransportText}>Transportation options will appear here</Text>
-                            <Text style={styles.emptyTransportSubtext}>Generate a new trip to see car rentals, taxis, and more</Text>
-                        </View>
-                    )}
-                </Section>
-
-                <Section title="Daily Itinerary">
+                {/* Itinerary */}
+                <View style={styles.itineraryContainer}>
                     {trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
-                        <View key={index} style={styles.dayCard}>
+                        <View key={index} style={styles.daySection}>
                             <View style={styles.dayHeader}>
-                                <View style={styles.dayBadge}>
-                                    <Text style={styles.dayBadgeText}>Day {day.day}</Text>
+                                <View>
+                                    <Text style={styles.dayTitle}>Day {day.day}</Text>
+                                    <Text style={styles.daySubtitle}>{day.title || `Explore ${trip.destination}`}</Text>
                                 </View>
-                                {day.title && <Text style={styles.dayTitle}>{day.title}</Text>}
+                                <View style={styles.energyBadge}>
+                                    <Text style={styles.energyText}>HIGH ENERGY</Text>
+                                </View>
                             </View>
+
                             {day.activities.map((activity: any, actIndex: number) => (
-                                <View key={actIndex} style={styles.activityItem}>
-                                    <Text style={styles.activityTime}>{activity.time}</Text>
-                                    <View style={styles.activityContent}>
-                                        <View style={styles.activityHeader}>
-                                            <Text style={styles.activityTitle}>{activity.title}</Text>
-                                            {activity.type && activity.type !== "free" && (
-                                                <View style={[
-                                                    styles.activityTypeBadge,
-                                                    activity.type === "museum" && styles.museumBadge,
-                                                    activity.type === "attraction" && styles.attractionBadge,
-                                                    activity.type === "tour" && styles.tourBadge,
-                                                    activity.type === "restaurant" && styles.restaurantBadge,
-                                                ]}>
-                                                    <Text style={styles.activityTypeText}>
-                                                        {activity.type === "museum" ? "🏛️" : 
-                                                         activity.type === "attraction" ? "🎯" : 
-                                                         activity.type === "tour" ? "🚶" : 
-                                                         activity.type === "restaurant" ? "🍽️" : "📍"}
-                                                    </Text>
-                                                </View>
-                                            )}
+                                <View key={actIndex} style={styles.timelineItem}>
+                                    <View style={styles.timelineLeft}>
+                                        <View style={styles.timelineIconContainer}>
+                                            <Ionicons 
+                                                name={
+                                                    activity.type === 'restaurant' ? 'restaurant' :
+                                                    activity.type === 'museum' ? 'easel' :
+                                                    activity.type === 'attraction' ? 'ticket' :
+                                                    'location'
+                                                } 
+                                                size={20} 
+                                                color="#1A1A1A" 
+                                            />
                                         </View>
-                                        
-                                        {/* TripAdvisor Badge for Restaurants */}
-                                        {activity.type === "restaurant" && activity.fromTripAdvisor && (
-                                            <View style={styles.tripAdvisorActivityBadge}>
-                                                <Image 
-                                                    source={{ uri: "https://static.tacdn.com/img2/brand_refresh/Tripadvisor_lockup_horizontal_secondary_registered.svg" }}
-                                                    style={styles.tripAdvisorActivityLogo}
-                                                    resizeMode="contain"
-                                                />
-                                                {activity.tripAdvisorRating && (
-                                                    <View style={styles.tripAdvisorRatingBadge}>
-                                                        <Ionicons name="star" size={14} color="#00AA6C" />
-                                                        <Text style={styles.tripAdvisorRatingText}>{activity.tripAdvisorRating}</Text>
-                                                        {activity.tripAdvisorReviewCount && (
-                                                            <Text style={styles.tripAdvisorReviewText}>({activity.tripAdvisorReviewCount})</Text>
-                                                        )}
-                                                    </View>
-                                                )}
-                                            </View>
-                                        )}
-                                        
-                                        {/* Restaurant Meta Info */}
-                                        {activity.type === "restaurant" && activity.fromTripAdvisor && (activity.cuisine || activity.priceRange) && (
-                                            <View style={styles.restaurantMetaRow}>
-                                                {activity.cuisine && (
-                                                    <View style={styles.cuisineActivityBadge}>
-                                                        <Text style={styles.cuisineActivityText}>{activity.cuisine}</Text>
-                                                    </View>
-                                                )}
-                                                {activity.priceRange && (
-                                                    <Text style={styles.priceRangeActivityText}>{activity.priceRange}</Text>
-                                                )}
-                                            </View>
-                                        )}
-                                        
-                                        {/* Restaurant Address */}
-                                        {activity.type === "restaurant" && activity.fromTripAdvisor && activity.address && (
-                                            <View style={styles.restaurantAddressActivityRow}>
-                                                <Ionicons name="location-outline" size={12} color="#78909C" />
-                                                <Text style={styles.restaurantAddressActivityText} numberOfLines={1}>{activity.address}</Text>
-                                            </View>
-                                        )}
-                                        
-                                        <Text style={styles.activityDesc}>{activity.description}</Text>
-                                        
-                                        {/* Duration */}
-                                        {activity.duration && (
-                                            <View style={styles.activityMeta}>
-                                                <Ionicons name="time-outline" size={14} color="#78909C" />
-                                                <Text style={styles.activityMetaText}>{activity.duration}</Text>
-                                            </View>
-                                        )}
-                                        
-                                        {/* Pricing Section */}
-                                        {(activity.price !== undefined && activity.price !== null) && (
-                                            <View style={styles.pricingSection}>
-                                                {activity.price === 0 ? (
-                                                    <View style={styles.freeBadge}>
-                                                        <Text style={styles.freeText}>FREE</Text>
-                                                    </View>
-                                                ) : (
-                                                    <>
-                                                        <View style={styles.activityPriceRow}>
-                                                            <Text style={styles.activityPriceLabel}>Entry:</Text>
-                                                            <Text style={styles.activityPrice}>€{activity.price}</Text>
-                                                        </View>
-                                                        
-                                                        {/* Skip the Line Option */}
-                                                        {activity.skipTheLine && activity.skipTheLinePrice && (
-                                                            <View style={styles.skipLineContainer}>
-                                                                <View style={styles.skipLineBadge}>
-                                                                    <Ionicons name="flash" size={12} color="#FF9500" />
-                                                                    <Text style={styles.skipLineLabel}>Skip the Line:</Text>
-                                                                    <Text style={styles.skipLinePrice}>€{activity.skipTheLinePrice}</Text>
-                                                                </View>
-                                                                <Text style={styles.skipLineSave}>
-                                                                    Save {Math.round(((activity.skipTheLinePrice - activity.price) / activity.skipTheLinePrice) * -100)}% time
-                                                                </Text>
-                                                            </View>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </View>
-                                        )}
-                                        
-                                        {/* Tips */}
-                                        {activity.tips && (
-                                            <View style={styles.tipContainer}>
-                                                <Ionicons name="bulb-outline" size={14} color="#FF9500" />
-                                                <Text style={styles.tipText}>{activity.tips}</Text>
-                                            </View>
-                                        )}
-                                        
-                                        {/* Action Buttons - Add to Cart and Book Now */}
-                                        {activity.price > 0 && (
-                                            <View style={styles.bookingButtons}>
-                                                {/* Regular Entry - Add to Cart */}
-                                                {isInCart(activity.title, day.day, false) ? (
-                                                    <TouchableOpacity 
-                                                        style={styles.inCartButton}
-                                                        onPress={() => handleRemoveFromCart(activity.title, day.day, false)}
-                                                    >
-                                                        <Ionicons name="checkmark-circle" size={16} color="#14B8A6" />
-                                                        <Text style={styles.inCartButtonText}>In Cart</Text>
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <TouchableOpacity 
-                                                        style={styles.addToCartButton}
-                                                        onPress={() => handleAddToCart(activity, day.day, false)}
-                                                        disabled={addingToCart === `${activity.title}-${day.day}-false`}
-                                                    >
-                                                        {addingToCart === `${activity.title}-${day.day}-false` ? (
-                                                            <ActivityIndicator size="small" color="#14B8A6" />
-                                                        ) : (
-                                                            <>
-                                                                <Ionicons name="cart-outline" size={16} color="#14B8A6" />
-                                                                <Text style={styles.addToCartButtonText}>Add €{activity.price}</Text>
-                                                            </>
-                                                        )}
-                                                    </TouchableOpacity>
-                                                )}
-                                                
-                                                {/* Skip the Line - Add to Cart */}
-                                                {activity.skipTheLine && activity.skipTheLinePrice && (
-                                                    isInCart(activity.title, day.day, true) ? (
-                                                        <TouchableOpacity 
-                                                            style={styles.inCartSkipLineButton}
-                                                            onPress={() => handleRemoveFromCart(activity.title, day.day, true)}
-                                                        >
-                                                            <Ionicons name="checkmark-circle" size={16} color="#F59E0B" />
-                                                            <Text style={styles.inCartSkipLineButtonText}>Skip Line ✓</Text>
-                                                        </TouchableOpacity>
-                                                    ) : (
-                                                        <TouchableOpacity 
-                                                            style={styles.addToCartSkipLineButton}
-                                                            onPress={() => handleAddToCart(activity, day.day, true)}
-                                                            disabled={addingToCart === `${activity.title}-${day.day}-true`}
-                                                        >
-                                                            {addingToCart === `${activity.title}-${day.day}-true` ? (
-                                                                <ActivityIndicator size="small" color="#F59E0B" />
-                                                            ) : (
-                                                                <>
-                                                                    <Ionicons name="flash" size={16} color="#F59E0B" />
-                                                                    <Text style={styles.addToCartSkipLineButtonText}>Skip €{activity.skipTheLinePrice}</Text>
-                                                                </>
-                                                            )}
-                                                        </TouchableOpacity>
-                                                    )
-                                                )}
-                                                
-                                                {/* Book Now Button (external link) */}
-                                                {activity.bookingUrl && (
-                                                    <TouchableOpacity 
-                                                        style={styles.bookActivityButton}
-                                                        onPress={() => {
-                                                            trackClick({
-                                                                tripId: id as Id<"trips">,
-                                                                type: "activity",
-                                                                item: activity.title,
-                                                                url: activity.bookingUrl
-                                                            }).catch(console.error);
-                                                            Linking.openURL(activity.bookingUrl);
-                                                        }}
-                                                    >
-                                                        <Ionicons name="open-outline" size={16} color="white" />
-                                                        <Text style={styles.bookActivityButtonText}>Book</Text>
-                                                    </TouchableOpacity>
-                                                )}
-                                                
-                                                {/* TripAdvisor Link Button */}
-                                                {activity.type === "restaurant" && activity.tripAdvisorUrl && (
-                                                    <TouchableOpacity 
-                                                        style={styles.tripAdvisorLinkButton}
-                                                        onPress={() => {
-                                                            trackClick({
-                                                                tripId: id as Id<"trips">,
-                                                                type: "restaurant",
-                                                                item: activity.title,
-                                                                url: activity.tripAdvisorUrl
-                                                            }).catch(console.error);
-                                                            Linking.openURL(activity.tripAdvisorUrl);
-                                                        }}
-                                                    >
-                                                        <Ionicons name="restaurant-outline" size={14} color="#00AA6C" />
-                                                        <Text style={styles.tripAdvisorLinkButtonText}>TripAdvisor</Text>
-                                                    </TouchableOpacity>
-                                                )}
-                                            </View>
-                                        )}
+                                        <Text style={styles.timelineTime}>{activity.time}</Text>
+                                        {actIndex < day.activities.length - 1 && <View style={styles.timelineLine} />}
                                     </View>
+                                    <TouchableOpacity style={styles.timelineCard}>
+                                        <View style={styles.timelineCardContent}>
+                                            <View style={{flex: 1}}>
+                                                <Text style={styles.activityTitle}>{activity.title}</Text>
+                                                <Text style={styles.activityDesc} numberOfLines={2}>{activity.description}</Text>
+                                                <View style={styles.activityMeta}>
+                                                    <View style={styles.metaBadge}>
+                                                        <Text style={styles.metaText}>{activity.type || 'Activity'}</Text>
+                                                    </View>
+                                                    <View style={styles.metaDuration}>
+                                                        <Ionicons name="time-outline" size={12} color="#94A3B8" />
+                                                        <Text style={styles.metaDurationText}>{activity.duration || '1h'}</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                            {/* Placeholder image if no image available */}
+                                            <View style={styles.activityImagePlaceholder} />
+                                        </View>
+                                    </TouchableOpacity>
                                 </View>
                             ))}
                         </View>
                     ))}
-                    
-                    {!isPremium && (
-                        <View style={styles.blurContainer}>
-                            <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-                            <View style={styles.lockContent}>
-                                <Ionicons name="lock-closed" size={48} color="#1B3F92" />
-                                <Text style={styles.lockTitle}>Unlock Full Itinerary</Text>
-                                <Text style={styles.lockText}>
-                                    Upgrade to Premium to see the detailed daily plan, maps, and more.
-                                </Text>
-                                <TouchableOpacity 
-                                    style={styles.unlockButton}
-                                    onPress={() => router.push("/subscription")}
-                                >
-                                    <Text style={styles.unlockButtonText}>Upgrade Now</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity 
-                                    style={styles.notNowButton}
-                                    onPress={() => {
-                                        // Just dismiss the overlay or scroll up? 
-                                        // Actually, the overlay covers the content, so "Not Now" 
-                                        // implies they accept seeing the limited version (which is just the blurred view).
-                                        // But usually "Not Now" means "Close this upsell".
-                                        // Since the content IS locked, they can't really "close" it to see the content.
-                                        // So "Not Now" might just be a way to go back or stay on the limited view.
-                                        // Or better, let's make it clear they are staying on the limited plan.
-                                    }}
-                                >
-                                    <Text style={styles.notNowButtonText}>Not Now</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    )}
-                </Section>
+                </View>
             </ScrollView>
 
-            <View style={styles.footer}>
-                <View style={styles.priceBreakdown}>
-                    <TouchableOpacity 
-                        style={styles.priceBreakdownToggle}
-                        onPress={() => {
-                            if (Platform.OS !== 'web') {
-                                const baggageLine = checkedBaggageSelected 
-                                    ? `\n🧳 Checked baggage: €${Math.round(totalBaggageCost)}` 
-                                    : '';
-                                Alert.alert(
-                                    "Price Breakdown",
-                                    `✈️ Flights: €${Math.round(totalFlightCost)}${baggageLine}\n🏨 ${selectedAccommodation?.type === 'airbnb' ? 'Airbnb' : 'Hotel'} (${duration} nights): €${Math.round(totalAccommodationCost)}\n🍽️ Daily expenses: €${Math.round(totalDailyExpenses)}\n\n💰 Total: €${Math.round(grandTotal)}`,
-                                    [{ text: "OK" }]
-                                );
-                            }
-                        }}
-                    >
-                        <View style={styles.priceRow}>
-                            <Text style={styles.priceLabel}>Total for {travelers} traveler{travelers > 1 ? 's' : ''}</Text>
-                            <Ionicons name="information-circle-outline" size={16} color="#78909C" />
-                        </View>
-                        <Text style={styles.totalPrice}>€{Math.round(grandTotal).toLocaleString()}</Text>
+            {/* Floating Action Bar */}
+            <View style={styles.fabContainer}>
+                <View style={styles.fab}>
+                    <TouchableOpacity style={styles.saveTripButton} onPress={() => Alert.alert("Saved", "Trip saved to your profile!")}>
+                        <Ionicons name="bookmark" size={20} color="#1A1A1A" />
+                        <Text style={styles.saveTripText}>Save Trip</Text>
                     </TouchableOpacity>
-                    <Text style={styles.perPersonPrice}>€{Math.round(pricePerPerson).toLocaleString()} per person</Text>
+                    <View style={styles.fabDivider} />
+                    <TouchableOpacity style={styles.fabIconButton} onPress={() => setIsEditing(true)}>
+                        <Ionicons name="pencil" size={20} color="#475569" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.fabIconButton} onPress={() => Alert.alert("Share", "Sharing functionality coming soon!")}>
+                        <Ionicons name="share-outline" size={20} color="#475569" />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.bookButton} onPress={handleBookTrip}>
-                    <Text style={styles.bookButtonText}>Book This Trip</Text>
-                </TouchableOpacity>
             </View>
 
             <Modal 
@@ -1753,7 +1151,7 @@ export default function TripDetails() {
                     </ScrollView>
                 </KeyboardAvoidingView>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -1769,507 +1167,291 @@ function Section({ title, children }: { title: string, children: React.ReactNode
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FAF9F6",
+        backgroundColor: "#F8F8F5",
     },
-    center: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#FAF9F6",
-    },
-    generatingText: {
-        marginTop: 16,
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#FFE500",
-    },
-    generatingSubtext: {
-        marginTop: 8,
-        fontSize: 14,
-        color: "#9B9B9B",
-    },
-    errorText: {
-        marginTop: 16,
-        fontSize: 18,
-        color: "#EF4444",
-    },
-    skippedSection: {
-        backgroundColor: "#F5F3EE",
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 16,
-        alignItems: "center",
-        justifyContent: "center",
-        flexDirection: "row",
-        gap: 12,
-    },
-    skippedText: {
-        fontSize: 14,
-        color: "#9B9B9B",
-        flex: 1,
+    headerContainer: {
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        zIndex: 10,
     },
     header: {
-        height: 200,
-        position: "relative",
-    },
-    headerImage: {
-        width: "100%",
-        height: "100%",
-    },
-    headerOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(26, 26, 26, 0.3)",
-    },
-    headerContent: {
-        position: "absolute",
-        bottom: 20,
-        left: 20,
-    },
-    backButton: {
-        position: "absolute",
-        top: 16,
-        left: 16,
-        zIndex: 10,
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: "rgba(0,0,0,0.3)",
-    },
-    headerRightButtons: {
-        position: "absolute",
-        top: 16,
-        right: 16,
-        zIndex: 10,
-        flexDirection: "row",
-        gap: 8,
-    },
-    iconButton: {
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: "rgba(0,0,0,0.3)",
-    },
-    destination: {
-        fontSize: 36,
-        fontWeight: "700",
-        color: "white",
-        letterSpacing: 1,
-    },
-    dates: {
-        fontSize: 16,
-        color: "rgba(255,255,255,0.9)",
-        marginTop: 4,
-        fontWeight: "500",
-    },
-    content: {
-        padding: 20,
-        paddingBottom: 100,
-    },
-    section: {
-        marginBottom: 32,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#1A1A1A",
-        marginBottom: 16,
-        letterSpacing: 0.5,
-    },
-    card: {
-        backgroundColor: "white",
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 12,
-        shadowColor: "#1A1A1A",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: "#E8E6E1",
-    },
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    flightInfo: {
-        flex: 1,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: "#1A1A1A",
-    },
-    cardSubtitle: {
-        fontSize: 14,
-        color: "#9B9B9B",
-    },
-    price: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#FFE500",
-    },
-    flightTimes: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginTop: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: "#E8E6E1",
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
-    time: {
-        fontSize: 16,
-        fontWeight: "500",
+    iconButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "transparent",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    headerTitleContainer: {
+        alignItems: "center",
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: "700",
         color: "#1A1A1A",
     },
-    stars: {
+    aiBadge: {
         flexDirection: "row",
-        gap: 2,
-        marginTop: 4,
+        alignItems: "center",
+        gap: 4,
     },
-    address: {
-        fontSize: 13,
-        color: "#9B9B9B",
-        marginTop: 8,
+    aiBadgeText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "#64748B",
     },
-    dayCard: {
+    scrollContent: {
+        paddingBottom: 100,
+    },
+    mapPreviewContainer: {
+        height: 224,
+        width: "100%",
+        position: "relative",
+    },
+    mapImage: {
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
+    },
+    mapGradient: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 100,
+    },
+    viewMapButton: {
+        position: "absolute",
+        bottom: 16,
+        right: 16,
         backgroundColor: "white",
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: "#E8E6E1",
-        shadowColor: "#FFE500",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 10,
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+        elevation: 4,
+    },
+    viewMapText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    filterContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 24,
+        gap: 12,
+    },
+    filterChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: "white",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    filterChipActive: {
+        backgroundColor: "#1A1A1A",
+        borderColor: "#1A1A1A",
+    },
+    filterText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#64748B",
+    },
+    filterTextActive: {
+        color: "white",
+    },
+    itineraryContainer: {
+        paddingHorizontal: 16,
+    },
+    daySection: {
+        marginBottom: 32,
     },
     dayHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 20,
-    },
-    dayBadge: {
-        backgroundColor: "#FFF8E1",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 10,
-    },
-    dayBadgeText: {
-        color: "#1A1A1A",
-        fontWeight: "700",
-        fontSize: 12,
-        textTransform: "uppercase",
-        letterSpacing: 1,
+        marginBottom: 16,
     },
     dayTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
+        fontSize: 24,
+        fontWeight: "700",
         color: "#1A1A1A",
     },
-    activityItem: {
+    daySubtitle: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#64748B",
+    },
+    energyBadge: {
+        backgroundColor: "rgba(249, 245, 6, 0.2)",
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    energyText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: "#1A1A1A",
+        letterSpacing: 0.5,
+    },
+    timelineItem: {
         flexDirection: "row",
+        gap: 16,
         marginBottom: 24,
     },
-    activityTime: {
-        width: 70,
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#9B9B9B",
+    timelineLeft: {
+        alignItems: "center",
+        width: 48,
     },
-    activityContent: {
+    timelineIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "white",
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: "#F1F5F9",
+        zIndex: 1,
+    },
+    timelineTime: {
+        marginTop: 8,
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#94A3B8",
+    },
+    timelineLine: {
+        position: "absolute",
+        top: 40,
+        bottom: -24,
+        width: 2,
+        backgroundColor: "#E2E8F0",
+        zIndex: 0,
+    },
+    timelineCard: {
         flex: 1,
-        paddingLeft: 16,
-        borderLeftWidth: 2,
-        borderLeftColor: "#E8E6E1",
-        paddingBottom: 4,
+        backgroundColor: "white",
+        borderRadius: 16,
+        padding: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 2,
+    },
+    timelineCardContent: {
+        flexDirection: "row",
+        gap: 12,
     },
     activityTitle: {
         fontSize: 16,
-        fontWeight: "600",
+        fontWeight: "700",
         color: "#1A1A1A",
         marginBottom: 4,
     },
     activityDesc: {
         fontSize: 14,
-        color: "#9B9B9B",
+        color: "#64748B",
         lineHeight: 20,
+        marginBottom: 12,
     },
-    mapLink: {
-        marginTop: 4,
-    },
-    mapLinkText: {
-        fontSize: 12,
-        color: "#4F6DF5",
-        fontWeight: "500",
-    },
-    flightHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 20,
-    },
-    routeDisplay: {
+    activityMeta: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#F8FAFC",
-        padding: 16,
-        borderRadius: 14,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
+        gap: 8,
     },
-    routePoint: {
-        alignItems: "center",
-        gap: 4,
-        flex: 1,
-    },
-    routeLine: {
-        flexDirection: "row",
-        alignItems: "center",
-        flex: 1,
-        justifyContent: "center",
-    },
-    routeDash: {
-        height: 2,
-        backgroundColor: "#6CE4FF",
-        flex: 1,
-        marginHorizontal: 4,
-    },
-    routeAirport: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#1A2433",
-        textAlign: "center",
-    },
-    flightPrice: {
-        fontSize: 24,
-        fontWeight: "700",
-        color: "#4F6DF5",
-    },
-    luggageBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#E0E7FF",
+    metaBadge: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 8,
+        borderRadius: 6,
+        backgroundColor: "#F1F5F9",
+    },
+    metaText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "#475569",
+    },
+    metaDuration: {
+        flexDirection: "row",
+        alignItems: "center",
         gap: 4,
     },
-    luggageText: {
+    metaDurationText: {
         fontSize: 12,
-        color: "#4F6DF5",
-        fontWeight: "600",
+        color: "#94A3B8",
     },
-    flightSegment: {
-        marginBottom: 12,
-    },
-    segmentHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 8,
-    },
-    segmentTitle: {
-        fontSize: 12,
-        fontWeight: "700",
-        color: "#A1AEC6",
-        textTransform: "uppercase",
-        letterSpacing: 1,
-    },
-    duration: {
-        fontSize: 14,
-        color: "#A1AEC6",
-    },
-    divider: {
-        height: 1,
+    activityImagePlaceholder: {
+        width: 64,
+        height: 64,
+        borderRadius: 8,
         backgroundColor: "#E2E8F0",
-        marginVertical: 20,
     },
-    hotelList: {
-        paddingRight: 16,
-        gap: 16,
-    },
-    hotelCard: {
-        width: 280,
-        backgroundColor: "white",
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: "#14B8A6",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 3,
-        borderWidth: 2,
-        borderColor: "transparent",
-    },
-    selectedHotelCard: {
-        borderColor: "#4F6DF5",
-        backgroundColor: "#E0E7FF",
-    },
-    selectedBadge: {
+    fabContainer: {
         position: "absolute",
-        top: 8,
-        right: 8,
-    },
-    hotelHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 8,
-    },
-    hotelDesc: {
-        fontSize: 13,
-        color: "#A1AEC6",
-        marginBottom: 12,
-        lineHeight: 20,
-    },
-    footer: {
-        position: "absolute",
-        bottom: 0,
+        bottom: 24,
         left: 0,
         right: 0,
-        backgroundColor: "white",
-        padding: 20,
-        paddingBottom: Platform.OS === "ios" ? 32 : 20,
-        borderTopWidth: 0,
-        flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 10,
-    },
-    priceBreakdown: {
-        flex: 1,
-    },
-    priceRow: {
-        flexDirection: "row",
-        alignItems: "baseline",
-        gap: 8,
-    },
-    priceLabel: {
-        fontSize: 12,
-        color: "#A1AEC6",
-        textTransform: "uppercase",
-    },
-    totalPrice: {
-        fontSize: 24,
-        fontWeight: "700",
-        color: "#4F6DF5",
-    },
-    perPersonPrice: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        fontWeight: "500",
-    },
-    bookButton: {
-        backgroundColor: "#4F6DF5",
         paddingHorizontal: 24,
-        paddingVertical: 14,
-        borderRadius: 14,
-        marginLeft: 16,
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
     },
-    bookButtonText: {
-        color: "white",
-        fontSize: 16,
-        fontWeight: "700",
-        textTransform: "uppercase",
-        letterSpacing: 1,
-    },
-    blurContainer: {
-        position: "absolute",
-        top: 50,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(248, 250, 252, 0.95)",
-        justifyContent: "center",
+    fab: {
+        flexDirection: "row",
         alignItems: "center",
-        borderRadius: 16,
-        zIndex: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        borderRadius: 32,
+        padding: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 24,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.2)",
     },
-    lockContent: {
-        alignItems: "center",
-        padding: 24,
-    },
-    lockTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#1A2433",
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    lockText: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        textAlign: "center",
-        lineHeight: 22,
-    },
-    unlockButton: {
-        backgroundColor: "#4F6DF5",
-        paddingHorizontal: 32,
-        paddingVertical: 12,
-        borderRadius: 14,
-        marginBottom: 12,
-        shadowColor: "#4F6DF5",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    unlockButtonText: {
-        color: "white",
-        fontSize: 16,
-        fontWeight: "700",
-        textTransform: "uppercase",
-    },
-    notNowButton: {
-        paddingVertical: 8,
-    },
-    notNowButtonText: {
-        color: "#A1AEC6",
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    affiliateButton: {
-        marginTop: 20,
+    saveTripButton: {
+        flex: 1,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        padding: 14,
-        backgroundColor: "#E0E7FF",
-        borderRadius: 12,
+        backgroundColor: "#F9F506",
+        height: 48,
+        borderRadius: 24,
         gap: 8,
+        paddingHorizontal: 24,
     },
-    affiliateButtonText: {
-        color: "#4F6DF5",
-        fontWeight: "700",
+    saveTripText: {
         fontSize: 14,
-        textTransform: "uppercase",
-    },
-    miniBookButton: {
-        marginTop: 16,
-        backgroundColor: "#4F6DF5",
-        paddingVertical: 10,
-        borderRadius: 10,
-        alignItems: "center",
-    },
-    miniBookButtonText: {
-        color: "white",
-        fontSize: 12,
         fontWeight: "700",
-        textTransform: "uppercase",
+        color: "#1A1A1A",
+    },
+    fabDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: "#E2E8F0",
+        marginHorizontal: 8,
+    },
+    fabIconButton: {
+        width: 48,
+        height: 48,
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 24,
     },
     modalContainer: {
         flex: 1,
@@ -2320,31 +1502,6 @@ const styles = StyleSheet.create({
         height: 100,
         textAlignVertical: "top",
     },
-    budgetOptions: {
-        flexDirection: "row",
-        gap: 8,
-    },
-    budgetOption: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 12,
-        backgroundColor: "white",
-        alignItems: "center",
-        borderWidth: 2,
-        borderColor: "#E2E8F0",
-    },
-    budgetOptionSelected: {
-        backgroundColor: "#4F6DF5",
-        borderColor: "#4F6DF5",
-    },
-    budgetOptionText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#A1AEC6",
-    },
-    budgetOptionTextSelected: {
-        color: "white",
-    },
     dateRow: {
         flexDirection: "row",
         alignItems: "center",
@@ -2388,17 +1545,205 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
         letterSpacing: 1,
     },
-    upgradeButton: {
-        backgroundColor: "#4F6DF5",
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+    section: {
+        marginBottom: 32,
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#1A1A1A",
+        marginBottom: 16,
+        letterSpacing: 0.5,
+    },
+    center: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#F8F8F5",
+    },
+    generatingText: {
+        marginTop: 16,
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    generatingSubtext: {
+        marginTop: 8,
+        fontSize: 14,
+        color: "#64748B",
+    },
+    errorText: {
+        marginTop: 16,
+        fontSize: 18,
+        color: "#EF4444",
+    },
+    card: {
+        backgroundColor: "white",
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 2,
+    },
+    skippedFlightsContainer: {
+        alignItems: "center",
+        padding: 24,
+        gap: 12,
+    },
+    skippedFlightsTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#1A1A1A",
+    },
+    skippedFlightsText: {
+        fontSize: 14,
+        color: "#64748B",
+        textAlign: "center",
+        lineHeight: 20,
+    },
+    bestPriceBanner: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F0FDF4",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        marginBottom: 16,
+        gap: 8,
+    },
+    bestPriceText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#15803D",
+    },
+    flightOptionsLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        marginBottom: 12,
+    },
+    flightOptionsScroll: {
+        marginBottom: 20,
+    },
+    flightOptionCard: {
+        width: 140,
+        backgroundColor: "white",
         borderRadius: 14,
+        padding: 14,
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
         alignItems: "center",
     },
-    upgradeButtonText: {
-        color: "white",
-        fontSize: 16,
+    flightOptionCardSelected: {
+        borderColor: "#F9F506",
+        backgroundColor: "#FEFCE8",
+    },
+    bestPriceBadge: {
+        backgroundColor: "#15803D",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginBottom: 8,
+    },
+    bestPriceBadgeText: {
+        fontSize: 10,
         fontWeight: "700",
+        color: "white",
+        textTransform: "uppercase",
+    },
+    flightOptionAirline: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        textAlign: "center",
+        marginBottom: 4,
+    },
+    flightOptionTime: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#1A1A1A",
+        marginBottom: 4,
+    },
+    flightOptionPrice: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: "#1A1A1A",
+        marginBottom: 4,
+    },
+    flightOptionStops: {
+        fontSize: 11,
+        color: "#64748B",
+        fontWeight: "500",
+        marginTop: 4,
+    },
+    selectedFlightDetails: {
+        backgroundColor: "#F8FAFC",
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 16,
+    },
+    routeDisplay: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "white",
+        padding: 16,
+        borderRadius: 14,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    routePoint: {
+        alignItems: "center",
+        gap: 4,
+        flex: 1,
+    },
+    routeAirport: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        textAlign: "center",
+    },
+    routeLine: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+        justifyContent: "center",
+    },
+    routeDash: {
+        height: 2,
+        backgroundColor: "#CBD5E1",
+        flex: 1,
+        marginHorizontal: 4,
+    },
+    flightHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 20,
+    },
+    flightPrice: {
+        fontSize: 24,
+        fontWeight: "700",
+        color: "#1A1A1A",
+    },
+    luggageBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F1F5F9",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        gap: 4,
+    },
+    luggageText: {
+        fontSize: 12,
+        color: "#475569",
+        fontWeight: "600",
     },
     dataSourceBadge: {
         flexDirection: "row",
@@ -2416,733 +1761,61 @@ const styles = StyleSheet.create({
         color: "#D97706",
         fontWeight: "600",
     },
-    transportSubtitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: "#1A2433",
-        marginBottom: 12,
-        textTransform: "uppercase",
-        letterSpacing: 0.5,
-    },
-    transportList: {
-        paddingRight: 16,
-        gap: 16,
-    },
-    transportCard: {
-        width: 280,
-        backgroundColor: "white",
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: "#1A2433",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-    },
-    transportHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 8,
-    },
-    transportProvider: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#A1AEC6",
-    },
-    transportCategoryBadge: {
-        backgroundColor: "#E0E7FF",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        gap: 4,
-    },
-    transportCategoryText: {
-        fontSize: 12,
-        color: "#4F6DF5",
-        fontWeight: "600",
-    },
-    transportVehicle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#1A2433",
-        marginBottom: 8,
-    },
-    transportService: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        marginBottom: 8,
-    },
-    transportDesc: {
-        fontSize: 13,
-        color: "#A1AEC6",
-        marginBottom: 12,
-        lineHeight: 20,
-    },
-    transportFeatures: {
-        flexDirection: "row",
-        gap: 8,
+    flightSegment: {
         marginBottom: 12,
     },
-    featureBadge: {
-        backgroundColor: "#E0E7FF",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        gap: 4,
-    },
-    featureText: {
-        fontSize: 12,
-        color: "#4F6DF5",
-        fontWeight: "600",
-    },
-    transportPriceRow: {
-        flexDirection: "row",
-        alignItems: "baseline",
-        gap: 8,
-    },
-    transportPrice: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#4F6DF5",
-    },
-    transportPriceUnit: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        fontWeight: "500",
-    },
-    transportNote: {
-        fontSize: 12,
-        color: "#A1AEC6",
-        marginBottom: 12,
-    },
-    transportBookButton: {
-        backgroundColor: "#4F6DF5",
-        paddingVertical: 10,
-        borderRadius: 10,
-        alignItems: "center",
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 6,
-    },
-    transportBookButtonText: {
-        color: "white",
-        fontSize: 12,
-        fontWeight: "700",
-        textTransform: "uppercase",
-    },
-    publicTransportCard: {
-        backgroundColor: "white",
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: "#14B8A6",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-    },
-    publicTransportOption: {
-        marginBottom: 12,
-    },
-    publicTransportHeader: {
+    segmentHeader: {
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
         marginBottom: 8,
     },
-    publicTransportMode: {
+    segmentTitle: {
         fontSize: 12,
-        fontWeight: "600",
-        color: "#A1AEC6",
+        fontWeight: "700",
+        color: "#64748B",
         textTransform: "uppercase",
         letterSpacing: 1,
     },
-    publicTransportDesc: {
-        fontSize: 13,
-        color: "#A1AEC6",
-        marginBottom: 12,
-        lineHeight: 20,
-    },
-    publicTransportPrices: {
+    row: {
         flexDirection: "row",
-        gap: 8,
-    },
-    publicTransportPrice: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        fontWeight: "500",
-    },
-    emptyTransportCard: {
-        backgroundColor: "white",
-        borderRadius: 16,
-        padding: 20,
         alignItems: "center",
-        gap: 8,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
+        gap: 12,
     },
-    emptyTransportText: {
+    flightInfo: {
+        flex: 1,
+    },
+    cardTitle: {
         fontSize: 16,
-        fontWeight: "600",
-        color: "#1A2433",
+        fontWeight: "700",
+        color: "#1A1A1A",
     },
-    emptyTransportSubtext: {
+    cardSubtitle: {
         fontSize: 14,
-        color: "#A1AEC6",
-        marginTop: 8,
-        textAlign: "center",
+        color: "#64748B",
     },
-    
-    activityHeader: {
+    duration: {
+        fontSize: 14,
+        color: "#64748B",
+    },
+    flightTimes: {
         flexDirection: "row",
+        alignItems: "center",
         justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 4,
-    },
-    activityTypeBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        backgroundColor: "#E0E7FF",
-    },
-    museumBadge: {
-        backgroundColor: "#E0E7FF",
-    },
-    attractionBadge: {
-        backgroundColor: "#FEF3C7",
-    },
-    tourBadge: {
-        backgroundColor: "#E0E7FF",
-    },
-    restaurantBadge: {
-        backgroundColor: "#FCE7F3",
-    },
-    activityTypeText: {
-        fontSize: 12,
-    },
-    activityMeta: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginTop: 8,
-    },
-    activityMetaText: {
-        fontSize: 12,
-        color: "#5EEAD4",
-    },
-    pricingSection: {
-        marginTop: 12,
-        paddingTop: 12,
+        marginTop: 16,
+        paddingTop: 16,
         borderTopWidth: 1,
         borderTopColor: "#E2E8F0",
     },
-    activityPriceRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    activityPriceLabel: {
-        fontSize: 14,
-        color: "#5EEAD4",
-    },
-    activityPrice: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#14B8A6",
-    },
-    freeBadge: {
-        backgroundColor: "#E0E7FF",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-        alignSelf: "flex-start",
-    },
-    freeText: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#4F6DF5",
-    },
-    skipLineContainer: {
-        marginTop: 8,
-    },
-    skipLineBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#FEF3C7",
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 8,
-        gap: 6,
-        alignSelf: "flex-start",
-    },
-    skipLineLabel: {
-        fontSize: 13,
-        color: "#D97706",
-        fontWeight: "500",
-    },
-    skipLinePrice: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#B45309",
-    },
-    skipLineSave: {
-        fontSize: 11,
-        color: "#A1AEC6",
-        marginTop: 4,
-        marginLeft: 2,
-    },
-    tipContainer: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        gap: 6,
-        marginTop: 10,
-        backgroundColor: "#FEF3C7",
-        padding: 10,
-        borderRadius: 10,
-    },
-    tipText: {
-        fontSize: 12,
-        color: "#D97706",
-        flex: 1,
-        lineHeight: 18,
-    },
-    bookingButtons: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-        marginTop: 12,
-    },
-    bookActivityButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#4F6DF5",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#4F6DF5",
-    },
-    bookActivityButtonText: {
-        color: "white",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    skipLineButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#FEF3C7",
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRadius: 10,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#F59E0B",
-    },
-    skipLineButtonText: {
-        color: "#B45309",
-        fontSize: 13,
-        fontWeight: "600",
-    },
-    
-    // Accommodation Filter Styles
-    accommodationFilter: {
-        flexDirection: "row",
-        marginBottom: 16,
-        gap: 8,
-    },
-    filterTab: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 2,
-        borderColor: "#E2E8F0",
-        gap: 6,
-    },
-    filterTabActive: {
-        backgroundColor: "#4F6DF5",
-        borderColor: "#4F6DF5",
-    },
-    airbnbTabActive: {
-        backgroundColor: "#FF5A5F",
-        borderColor: "#FF5A5F",
-    },
-    filterTabText: {
-        fontSize: 13,
-        fontWeight: "600",
-        color: "#5EEAD4",
-    },
-    filterTabTextActive: {
-        color: "white",
-    },
-    
-    // Airbnb Card Styles
-    airbnbCard: {
-        borderColor: "#FFE4E6",
-    },
-    accommodationTypeBadge: {
-        position: "absolute",
-        top: 8,
-        left: 8,
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#E0E7FF",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        gap: 4,
-        zIndex: 5,
-    },
-    airbnbBadge: {
-        backgroundColor: "#FFE4E6",
-    },
-    accommodationTypeText: {
-        fontSize: 10,
-        fontWeight: "700",
-        color: "#4F6DF5",
-        textTransform: "uppercase",
-    },
-    airbnbTypeText: {
-        color: "#FF5A5F",
-    },
-    superhostBadge: {
-        position: "absolute",
-        top: 8,
-        right: 8,
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#FFF",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#FF5A5F",
-        zIndex: 5,
-    },
-    superhostText: {
-        fontSize: 10,
-        fontWeight: "700",
-        color: "#FF5A5F",
-    },
-    ratingBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    ratingText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A2433",
-    },
-    propertyDetails: {
-        marginBottom: 8,
-    },
-    propertyType: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#FF5A5F",
-        marginBottom: 4,
-        textTransform: "uppercase",
-    },
-    propertyStats: {
-        flexDirection: "row",
-        gap: 12,
-    },
-    statItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    statText: {
-        fontSize: 12,
-        color: "#A1AEC6",
-    },
-    amenitiesRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 6,
-        marginBottom: 12,
-    },
-    amenityBadge: {
-        backgroundColor: "#E0E7FF",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    airbnbAmenityBadge: {
-        backgroundColor: "#FFE4E6",
-    },
-    amenityText: {
-        fontSize: 10,
-        fontWeight: "600",
-        color: "#4F6DF5",
-    },
-    airbnbAmenityText: {
-        color: "#FF5A5F",
-    },
-    accommodationPriceRow: {
-        flexDirection: "row",
-        alignItems: "baseline",
-        marginBottom: 4,
-    },
-    airbnbPrice: {
-        color: "#FF5A5F",
-    },
-    priceNight: {
-        fontSize: 14,
-        color: "#A1AEC6",
-        fontWeight: "500",
-    },
-    totalStayPrice: {
-        fontSize: 12,
-        color: "#A1AEC6",
-    },
-    airbnbBookButton: {
-        backgroundColor: "#FF5A5F",
-    },
-    
-    // Accommodation Summary Styles
-    accommodationSummary: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 16,
-        marginTop: 16,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-    },
-    summaryHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 12,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
-    },
-    summaryTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A2433",
-        flex: 1,
-    },
-    summaryDetails: {
-        gap: 8,
-    },
-    summaryRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-    summaryLabel: {
-        fontSize: 14,
-        color: "#A1AEC6",
-    },
-    summaryValue: {
+    time: {
         fontSize: 16,
-        fontWeight: "700",
-        color: "#4F6DF5",
-    },
-    priceBreakdownToggle: {
-        flex: 1,
-    },
-    // Cart Button Styles
-    addToCartButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#E0E7FF",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#4F6DF5",
-    },
-    addToCartButtonText: {
-        color: "#4F6DF5",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    inCartButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#4F6DF5",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-    },
-    inCartButtonText: {
-        color: "white",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    addToCartSkipLineButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#FEF3C7",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#F59E0B",
-    },
-    addToCartSkipLineButtonText: {
-        color: "#B45309",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    inCartSkipLineButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#F59E0B",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-    },
-    inCartSkipLineButtonText: {
-        color: "white",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    cartBadge: {
-        position: "absolute",
-        top: -4,
-        right: -4,
-        backgroundColor: "#FF5A5F",
-        minWidth: 18,
-        height: 18,
-        paddingHorizontal: 4,
-        borderRadius: 9,
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10,
-    },
-    cartBadgeText: {
-        color: "white",
-        fontSize: 10,
-        fontWeight: "700",
-    },
-    // Skipped Flights Styles
-    skippedFlightsContainer: {
-        alignItems: "center",
-        padding: 24,
-        gap: 12,
-    },
-    skippedFlightsTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#0D9488",
-    },
-    skippedFlightsText: {
-        fontSize: 14,
-        color: "#5EEAD4",
-        textAlign: "center",
-        lineHeight: 20,
-    },
-    // Multiple Flight Options Styles
-    bestPriceBanner: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#D1FAE5",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 10,
-        marginBottom: 16,
-        gap: 8,
-    },
-    bestPriceText: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#10B981",
-    },
-    flightOptionsLabel: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#0D9488",
-        marginBottom: 12,
-    },
-    flightOptionsScroll: {
-        marginBottom: 20,
-    },
-    flightOptionCard: {
-        width: 140,
-        backgroundColor: "#F0FFFE",
-        borderRadius: 14,
-        padding: 14,
-        marginRight: 12,
-        borderWidth: 2,
-        borderColor: "#CCFBF1",
-        alignItems: "center",
-    },
-    flightOptionCardSelected: {
-        borderColor: "#14B8A6",
-        backgroundColor: "#CCFBF1",
-    },
-    bestPriceBadge: {
-        backgroundColor: "#10B981",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-        marginBottom: 8,
-    },
-    bestPriceBadgeText: {
-        fontSize: 10,
-        fontWeight: "700",
-        color: "white",
-        textTransform: "uppercase",
-    },
-    flightOptionAirline: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#0D9488",
-        textAlign: "center",
-        marginBottom: 4,
-    },
-    flightOptionTime: {
-        fontSize: 14,
-        fontWeight: "700",
-        color: "#134E4A",
-        marginBottom: 4,
-    },
-    flightOptionPrice: {
-        fontSize: 18,
-        fontWeight: "800",
-        color: "#14B8A6",
-        marginBottom: 4,
-    },
-    flightOptionStops: {
-        fontSize: 11,
-        color: "#5EEAD4",
         fontWeight: "500",
-        marginTop: 4,
+        color: "#1A1A1A",
     },
-    selectedFlightDetails: {
-        backgroundColor: "#F0FFFE",
-        borderRadius: 14,
-        padding: 16,
-        marginBottom: 16,
-    },
-    stopsText: {
-        fontSize: 12,
-        color: "#F59E0B",
-        fontWeight: "500",
-        marginTop: 4,
+    divider: {
+        height: 1,
+        backgroundColor: "#E2E8F0",
+        marginVertical: 20,
     },
     baggageSection: {
         marginTop: 16,
@@ -3150,17 +1823,19 @@ const styles = StyleSheet.create({
     baggageSectionTitle: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#0D9488",
+        color: "#1A1A1A",
         marginBottom: 12,
     },
     baggageOption: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "#F0FFFE",
+        backgroundColor: "white",
         borderRadius: 12,
         padding: 12,
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
     },
     baggageOptionLeft: {
         flexDirection: "row",
@@ -3174,11 +1849,11 @@ const styles = StyleSheet.create({
     baggageOptionTitle: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#134E4A",
+        color: "#1A1A1A",
     },
     baggageOptionDesc: {
         fontSize: 12,
-        color: "#5EEAD4",
+        color: "#64748B",
     },
     baggageOptionRight: {
         flexDirection: "row",
@@ -3188,34 +1863,35 @@ const styles = StyleSheet.create({
     baggagePrice: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#14B8A6",
+        color: "#1A1A1A",
     },
     baggageOptionSelectable: {
         backgroundColor: "white",
         borderWidth: 1,
-        borderColor: "#CCFBF1",
+        borderColor: "#E2E8F0",
     },
     baggageOptionSelected: {
-        backgroundColor: "#CCFBF1",
+        backgroundColor: "#FEFCE8",
+        borderColor: "#F9F506",
     },
     baggagePriceSelected: {
-        color: "#14B8A6",
+        color: "#1A1A1A",
     },
     baggageOptionTitleSelected: {
-        color: "#14B8A6",
+        color: "#1A1A1A",
     },
     checkbox: {
         width: 24,
         height: 24,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#546E7A",
+        borderColor: "#94A3B8",
         alignItems: "center",
         justifyContent: "center",
     },
     checkboxSelected: {
-        backgroundColor: "#14B8A6",
-        borderColor: "#14B8A6",
+        backgroundColor: "#F9F506",
+        borderColor: "#F9F506",
     },
     baggageSummary: {
         alignItems: "center",
@@ -3223,7 +1899,7 @@ const styles = StyleSheet.create({
     },
     baggageSummaryText: {
         fontSize: 12,
-        color: "#5EEAD4",
+        color: "#64748B",
         textAlign: "center",
     },
     includedBadge: {
@@ -3234,80 +1910,27 @@ const styles = StyleSheet.create({
     includedText: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#10B981",
+        color: "#15803D",
     },
-    // TripAdvisor Activity Badge Styles
-    tripAdvisorActivityBadge: {
+    affiliateButton: {
+        marginTop: 20,
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
+        padding: 14,
+        backgroundColor: "#1A1A1A",
+        borderRadius: 12,
         gap: 8,
-        marginTop: 8,
     },
-    tripAdvisorActivityLogo: {
-        width: 100,
-        height: 20,
+    affiliateButtonText: {
+        color: "white",
+        fontWeight: "700",
+        fontSize: 14,
+        textTransform: "uppercase",
     },
-    tripAdvisorRatingBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    tripAdvisorRatingText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#00AA6C",
-    },
-    tripAdvisorReviewText: {
-        fontSize: 12,
-        color: "#5EEAD4",
-    },
-    // Restaurant Meta Info Styles
-    restaurantMetaRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginTop: 8,
-    },
-    cuisineActivityBadge: {
-        backgroundColor: "#CCFBF1",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    cuisineActivityText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#134E4A",
-    },
-    priceRangeActivityText: {
-        fontSize: 12,
-        color: "#5EEAD4",
-    },
-    // Restaurant Address Styles
-    restaurantAddressActivityRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginTop: 8,
-    },
-    restaurantAddressActivityText: {
-        fontSize: 12,
-        color: "#78909C",
-    },
-    tripAdvisorLinkButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#E8F5E9",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: "#00AA6C",
-    },
-    tripAdvisorLinkButtonText: {
-        fontSize: 11,
-        fontWeight: "600",
-        color: "#00AA6C",
+    price: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#1A1A1A",
     },
 });
