@@ -249,7 +249,7 @@ export default function TripDetails() {
     const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
     const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0);
     const [checkedBaggageSelected, setCheckedBaggageSelected] = useState<boolean>(false);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'food' | 'sights' | 'stays'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'food' | 'sights' | 'stays' | 'transportation'>('all');
 
     const [editForm, setEditForm] = useState({
         destination: "",
@@ -950,11 +950,18 @@ export default function TripDetails() {
                         <Ionicons name="bed" size={18} color={activeFilter === 'stays' ? "#1A1A1A" : "#64748B"} />
                         <Text style={[styles.filterText, activeFilter === 'stays' && styles.filterTextActive]}>Stays</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.filterChip, activeFilter === 'transportation' && styles.filterChipActive]}
+                        onPress={() => setActiveFilter('transportation')}
+                    >
+                        <Ionicons name="car" size={18} color={activeFilter === 'transportation' ? "#1A1A1A" : "#64748B"} />
+                        <Text style={[styles.filterText, activeFilter === 'transportation' && styles.filterTextActive]}>Transport</Text>
+                    </TouchableOpacity>
                 </ScrollView>
 
-                {/* Itinerary */}
+                {/* Content based on active filter */}
                 <View style={styles.itineraryContainer}>
-                    {trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
+                    {activeFilter === 'all' && trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
                         <View key={index} style={styles.daySection}>
                             <View style={styles.dayHeader}>
                                 <View>
@@ -1007,6 +1014,176 @@ export default function TripDetails() {
                             ))}
                         </View>
                     ))}
+
+                    {activeFilter === 'food' && (
+                        <View>
+                            <Text style={styles.sectionTitle}>Top Restaurants</Text>
+                            {trip.itinerary?.restaurants?.map((restaurant: any, index: number) => (
+                                <View key={index} style={styles.card}>
+                                    <View style={styles.row}>
+                                        <View style={styles.flightInfo}>
+                                            <Text style={styles.cardTitle}>{restaurant.name}</Text>
+                                            <Text style={styles.cardSubtitle}>{restaurant.cuisine} • {restaurant.priceRange}</Text>
+                                            <View style={styles.ratingContainer}>
+                                                <Ionicons name="star" size={14} color="#F59E0B" />
+                                                <Text style={styles.ratingText}>{restaurant.rating} ({restaurant.reviewCount} reviews)</Text>
+                                            </View>
+                                            <Text style={styles.addressText}>{restaurant.address}</Text>
+                                        </View>
+                                        {restaurant.tripAdvisorUrl && (
+                                            <TouchableOpacity onPress={() => Linking.openURL(restaurant.tripAdvisorUrl)}>
+                                                <Ionicons name="open-outline" size={24} color="#1A1A1A" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
+                            ))}
+                            {(!trip.itinerary?.restaurants || trip.itinerary.restaurants.length === 0) && (
+                                <Text style={styles.emptyText}>No restaurants found.</Text>
+                            )}
+                        </View>
+                    )}
+
+                    {activeFilter === 'sights' && (
+                        <View>
+                            <Text style={styles.sectionTitle}>Top Sights & Activities</Text>
+                            {trip.itinerary?.activities?.map((activity: any, index: number) => (
+                                <View key={index} style={styles.card}>
+                                    <View style={styles.row}>
+                                        <View style={styles.flightInfo}>
+                                            <Text style={styles.cardTitle}>{activity.title}</Text>
+                                            <Text style={styles.cardSubtitle}>{activity.duration}</Text>
+                                            <Text style={styles.activityDesc} numberOfLines={3}>{activity.description}</Text>
+                                            <View style={styles.priceRow}>
+                                                <Text style={styles.price}>€{activity.price}</Text>
+                                                {activity.skipTheLine && (
+                                                    <View style={styles.skipLineBadge}>
+                                                        <Text style={styles.skipLineText}>Skip the Line</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                        {activity.image && (
+                                            <Image source={{ uri: activity.image }} style={styles.activityThumbnail} />
+                                        )}
+                                    </View>
+                                    {activity.bookingUrl && (
+                                        <TouchableOpacity 
+                                            style={styles.bookButton}
+                                            onPress={() => Linking.openURL(activity.bookingUrl)}
+                                        >
+                                            <Text style={styles.bookButtonText}>Book Now</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))}
+                            {(!trip.itinerary?.activities || trip.itinerary.activities.length === 0) && (
+                                <Text style={styles.emptyText}>No activities found.</Text>
+                            )}
+                        </View>
+                    )}
+
+                    {activeFilter === 'stays' && (
+                        <View>
+                            <Text style={styles.sectionTitle}>Accommodations</Text>
+                            {trip.itinerary?.hotels?.map((hotel: any, index: number) => (
+                                <View key={index} style={styles.card}>
+                                    <View style={styles.row}>
+                                        <View style={styles.flightInfo}>
+                                            <Text style={styles.cardTitle}>{hotel.name}</Text>
+                                            <Text style={styles.cardSubtitle}>{hotel.address}</Text>
+                                            <View style={styles.ratingContainer}>
+                                                <Ionicons name="star" size={14} color="#F59E0B" />
+                                                <Text style={styles.ratingText}>{hotel.rating} Stars</Text>
+                                            </View>
+                                            <Text style={styles.activityDesc} numberOfLines={3}>{hotel.description}</Text>
+                                            <Text style={styles.price}>€{hotel.price} / night</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.amenitiesContainer}>
+                                        {hotel.amenities?.map((amenity: string, i: number) => (
+                                            <View key={i} style={styles.amenityBadge}>
+                                                <Text style={styles.amenityText}>{amenity}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
+                            ))}
+                            {(!trip.itinerary?.hotels || trip.itinerary.hotels.length === 0) && (
+                                <Text style={styles.emptyText}>No accommodations found.</Text>
+                            )}
+                        </View>
+                    )}
+
+                    {activeFilter === 'transportation' && (
+                        <View>
+                            <Text style={styles.sectionTitle}>Transportation Options</Text>
+                            {trip.itinerary?.transportation?.map((option: any, index: number) => (
+                                <View key={index} style={styles.card}>
+                                    <View style={styles.row}>
+                                        <View style={styles.flightInfo}>
+                                            <View style={styles.transportHeader}>
+                                                <Ionicons 
+                                                    name={
+                                                        option.type === 'car_rental' ? 'car' :
+                                                        option.type === 'taxi' ? 'car-sport' :
+                                                        option.type === 'rideshare' ? 'phone-portrait' :
+                                                        'bus'
+                                                    } 
+                                                    size={24} 
+                                                    color="#1A1A1A" 
+                                                />
+                                                <Text style={styles.cardTitle}>
+                                                    {option.provider} {option.service ? `- ${option.service}` : ''}
+                                                </Text>
+                                            </View>
+                                            
+                                            {option.type === 'public_transport' ? (
+                                                <View>
+                                                    {option.options?.map((opt: any, i: number) => (
+                                                        <View key={i} style={styles.transportOption}>
+                                                            <Text style={styles.transportMode}>{opt.mode}</Text>
+                                                            <Text style={styles.transportDesc}>{opt.description}</Text>
+                                                            <Text style={styles.transportPrice}>
+                                                                Single: €{opt.singleTicketPrice} | Day Pass: €{opt.dayPassPrice}
+                                                            </Text>
+                                                        </View>
+                                                    ))}
+                                                </View>
+                                            ) : (
+                                                <View>
+                                                    <Text style={styles.cardSubtitle}>{option.description}</Text>
+                                                    <Text style={styles.price}>
+                                                        {option.estimatedPrice ? `€${option.estimatedPrice}` : `€${option.pricePerDay}/day`}
+                                                    </Text>
+                                                    {option.features && (
+                                                        <View style={styles.amenitiesContainer}>
+                                                            {option.features.map((feature: string, i: number) => (
+                                                                <View key={i} style={styles.amenityBadge}>
+                                                                    <Text style={styles.amenityText}>{feature}</Text>
+                                                                </View>
+                                                            ))}
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                    {option.bookingUrl && (
+                                        <TouchableOpacity 
+                                            style={styles.bookButton}
+                                            onPress={() => Linking.openURL(option.bookingUrl)}
+                                        >
+                                            <Text style={styles.bookButtonText}>Book Now</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))}
+                            {(!trip.itinerary?.transportation || trip.itinerary.transportation.length === 0) && (
+                                <Text style={styles.emptyText}>No transportation options found.</Text>
+                            )}
+                        </View>
+                    )}
                 </View>
             </ScrollView>
 
@@ -1270,7 +1447,7 @@ const styles = StyleSheet.create({
     },
     filterText: {
         fontSize: 14,
-        fontWeight: "500",
+        fontWeight: "600",
         color: "#64748B",
     },
     filterTextActive: {
@@ -1334,7 +1511,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 12,
         fontWeight: "600",
-        color: "#94A3B8",
+        color: "#8E8E93",
     },
     timelineLine: {
         position: "absolute",
@@ -1384,7 +1561,7 @@ const styles = StyleSheet.create({
     },
     metaText: {
         fontSize: 12,
-        fontWeight: "500",
+        fontWeight: "600",
         color: "#475569",
     },
     metaDuration: {
@@ -1932,5 +2109,107 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "700",
         color: "#1A1A1A",
+    },
+    ratingContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginTop: 4,
+    },
+    ratingText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    addressText: {
+        fontSize: 12,
+        color: "#64748B",
+        marginTop: 4,
+    },
+    priceRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 8,
+    },
+    skipLineBadge: {
+        backgroundColor: "#FEF3C7",
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    skipLineText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: "#D97706",
+        textTransform: "uppercase",
+    },
+    activityThumbnail: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+        backgroundColor: "#E2E8F0",
+    },
+    bookButton: {
+        marginTop: 16,
+        backgroundColor: "#1A1A1A",
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: "center",
+    },
+    bookButtonText: {
+        color: "white",
+        fontWeight: "700",
+        fontSize: 14,
+    },
+    amenitiesContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+        marginTop: 12,
+    },
+    amenityBadge: {
+        backgroundColor: "#F1F5F9",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    amenityText: {
+        fontSize: 12,
+        color: "#475569",
+    },
+    transportHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 8,
+    },
+    transportOption: {
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: "#E2E8F0",
+    },
+    transportMode: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#1A1A1A",
+    },
+    transportDesc: {
+        fontSize: 12,
+        color: "#64748B",
+        marginTop: 2,
+    },
+    transportPrice: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        marginTop: 4,
+    },
+    emptyText: {
+        textAlign: "center",
+        color: "#64748B",
+        fontSize: 16,
+        marginTop: 32,
     },
 });

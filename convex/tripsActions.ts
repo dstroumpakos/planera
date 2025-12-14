@@ -1216,7 +1216,7 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
 
         console.log(`✅ Found ${data.data.length} restaurants via TripAdvisor`);
 
-        // Step 4: Get details for more restaurants (up to 15) to find the best rated ones
+        // Step 4: Get details for more restaurants (up to 30) to find the best rated ones
         const restaurants: Array<{
             name: string;
             priceRange: string;
@@ -1228,7 +1228,7 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
             phone: string | null;
             description: string | null;
         }> = [];
-        const restaurantList = data.data.slice(0, 15); // Fetch up to 15 to get better selection
+        const restaurantList = data.data.slice(0, 30); // Fetch up to 30 to get better selection
         
         console.log(`🔍 Fetching details for ${restaurantList.length} restaurants...`);
         
@@ -1286,8 +1286,8 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
             return b.reviewCount - a.reviewCount; // More reviews as tiebreaker
         });
         
-        // Return top 5 highest-rated restaurants
-        const topRestaurants = restaurants.slice(0, 5);
+        // Return top 20 highest-rated restaurants
+        const topRestaurants = restaurants.slice(0, 20);
 
         console.log(`✅ Returning top ${topRestaurants.length} highest-rated restaurants (4.0+ rating)`);
         topRestaurants.forEach((r, i) => {
@@ -1295,7 +1295,7 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
         });
         
         // If we didn't find enough high-rated restaurants, lower the threshold
-        if (topRestaurants.length < 3) {
+        if (topRestaurants.length < 5) {
             console.log("⚠️ Not enough high-rated restaurants, including lower rated ones...");
             // Re-fetch without the rating filter
             return await searchTripAdvisorRestaurantsNoFilter(destination, apiKey, cityLocation);
@@ -1335,7 +1335,7 @@ async function searchTripAdvisorRestaurantsNoFilter(destination: string, apiKey:
             description: string | null;
         }> = [];
         
-        for (const restaurant of data.data.slice(0, 10)) {
+        for (const restaurant of data.data.slice(0, 25)) {
             try {
                 const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${restaurant.location_id}/details?key=${apiKey}&language=en&currency=EUR`;
                 const detailsResponse = await fetch(detailsUrl, {
@@ -1370,7 +1370,7 @@ async function searchTripAdvisorRestaurantsNoFilter(destination: string, apiKey:
 
         // Still sort by rating
         restaurants.sort((a, b) => b.rating - a.rating);
-        return restaurants.slice(0, 5);
+        return restaurants.slice(0, 20);
     } catch (error) {
         console.error("❌ Fallback restaurant search error:", error);
         return [];
@@ -1420,7 +1420,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 body: JSON.stringify({
                     searchTerm: `${destination} tours activities`,
                     searchTypes: [
-                        { searchType: "PRODUCTS", pagination: { start: 1, count: 15 } }
+                        { searchType: "PRODUCTS", pagination: { start: 1, count: 25 } }
                     ],
                     currency: "EUR"
                 })
@@ -1446,11 +1446,11 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         console.log(`✅ Found ${products.length} activities via Viator freetext search`);
 
         // Get detailed product info using /products/search endpoint
-        const productCodes = products.slice(0, 10).map((p: any) => p.productCode).filter(Boolean);
+        const productCodes = products.slice(0, 20).map((p: any) => p.productCode).filter(Boolean);
         
         if (productCodes.length === 0) {
             // Return basic info from freetext search
-            return products.slice(0, 8).map((product: any) => ({
+            return products.slice(0, 20).map((product: any) => ({
                 title: product.title || "Activity",
                 price: product.pricing?.summary?.fromPrice || 25,
                 currency: product.pricing?.currency || "EUR",
@@ -1490,14 +1490,14 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         if (!productsResponse.ok) {
             // Fall back to basic freetext results
             console.warn("⚠️ Products search failed, using freetext results");
-            return products.slice(0, 8).map((product: any) => ({
+            return products.slice(0, 20).map((product: any) => ({
                 title: product.title || "Activity",
                 price: product.pricing?.summary?.fromPrice || 25,
                 currency: product.pricing?.currency || "EUR",
                 duration: "2-3h",
                 description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
-                rating: product.reviews?.combinedAverageRating || 4.5,
-                reviewCount: product.reviews?.totalReviews || 0,
+                rating: product.rating || 4.5,
+                reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
                 image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
@@ -1515,7 +1515,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         
         if (!productsData.products || productsData.products.length === 0) {
             // Fall back to basic freetext results
-            return products.slice(0, 8).map((product: any) => ({
+            return products.slice(0, 20).map((product: any) => ({
                 title: product.title || "Activity",
                 price: product.pricing?.summary?.fromPrice || 25,
                 currency: product.pricing?.currency || "EUR",
@@ -1535,7 +1535,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
             }));
         }
 
-        return productsData.products.slice(0, 8).map((product: any) => ({
+        return productsData.products.slice(0, 20).map((product: any) => ({
             title: product.title,
             price: product.pricing?.summary?.fromPrice || 25,
             currency: product.pricing?.currency || "EUR",
