@@ -45,7 +45,7 @@ export const generate = internalAction({
         console.log("  - Budget:", trip.budget);
         console.log("  - Interests:", trip.interests);
         
-        if (!skipFlights && !trip.origin) {
+        if (!skipFlights && !origin) {
             console.error("❌ Trip origin is missing!");
             await ctx.runMutation(internal.trips.updateItinerary, {
                 tripId,
@@ -1833,7 +1833,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             uberComfort: { min: 75, max: 110 },
             bolt: { min: 50, max: 75 },
             carRentalEconomy: 55,
-            carRentalCompact: 75,
+            carRentalCompact: 70,
             carRentalSUV: 120,
             metroTicket: 6.50, // Tube zone 1-6
             dayPass: 15.50,
@@ -1984,7 +1984,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             premiumTransfer: 55,
         },
         "prague": {
-            taxiFromAirport: 30, // PRG to city center
+            taxiFromAirport: 25, // PRG to city center
             uberX: { min: 20, max: 35 },
             uberComfort: { min: 35, max: 50 },
             bolt: { min: 18, max: 30 },

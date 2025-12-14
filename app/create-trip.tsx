@@ -459,6 +459,11 @@ export default function CreateTripScreen() {
             return;
         }
 
+        if (!formData.skipFlights && !formData.origin) {
+            Alert.alert("Error", "Please enter an origin city or enable 'Skip Flights'");
+            return;
+        }
+
         setLoading(true);
         setShowLoadingScreen(true);
         setLoadingProgress(0);
@@ -694,6 +699,16 @@ export default function CreateTripScreen() {
                             )}
                         </View>
                     </View>
+                    
+                    <TouchableOpacity 
+                        style={styles.skipFlightsContainer}
+                        onPress={() => setFormData(prev => ({ ...prev, skipFlights: !prev.skipFlights }))}
+                    >
+                        <View style={[styles.checkbox, formData.skipFlights && styles.checkboxChecked]}>
+                            {formData.skipFlights && <Ionicons name="checkmark" size={14} color="#1A1A1A" />}
+                        </View>
+                        <Text style={styles.skipFlightsText}>I already have flights (Skip flight search)</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Dates Section */}
@@ -1434,9 +1449,36 @@ const styles = StyleSheet.create({
     },
     budgetInput: {
         flex: 1,
-        fontSize: 20,
-        fontWeight: "600",
-        color: "#1A1A1A",
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#1A1A1A',
         padding: 0,
+    },
+    skipFlightsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+    },
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: '#1A1A1A',
+        marginRight: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxChecked: {
+        backgroundColor: '#FFE500',
+        borderColor: '#FFE500',
+    },
+    skipFlightsText: {
+        fontSize: 14,
+        color: '#1A1A1A',
+        fontWeight: '500',
     },
 });
