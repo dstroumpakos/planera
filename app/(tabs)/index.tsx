@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth-client";
+import TripCounter from "@/components/TripCounter";
 
 // Planera Colors
 const COLORS = {
@@ -70,10 +71,9 @@ export default function HomeScreen() {
                             <Text style={styles.userName}>{userName}</Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.notificationButton}>
-                        <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
-                        <View style={styles.notificationBadge} />
-                    </TouchableOpacity>
+                    <View style={styles.headerRight}>
+                        <TripCounter />
+                    </View>
                 </View>
 
                 {/* Hero Text */}
@@ -249,6 +249,11 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
+    },
+    headerRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
     },
     avatarContainer: {
         width: 48,
