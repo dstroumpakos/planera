@@ -30,21 +30,21 @@ export const DEALS = [
             {
                 name: "The Kayon Jungle Resort",
                 rating: 5,
-                price: "$200/night",
+                price: "€200/night",
                 image: "https://images.unsplash.com/photo-1571896349842-6e5c48dc52e3",
                 address: "Ubud, Bali"
             },
             {
                 name: "Padma Resort Ubud",
                 rating: 4.8,
-                price: "$180/night",
+                price: "€180/night",
                 image: "https://images.unsplash.com/photo-1582719508461-905c673771fd",
                 address: "Payangan, Bali"
             },
             {
                 name: "Viceroy Bali",
                 rating: 5,
-                price: "$350/night",
+                price: "€350/night",
                 image: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb",
                 address: "Ubud, Bali"
             }
@@ -97,21 +97,21 @@ export const DEALS = [
             {
                 name: "Canaves Oia",
                 rating: 5,
-                price: "$400/night",
+                price: "€400/night",
                 image: "https://images.unsplash.com/photo-1566073771259-6a8506099945",
                 address: "Oia, Santorini"
             },
             {
                 name: "Mystique",
                 rating: 5,
-                price: "$500/night",
+                price: "€500/night",
                 image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4",
                 address: "Oia, Santorini"
             },
             {
                 name: "Katikies",
                 rating: 4.9,
-                price: "$450/night",
+                price: "€450/night",
                 image: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c",
                 address: "Oia, Santorini"
             }
@@ -156,21 +156,21 @@ export const DEALS = [
             {
                 name: "Ritz-Carlton Kyoto",
                 rating: 5,
-                price: "$600/night",
+                price: "€600/night",
                 image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39",
                 address: "Nakagyo Ward, Kyoto"
             },
             {
                 name: "Hotel The Mitsui",
                 rating: 5,
-                price: "$550/night",
+                price: "€550/night",
                 image: "https://images.unsplash.com/photo-1590073242678-cfea533fc063",
                 address: "Nakagyo Ward, Kyoto"
             },
             {
                 name: "Park Hyatt Kyoto",
                 rating: 5,
-                price: "$700/night",
+                price: "€700/night",
                 image: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb",
                 address: "Higashiyama Ward, Kyoto"
             }
@@ -215,21 +215,21 @@ export const DEALS = [
             {
                 name: "The Plaza",
                 rating: 5,
-                price: "$800/night",
+                price: "€800/night",
                 image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa",
                 address: "5th Avenue, NY"
             },
             {
                 name: "1 Hotel Central Park",
                 rating: 4.8,
-                price: "$500/night",
+                price: "€500/night",
                 image: "https://images.unsplash.com/photo-1566073771259-6a8506099945",
                 address: "6th Avenue, NY"
             },
             {
                 name: "Arlo NoMad",
                 rating: 4.5,
-                price: "$300/night",
+                price: "€300/night",
                 image: "https://images.unsplash.com/photo-1582719508461-905c673771fd",
                 address: "NoMad, NY"
             }

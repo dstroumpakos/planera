@@ -51,8 +51,8 @@ export default function Deals() {
                                 <Text style={styles.locationText}>{item.dates}</Text>
                             </View>
                             <View style={styles.priceRow}>
-                                <Text style={styles.price}>${item.price}</Text>
-                                <Text style={styles.originalPrice}>${item.originalPrice}</Text>
+                                <Text style={styles.price}>€{item.price}</Text>
+                                <Text style={styles.originalPrice}>€{item.originalPrice}</Text>
                             </View>
                         </View>
                         <TouchableOpacity style={styles.arrowButton}>

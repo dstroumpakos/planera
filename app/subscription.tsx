@@ -94,25 +94,17 @@ export default function SubscriptionScreen() {
                     </View>
                     <View style={styles.planHeader}>
                         <View>
-                            <Text style={styles.planName}>Yearly Era</Text>
-                            <Text style={styles.planBilled}>Billed $59.99 yearly</Text>
+                            <Text style={styles.planName}>Yearly</Text>
+                            <View style={styles.saveBadge}>
+                                <Text style={styles.saveText}>SAVE 40%</Text>
+                            </View>
                         </View>
-                        <View style={styles.planPriceContainer}>
-                            <Text style={styles.planPrice}>$4.99</Text>
-                            <Text style={styles.planPeriod}>/ mo</Text>
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.planPrice}>€4.99</Text>
+                            <Text style={styles.planPeriod}>/mo</Text>
                         </View>
-                        <View style={[
-                            styles.radioButton,
-                            selectedPlan === "yearly" && styles.radioButtonSelected
-                        ]}>
-                            {selectedPlan === "yearly" && (
-                                <Ionicons name="checkmark" size={16} color={COLORS.text} />
-                            )}
-                        </View>
-                    </View>
-                    
-                    {selectedPlan === "yearly" && (
-                        <View style={styles.planFeatures}>
+                        <Text style={styles.planBilled}>Billed €59.99 yearly</Text>
+                        <View style={styles.featuresList}>
                             <View style={styles.featureItem}>
                                 <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
                                 <Text style={styles.featureText}>Unlimited AI Planning</Text>
@@ -126,7 +118,7 @@ export default function SubscriptionScreen() {
                                 <Text style={styles.featureText}>Full Multi-City Routing</Text>
                             </View>
                         </View>
-                    )}
+                    </View>
                 </TouchableOpacity>
 
                 {/* Monthly Plan */}
@@ -140,22 +132,25 @@ export default function SubscriptionScreen() {
                 >
                     <View style={styles.planHeader}>
                         <View>
-                            <Text style={styles.planName}>Monthly Era</Text>
-                            <Text style={styles.cancelAnytime}>
-                                <Ionicons name="close-circle" size={12} color={COLORS.error} /> Cancel anytime
-                            </Text>
+                            <Text style={styles.planName}>Monthly</Text>
                         </View>
-                        <View style={styles.planPriceContainer}>
-                            <Text style={styles.planPrice}>$9.99</Text>
-                            <Text style={styles.planPeriod}>/ mo</Text>
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.planPrice}>€9.99</Text>
+                            <Text style={styles.planPeriod}>/mo</Text>
                         </View>
-                        <View style={[
-                            styles.radioButton,
-                            selectedPlan === "monthly" && styles.radioButtonSelected
-                        ]}>
-                            {selectedPlan === "monthly" && (
-                                <Ionicons name="checkmark" size={16} color={COLORS.text} />
-                            )}
+                        <View style={styles.featuresList}>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Unlimited AI Planning</Text>
+                            </View>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Smart Recommendations</Text>
+                            </View>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Full Multi-City Routing</Text>
+                            </View>
                         </View>
                     </View>
                 </TouchableOpacity>
@@ -172,18 +167,24 @@ export default function SubscriptionScreen() {
                     <View style={styles.planHeader}>
                         <View>
                             <Text style={styles.planName}>Single Trip</Text>
-                            <Text style={styles.planSubtext}>One-time AI planning</Text>
                         </View>
-                        <View style={styles.planPriceContainer}>
-                            <Text style={styles.planPrice}>$2.99</Text>
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.planPrice}>€2.99</Text>
+                            <Text style={styles.planPeriod}>/trip</Text>
                         </View>
-                        <View style={[
-                            styles.radioButton,
-                            selectedPlan === "single" && styles.radioButtonSelected
-                        ]}>
-                            {selectedPlan === "single" && (
-                                <Ionicons name="checkmark" size={16} color={COLORS.text} />
-                            )}
+                        <View style={styles.featuresList}>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Unlimited AI Planning</Text>
+                            </View>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Smart Recommendations</Text>
+                            </View>
+                            <View style={styles.featureItem}>
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                                <Text style={styles.featureText}>Full Multi-City Routing</Text>
+                            </View>
                         </View>
                     </View>
                 </TouchableOpacity>

@@ -256,9 +256,9 @@ const TRAVEL_TYPES = [
 ];
 
 const BUDGET_RANGES = [
-    { id: "budget", label: "Budget", range: "$1k - $3k" },
-    { id: "moderate", label: "Moderate", range: "$3k - $7k" },
-    { id: "luxury", label: "Luxury", range: "$7k+" },
+    { id: "budget", label: "Budget", range: "€1k - €3k" },
+    { id: "moderate", label: "Moderate", range: "€3k - €7k" },
+    { id: "luxury", label: "Luxury", range: "€7k+" },
 ];
 
 const INTERESTS = [
@@ -772,9 +772,9 @@ export default function CreateTripScreen() {
 
                 {/* Budget Section */}
                 <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>BUDGET (USD)</Text>
+                    <Text style={styles.sectionLabel}>BUDGET (EUR)</Text>
                     <View style={styles.budgetInputContainer}>
-                        <Text style={styles.currencySymbol}>$</Text>
+                        <Text style={styles.currencySymbol}>€</Text>
                         <TextInput
                             style={styles.budgetInput}
                             value={formData.budget.toString()}

@@ -580,7 +580,7 @@ function calculateDailyExpenses(budget: string | number): number {
     
     // Estimate daily expenses as roughly 30% of total budget divided by typical 7-day trip
     const estimatedDailyExpense = (budget * 0.3) / 7;
-    return Math.max(50, Math.round(estimatedDailyExpense)); // Minimum $50/day
+    return Math.max(50, Math.round(estimatedDailyExpense)); // Minimum €50/day
 }
 
 // Helper function to get Amadeus access token

@@ -791,7 +791,7 @@ export default function TripDetails() {
                                 <Text style={styles.cardTitle}>{flight.airline}</Text>
                                 <Text style={styles.cardSubtitle}>{flight.flightNumber}</Text>
                             </View>
-                            <Text style={styles.price}>${flight.price}</Text>
+                            <Text style={styles.price}>€{flight.price}</Text>
                         </View>
                     ))}
                 </View>
@@ -1588,7 +1588,6 @@ export default function TripDetails() {
                                         // But usually "Not Now" means "Close this upsell".
                                         // Since the content IS locked, they can't really "close" it to see the content.
                                         // So "Not Now" might just be a way to go back or stay on the limited view.
-                                        // For this flow, let's make it just a secondary action that maybe scrolls to top or does nothing (just acknowledges).
                                         // Or better, let's make it clear they are staying on the limited plan.
                                     }}
                                 >
@@ -1944,7 +1943,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
-        elevation: 3,
+        elevation: 10,
     },
     dayHeader: {
         flexDirection: "row",
@@ -2439,8 +2438,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 12,
         elevation: 3,
-        borderWidth: 2,
-        borderColor: "transparent",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
     },
     transportHeader: {
         flexDirection: "row",
@@ -2902,6 +2901,7 @@ const styles = StyleSheet.create({
     priceNight: {
         fontSize: 14,
         color: "#A1AEC6",
+        fontWeight: "500",
     },
     totalStayPrice: {
         fontSize: 12,

@@ -21,12 +21,11 @@ const COLORS = {
     cardBg: "#FFFFFF",
 };
 
-// Sample trending destinations
-const trendingDestinations = [
-    { id: "1", name: "Tokyo", country: "Japan", price: "$1,250", rating: 4.9, image: "🗼" },
-    { id: "2", name: "Paris", country: "France", price: "$980", rating: 4.8, image: "🗼" },
-    { id: "3", name: "Bali", country: "Indonesia", price: "$750", rating: 4.7, image: "🏝️" },
-    { id: "4", name: "New York", country: "USA", price: "$1,100", rating: 4.6, image: "🗽" },
+const FEATURED_TRIPS = [
+    { id: "1", name: "Tokyo", country: "Japan", price: "€1,250", rating: 4.9, image: "🗼" },
+    { id: "2", name: "Paris", country: "France", price: "€980", rating: 4.8, image: "🗼" },
+    { id: "3", name: "Bali", country: "Indonesia", price: "€750", rating: 4.7, image: "🏝️" },
+    { id: "4", name: "New York", country: "USA", price: "€1,100", rating: 4.6, image: "🗽" },
 ];
 
 export default function HomeScreen() {
@@ -137,31 +136,31 @@ export default function HomeScreen() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.trendingContainer}
                 >
-                    {trendingDestinations.map((dest) => (
+                    {FEATURED_TRIPS.map((trip) => (
                         <TouchableOpacity 
-                            key={dest.id}
+                            key={trip.id}
                             style={styles.trendingCard}
                             onPress={() => router.push("/create-trip")}
                         >
                             <View style={styles.trendingImageContainer}>
                                 <View style={styles.trendingImagePlaceholder}>
-                                    <Text style={styles.trendingEmoji}>{dest.image}</Text>
+                                    <Text style={styles.trendingEmoji}>{trip.image}</Text>
                                 </View>
                                 <View style={styles.ratingBadge}>
                                     <Ionicons name="star" size={12} color={COLORS.primary} />
-                                    <Text style={styles.ratingText}>{dest.rating}</Text>
+                                    <Text style={styles.ratingText}>{trip.rating}</Text>
                                 </View>
                                 <TouchableOpacity style={styles.arrowButton}>
                                     <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
                                 </TouchableOpacity>
                             </View>
                             <View style={styles.trendingInfo}>
-                                <Text style={styles.trendingName}>{dest.name}</Text>
+                                <Text style={styles.trendingName}>{trip.name}</Text>
                                 <View style={styles.trendingLocation}>
                                     <Ionicons name="location" size={12} color={COLORS.textMuted} />
-                                    <Text style={styles.trendingCountry}>{dest.country}</Text>
+                                    <Text style={styles.trendingCountry}>{trip.country}</Text>
                                 </View>
-                                <Text style={styles.trendingPrice}>{dest.price}</Text>
+                                <Text style={styles.trendingPrice}>{trip.price}</Text>
                             </View>
                         </TouchableOpacity>
                     ))}
