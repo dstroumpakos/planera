@@ -261,7 +261,18 @@ const BUDGET_RANGES = [
     { id: "luxury", label: "Luxury", range: "$7k+" },
 ];
 
-const INTERESTS = ["Adventure", "Culinary", "Culture"];
+const INTERESTS = [
+    "Adventure", 
+    "Culinary", 
+    "Culture", 
+    "Relaxation", 
+    "Nightlife", 
+    "Nature", 
+    "History", 
+    "Shopping", 
+    "Luxury", 
+    "Family"
+];
 
 export default function CreateTripScreen() {
     const router = useRouter();
@@ -285,8 +296,6 @@ export default function CreateTripScreen() {
         endDate: new Date().getTime() + 7 * 24 * 60 * 60 * 1000,
         budget: 2000,
         travelers: 1,
-        travelType: "solo" as string,
-        budgetRange: "moderate" as string,
         interests: [] as string[],
         skipFlights: false,
         skipHotel: false,
@@ -466,25 +475,13 @@ export default function CreateTripScreen() {
         }, 500);
 
         try {
-            // Map travelType to travelers count if not manually set
-            let travelersCount = formData.travelers;
-            if (formData.travelType === "couple") travelersCount = 2;
-            if (formData.travelType === "friends") travelersCount = 4;
-            if (formData.travelType === "family") travelersCount = 4;
-
-            // Map budgetRange to budget value
-            let budgetValue = formData.budget;
-            if (formData.budgetRange === "budget") budgetValue = 1000;
-            if (formData.budgetRange === "moderate") budgetValue = 3000;
-            if (formData.budgetRange === "luxury") budgetValue = 8000;
-
             const tripId = await createTrip({
                 destination: formData.destination,
                 origin: formData.origin,
                 startDate: Number(formData.startDate),
                 endDate: Number(formData.endDate),
-                budget: budgetValue,
-                travelers: Number(travelersCount),
+                budget: Number(formData.budget),
+                travelers: Number(formData.travelers),
                 interests: formData.interests,
                 skipFlights: formData.skipFlights,
                 skipHotel: formData.skipHotel,
@@ -702,76 +699,78 @@ export default function CreateTripScreen() {
                 {/* Dates Section */}
                 <View style={styles.card}>
                     <Text style={styles.sectionLabel}>DATES</Text>
-                    <TouchableOpacity 
-                        style={styles.dateButton}
-                        onPress={() => {
-                            setSelectingDate('start');
-                            setShowCalendar(true);
-                        }}
-                    >
-                        <Ionicons name="calendar-outline" size={24} color="#1A1A1A" />
-                        <Text style={styles.dateButtonText}>Select Dates</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.dateRange}>
-                        {formatDate(formData.startDate)} - {formatDate(formData.endDate)}
-                    </Text>
+                    <View style={styles.datesContainer}>
+                        <TouchableOpacity 
+                            style={styles.dateInputButton}
+                            onPress={() => {
+                                setSelectingDate('start');
+                                setShowCalendar(true);
+                            }}
+                        >
+                            <Text style={styles.dateLabel}>START DATE</Text>
+                            <View style={styles.dateValueContainer}>
+                                <Ionicons name="calendar-outline" size={20} color="#1A1A1A" />
+                                <Text style={styles.dateValueText}>{formatDate(formData.startDate)}</Text>
+                            </View>
+                        </TouchableOpacity>
+                        
+                        <View style={styles.dateSeparator} />
+
+                        <TouchableOpacity 
+                            style={styles.dateInputButton}
+                            onPress={() => {
+                                setSelectingDate('end');
+                                setShowCalendar(true);
+                            }}
+                        >
+                            <Text style={styles.dateLabel}>END DATE</Text>
+                            <View style={styles.dateValueContainer}>
+                                <Ionicons name="calendar-outline" size={20} color="#1A1A1A" />
+                                <Text style={styles.dateValueText}>{formatDate(formData.endDate)}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Who's Going Section */}
                 <View style={styles.card}>
                     <Text style={styles.sectionLabel}>WHO'S GOING?</Text>
-                    <View style={styles.travelTypeContainer}>
-                        {TRAVEL_TYPES.map((type) => (
-                            <TouchableOpacity
-                                key={type.id}
-                                style={[
-                                    styles.travelTypeButton,
-                                    formData.travelType === type.id && styles.travelTypeButtonActive,
-                                ]}
-                                onPress={() => setFormData({ ...formData, travelType: type.id })}
+                    <View style={styles.numberInputContainer}>
+                        <Text style={styles.inputLabel}>Travelers</Text>
+                        <View style={styles.counterContainer}>
+                            <TouchableOpacity 
+                                style={styles.counterButton}
+                                onPress={() => setFormData(prev => ({ ...prev, travelers: Math.max(1, prev.travelers - 1) }))}
                             >
-                                <Ionicons 
-                                    name={type.icon as any} 
-                                    size={24} 
-                                    color={formData.travelType === type.id ? "white" : "#1A1A1A"}
-                                />
-                                <Text style={[
-                                    styles.travelTypeText,
-                                    formData.travelType === type.id && styles.travelTypeTextActive,
-                                ]}>
-                                    {type.label}
-                                </Text>
+                                <Ionicons name="remove" size={24} color="#1A1A1A" />
                             </TouchableOpacity>
-                        ))}
+                            <Text style={styles.counterValue}>{formData.travelers}</Text>
+                            <TouchableOpacity 
+                                style={styles.counterButton}
+                                onPress={() => setFormData(prev => ({ ...prev, travelers: prev.travelers + 1 }))}
+                            >
+                                <Ionicons name="add" size={24} color="#1A1A1A" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
 
-                {/* Budget Range Section */}
+                {/* Budget Section */}
                 <View style={styles.card}>
-                    <View style={styles.budgetHeader}>
-                        <Text style={styles.sectionLabel}>Budget Range</Text>
-                        <View style={styles.budgetBadge}>
-                            <Text style={styles.budgetBadgeText}>$1k - $3k</Text>
-                        </View>
-                    </View>
-                    <View style={styles.budgetButtonsContainer}>
-                        {BUDGET_RANGES.map((range) => (
-                            <TouchableOpacity
-                                key={range.id}
-                                style={[
-                                    styles.budgetButton,
-                                    formData.budgetRange === range.id && styles.budgetButtonActive,
-                                ]}
-                                onPress={() => setFormData({ ...formData, budgetRange: range.id })}
-                            >
-                                <Text style={[
-                                    styles.budgetButtonText,
-                                    formData.budgetRange === range.id && styles.budgetButtonTextActive,
-                                ]}>
-                                    {range.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                    <Text style={styles.sectionLabel}>BUDGET (USD)</Text>
+                    <View style={styles.budgetInputContainer}>
+                        <Text style={styles.currencySymbol}>$</Text>
+                        <TextInput
+                            style={styles.budgetInput}
+                            value={formData.budget.toString()}
+                            onChangeText={(text) => {
+                                const value = parseInt(text.replace(/[^0-9]/g, '')) || 0;
+                                setFormData({ ...formData, budget: value });
+                            }}
+                            keyboardType="numeric"
+                            placeholder="Enter budget"
+                            placeholderTextColor="#9B9B9B"
+                        />
                     </View>
                 </View>
 
@@ -789,7 +788,18 @@ export default function CreateTripScreen() {
                                 onPress={() => toggleInterest(interest)}
                             >
                                 <Ionicons 
-                                    name={interest === "Adventure" ? "trail-sign" : interest === "Culinary" ? "restaurant" : "library"} 
+                                    name={
+                                        interest === "Adventure" ? "trail-sign" : 
+                                        interest === "Culinary" ? "restaurant" : 
+                                        interest === "Culture" ? "library" :
+                                        interest === "Relaxation" ? "cafe" :
+                                        interest === "Nightlife" ? "wine" :
+                                        interest === "Nature" ? "leaf" :
+                                        interest === "History" ? "book" :
+                                        interest === "Shopping" ? "cart" :
+                                        interest === "Luxury" ? "diamond" :
+                                        "people"
+                                    } 
                                     size={20} 
                                     color={formData.interests.includes(interest) ? "white" : "#FFE500"}
                                 />
@@ -1333,5 +1343,100 @@ const styles = StyleSheet.create({
     },
     calendar: {
         marginHorizontal: 10,
+    },
+    datesContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#FFF8E1",
+        borderRadius: 14,
+        padding: 4,
+    },
+    dateInputButton: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        alignItems: "center",
+    },
+    dateSeparator: {
+        width: 1,
+        height: "60%",
+        backgroundColor: "#E8E6E1",
+    },
+    dateLabel: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#9B9B9B",
+        marginBottom: 4,
+        letterSpacing: 0.5,
+    },
+    dateValueContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    dateValueText: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    numberInputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#FFF8E1",
+        borderRadius: 14,
+        padding: 16,
+    },
+    inputLabel: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    counterContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 16,
+    },
+    counterButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: "white",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    counterValue: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#1A1A1A",
+        minWidth: 24,
+        textAlign: "center",
+    },
+    budgetInputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFF8E1",
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    currencySymbol: {
+        fontSize: 20,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        marginRight: 8,
+    },
+    budgetInput: {
+        flex: 1,
+        fontSize: 20,
+        fontWeight: "600",
+        color: "#1A1A1A",
+        padding: 0,
     },
 });
