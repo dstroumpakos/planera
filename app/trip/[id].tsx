@@ -1270,16 +1270,8 @@ export default function TripDetails() {
             {/* Floating Action Bar */}
             <View style={styles.fabContainer}>
                 <View style={styles.fab}>
-                    <TouchableOpacity style={styles.saveTripButton} onPress={() => Alert.alert("Saved", "Trip saved to your profile!")}>
-                        <Ionicons name="bookmark" size={20} color="#1A1A1A" />
-                        <Text style={styles.saveTripText}>Save Trip</Text>
-                    </TouchableOpacity>
-                    <View style={styles.fabDivider} />
                     <TouchableOpacity style={styles.fabIconButton} onPress={() => setIsEditing(true)}>
                         <Ionicons name="pencil" size={20} color="#475569" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.fabIconButton} onPress={() => Alert.alert("Share", "Sharing functionality coming soon!")}>
-                        <Ionicons name="share-outline" size={20} color="#475569" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -2183,7 +2175,6 @@ const styles = StyleSheet.create({
         color: "white",
         fontWeight: "700",
         fontSize: 14,
-        textTransform: "uppercase",
     },
     price: {
         fontSize: 18,
