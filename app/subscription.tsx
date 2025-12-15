@@ -175,7 +175,7 @@ export default function SubscriptionScreen() {
                         <View style={styles.featuresList}>
                             <View style={styles.featureItem}>
                                 <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Unlimited AI Planning</Text>
+                                <Text style={styles.featureText}>One-time AI Trip Plan</Text>
                             </View>
                             <View style={styles.featureItem}>
                                 <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
