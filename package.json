@@ -49,7 +49,8 @@
     "@react-native-community/datetimepicker": "^8.5.0",
     "react-native-calendars": "^1.1313.0",
     "expo-location": "^19.0.8",
-    "expo-linear-gradient": "^15.0.8"
+    "expo-linear-gradient": "^15.0.8",
+    "react-native-maps": "^1.26.20"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

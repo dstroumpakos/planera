@@ -174,7 +174,40 @@ export const generate = internalAction({
             const transportation = generateTransportationOptions(trip.destination, origin, trip.travelers);
             console.log(`✅ Transportation ready: ${transportation.length} options`);
 
-            // 6. Generate day-by-day itinerary with OpenAI
+            // 6. Get destination coordinates
+            console.log("📍 Fetching destination coordinates...");
+            let destinationCoordinates = null;
+            if (process.env.TRIPADVISOR_API_KEY) {
+                try {
+                    const cityLocation = await searchTripAdvisorLocation(trip.destination, process.env.TRIPADVISOR_API_KEY);
+                    if (cityLocation) {
+                        const cityDetailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${cityLocation.locationId}/details?key=${process.env.TRIPADVISOR_API_KEY}&language=en&currency=EUR`;
+                        const cityDetailsResponse = await fetch(cityDetailsUrl, {
+                            method: "GET",
+                            headers: { "Accept": "application/json" }
+                        });
+                        if (cityDetailsResponse.ok) {
+                            const cityDetails = await cityDetailsResponse.json();
+                            if (cityDetails.latitude && cityDetails.longitude) {
+                                destinationCoordinates = {
+                                    latitude: parseFloat(cityDetails.latitude),
+                                    longitude: parseFloat(cityDetails.longitude),
+                                };
+                                console.log(`✅ Destination coordinates: ${JSON.stringify(destinationCoordinates)}`);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("❌ Error fetching destination coordinates:", error);
+                }
+            }
+            
+            // Fallback coordinates if API fails (approximate for major cities)
+            if (!destinationCoordinates) {
+                destinationCoordinates = getFallbackCoordinates(trip.destination);
+            }
+
+            // 7. Generate day-by-day itinerary with OpenAI
             console.log("📝 Generating itinerary with OpenAI...");
             let dayByDayItinerary;
             if (hasOpenAIKey) {
@@ -257,6 +290,7 @@ Make sure prices are realistic for ${trip.destination}. Museums typically cost �
                 activities,
                 restaurants,
                 transportation,
+                destinationCoordinates,
                 dayByDayItinerary,
                 estimatedDailyExpenses: calculateDailyExpenses(Number(trip.budget)),
             };
@@ -1161,259 +1195,82 @@ async function searchActivities(destination: string) {
     }
 }
 
-// TripAdvisor Content API - Search for city/destination location ID
-async function searchTripAdvisorLocation(destination: string, apiKey: string): Promise<{ locationId: string; name: string } | null> {
+// Helper function to search restaurants
+async function searchRestaurants(destination: string) {
+    const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
+    
+    if (!tripAdvisorKey) {
+        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback restaurants.");
+        return getFallbackRestaurants(destination);
+    }
+
+    console.log(`🍽️ Searching restaurants in ${destination} via TripAdvisor`);
     try {
-        // Use "geos" category to find cities/destinations, not restaurants
-        const searchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&category=geos&language=en`;
-        
-        console.log(`🔍 TripAdvisor searching for city: ${destination}`);
-        
-        const response = await fetch(searchUrl, {
-            method: "GET",
-            headers: {
-                "Accept": "application/json",
-            }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("TripAdvisor location search error:", response.status, errorText);
-            return null;
+        const restaurants = await searchTripAdvisorRestaurants(destination, tripAdvisorKey);
+        if (restaurants.length > 0) {
+            console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
+            return restaurants;
         }
-
-        const data = await response.json();
-        
-        if (data.data && data.data.length > 0) {
-            // Find the best match - prefer cities over regions
-            const cityMatch = data.data.find((loc: any) => 
-                loc.name.toLowerCase().includes(destination.toLowerCase()) ||
-                destination.toLowerCase().includes(loc.name.toLowerCase())
-            ) || data.data[0];
-            
-            console.log(`✅ Found TripAdvisor city: ${cityMatch.name} (ID: ${cityMatch.location_id})`);
-            return { locationId: cityMatch.location_id, name: cityMatch.name };
-        }
-        
-        return null;
+        console.warn("⚠️ No restaurants found via TripAdvisor. Using fallback.");
+        return getFallbackRestaurants(destination);
     } catch (error) {
-        console.error("❌ TripAdvisor location search error:", error);
-        return null;
+        console.error("❌ TripAdvisor restaurants failed:", error);
+        return getFallbackRestaurants(destination);
     }
 }
 
-// TripAdvisor Content API - Search for restaurants using location/search with restaurants category
-async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
-    try {
-        // Step 1: Get the city location to find its coordinates
-        const cityLocation = await searchTripAdvisorLocation(destination, apiKey);
-        
-        if (!cityLocation) {
-            console.warn("⚠️ Could not find TripAdvisor city for:", destination);
-            return [];
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
         }
-
-        // Step 2: Get city details to get lat/long
-        const cityDetailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${cityLocation.locationId}/details?key=${apiKey}&language=en&currency=EUR`;
-        
-        const cityDetailsResponse = await fetch(cityDetailsUrl, {
-            method: "GET",
-            headers: { "Accept": "application/json" }
-        });
-
-        let latLong = "";
-        if (cityDetailsResponse.ok) {
-            const cityDetails = await cityDetailsResponse.json();
-            if (cityDetails.latitude && cityDetails.longitude) {
-                latLong = `${cityDetails.latitude},${cityDetails.longitude}`;
-                console.log(`📍 City coordinates: ${latLong}`);
-            }
-        }
-
-        // Step 3: Search for top-rated restaurants - always use search endpoint with "top rated" query
-        // This returns better quality results than nearby_search
-        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=top rated restaurants ${encodeURIComponent(cityLocation.name)}&category=restaurants&language=en`;
-        
-        console.log(`🍽️ Searching top-rated restaurants in: ${cityLocation.name}`);
-        
-        const response = await fetch(restaurantsUrl, {
-            method: "GET",
-            headers: { "Accept": "application/json" }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("TripAdvisor restaurants search error:", response.status, errorText);
-            return [];
-        }
-
-        const data = await response.json();
-        
-        if (!data.data || data.data.length === 0) {
-            console.warn("⚠️ No restaurants found via TripAdvisor search");
-            return [];
-        }
-
-        console.log(`✅ Found ${data.data.length} restaurants via TripAdvisor`);
-
-        // Step 4: Get details for more restaurants (up to 30) to find the best rated ones
-        const restaurants: Array<{
-            name: string;
-            priceRange: string;
-            cuisine: string;
-            rating: number;
-            address: string;
-            reviewCount: number;
-            tripAdvisorUrl: string | null;
-            phone: string | null;
-            description: string | null;
-        }> = [];
-        const restaurantList = data.data.slice(0, 30); // Fetch up to 30 to get better selection
-        
-        console.log(`🔍 Fetching details for ${restaurantList.length} restaurants...`);
-        
-        for (const restaurant of restaurantList) {
-            try {
-                const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${restaurant.location_id}/details?key=${apiKey}&language=en&currency=EUR`;
-                
-                const detailsResponse = await fetch(detailsUrl, {
-                    method: "GET",
-                    headers: { "Accept": "application/json" }
-                });
-
-                if (detailsResponse.ok) {
-                    const details = await detailsResponse.json();
-                    
-                    // Map price level to price range
-                    const priceLevel = details.price_level || "$";
-                    const priceRange = priceLevel === "$" ? "€" : 
-                                      priceLevel === "$$" || priceLevel === "$$ - $$$" ? "€€" :
-                                      priceLevel === "$$$" || priceLevel === "$$$ - $$$$" ? "€€€" : "€€€€";
-                    
-                    const rating = parseFloat(details.rating) || 0;
-                    const reviewCount = parseInt(details.num_reviews) || 0;
-                    
-                    console.log(`   📊 ${details.name}: Rating ${rating}, Reviews ${reviewCount}`);
-                    
-                    // Only include restaurants with rating >= 4.0 and at least some reviews
-                    if (rating >= 4.0 && reviewCount >= 10) {
-                        restaurants.push({
-                            name: details.name || restaurant.name,
-                            priceRange: priceRange,
-                            cuisine: details.cuisine?.[0]?.localized_name || details.subcategory?.[0]?.localized_name || "Local Cuisine",
-                            rating: rating,
-                            address: details.address_obj?.street1 || details.address_obj?.address_string || cityLocation.name,
-                            reviewCount: reviewCount,
-                            tripAdvisorUrl: details.web_url || null,
-                            phone: details.phone || null,
-                            description: details.description || null,
-                        });
-                    }
-                }
-                
-                // Small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (detailError) {
-                console.error("Error fetching restaurant details:", detailError);
-            }
-        }
-
-        // Sort by rating (highest first), then by review count as tiebreaker
-        restaurants.sort((a, b) => {
-            if (b.rating !== a.rating) {
-                return b.rating - a.rating; // Higher rating first
-            }
-            return b.reviewCount - a.reviewCount; // More reviews as tiebreaker
-        });
-        
-        // Return top 20 highest-rated restaurants
-        const topRestaurants = restaurants.slice(0, 20);
-
-        console.log(`✅ Returning top ${topRestaurants.length} highest-rated restaurants (4.0+ rating)`);
-        topRestaurants.forEach((r, i) => {
-            console.log(`   ${i + 1}. ${r.name} - Rating: ${r.rating} ⭐ (${r.reviewCount} reviews)`);
-        });
-        
-        // If we didn't find enough high-rated restaurants, lower the threshold
-        if (topRestaurants.length < 5) {
-            console.log("⚠️ Not enough high-rated restaurants, including lower rated ones...");
-            // Re-fetch without the rating filter
-            return await searchTripAdvisorRestaurantsNoFilter(destination, apiKey, cityLocation);
-        }
-        
-        return topRestaurants;
-    } catch (error) {
-        console.error("❌ TripAdvisor restaurants search error:", error);
-        return [];
     }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
 }
 
-// Fallback search without rating filter
-async function searchTripAdvisorRestaurantsNoFilter(destination: string, apiKey: string, cityLocation: { locationId: string; name: string }) {
+// Helper function to search activities
+async function searchActivities(destination: string) {
+    const viatorKey = process.env.VIATOR_API_KEY;
+    
+    if (!viatorKey) {
+        console.warn("⚠️ Viator API key not configured. Using destination-specific fallback activities.");
+        return getFallbackActivities(destination);
+    }
+
+    console.log(`🎯 Searching activities in ${destination} via Viator`);
     try {
-        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=popular restaurants ${encodeURIComponent(cityLocation.name)}&category=restaurants&language=en`;
-        
-        const response = await fetch(restaurantsUrl, {
-            method: "GET",
-            headers: { "Accept": "application/json" }
-        });
-
-        if (!response.ok) return [];
-
-        const data = await response.json();
-        if (!data.data || data.data.length === 0) return [];
-
-        const restaurants: Array<{
-            name: string;
-            priceRange: string;
-            cuisine: string;
-            rating: number;
-            address: string;
-            reviewCount: number;
-            tripAdvisorUrl: string | null;
-            phone: string | null;
-            description: string | null;
-        }> = [];
-        
-        for (const restaurant of data.data.slice(0, 25)) {
-            try {
-                const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${restaurant.location_id}/details?key=${apiKey}&language=en&currency=EUR`;
-                const detailsResponse = await fetch(detailsUrl, {
-                    method: "GET",
-                    headers: { "Accept": "application/json" }
-                });
-
-                if (detailsResponse.ok) {
-                    const details = await detailsResponse.json();
-                    const priceLevel = details.price_level || "$";
-                    const priceRange = priceLevel === "$" ? "€" : 
-                                      priceLevel === "$$" || priceLevel === "$$ - $$$" ? "€€" :
-                                      priceLevel === "$$$" || priceLevel === "$$$ - $$$$" ? "€€€" : "€€€€";
-                    
-                    restaurants.push({
-                        name: details.name || restaurant.name,
-                        priceRange: priceRange,
-                        cuisine: details.cuisine?.[0]?.localized_name || "Local Cuisine",
-                        rating: parseFloat(details.rating) || 4.0,
-                        address: details.address_obj?.street1 || cityLocation.name,
-                        reviewCount: parseInt(details.num_reviews) || 0,
-                        tripAdvisorUrl: details.web_url || null,
-                        phone: details.phone || null,
-                        description: details.description || null,
-                    });
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (e) {
-                console.error("Error in fallback restaurant fetch:", e);
-            }
+        const activities = await searchViatorActivities(destination, viatorKey);
+        if (activities.length > 0) {
+            console.log(`✅ Found ${activities.length} activities via Viator`);
+            return activities;
         }
-
-        // Still sort by rating
-        restaurants.sort((a, b) => b.rating - a.rating);
-        return restaurants.slice(0, 20);
+        console.warn("⚠️ No activities found via Viator. Using fallback.");
+        return getFallbackActivities(destination);
     } catch (error) {
-        console.error("❌ Fallback restaurant search error:", error);
-        return [];
+        console.error("❌ Viator activities failed:", error);
+        return getFallbackActivities(destination);
     }
 }
 
@@ -1441,1064 +1298,5070 @@ async function searchRestaurants(destination: string) {
     }
 }
 
-// Viator API - Search for activities/experiences
-async function searchViatorActivities(destination: string, apiKey: string) {
-    try {
-        // Use /search/freetext endpoint which is available for Basic-access Affiliate
-        console.log(`🔍 Searching Viator activities for: ${destination}`);
-        
-        const searchResponse = await fetch(
-            "https://api.viator.com/partner/search/freetext",
-            {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json;version=2.0",
-                    "Accept-Language": "en-US",
-                    "Content-Type": "application/json",
-                    "exp-api-key": apiKey,
-                },
-                body: JSON.stringify({
-                    searchTerm: `${destination} tours activities`,
-                    searchTypes: [
-                        { searchType: "PRODUCTS", pagination: { start: 1, count: 25 } }
-                    ],
-                    currency: "EUR"
-                })
-            }
-        );
-
-        if (!searchResponse.ok) {
-            const errorText = await searchResponse.text();
-            console.error("Viator freetext search API error:", searchResponse.status, errorText);
-            throw new Error(`Viator freetext search failed: ${searchResponse.status}`);
-        }
-
-        const searchData = await searchResponse.json();
-        
-        // Extract products from freetext search results
-        const products = searchData.products?.results || [];
-        
-        if (products.length === 0) {
-            console.warn("⚠️ No products found via Viator freetext search");
-            return [];
-        }
-
-        console.log(`✅ Found ${products.length} activities via Viator freetext search`);
-
-        // Get detailed product info using /products/search endpoint
-        const productCodes = products.slice(0, 20).map((p: any) => p.productCode).filter(Boolean);
-        
-        if (productCodes.length === 0) {
-            // Return basic info from freetext search
-            return products.slice(0, 20).map((product: any) => ({
-                title: product.title || "Activity",
-                price: product.pricing?.summary?.fromPrice || 25,
-                currency: product.pricing?.currency || "EUR",
-                duration: "2-3h",
-                description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
-                rating: product.reviews?.combinedAverageRating || 4.5,
-                reviewCount: product.reviews?.totalReviews || 0,
-                productCode: product.productCode,
-                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.primaryImage?.url || product.images?.[0]?.url || null,
-                skipTheLine: product.title?.toLowerCase().includes("skip") ||
-                            product.title?.toLowerCase().includes("priority"),
-                skipTheLinePrice: null,
-            }));
-        }
-
-        // Use /products/search to get more details
-        const productsResponse = await fetch(
-            "https://api.viator.com/partner/products/search",
-            {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json;version=2.0",
-                    "Accept-Language": "en-US",
-                    "Content-Type": "application/json",
-                    "exp-api-key": apiKey,
-                },
-                body: JSON.stringify({
-                    filtering: {
-                        productCodes: productCodes,
-                    },
-                    currency: "EUR"
-                })
-            }
-        );
-
-        if (!productsResponse.ok) {
-            // Fall back to basic freetext results
-            console.warn("⚠️ Products search failed, using freetext results");
-            return products.slice(0, 20).map((product: any) => ({
-                title: product.title || "Activity",
-                price: product.pricing?.summary?.fromPrice || 25,
-                currency: product.pricing?.currency || "EUR",
-                duration: "2-3h",
-                description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
-                rating: product.rating || 4.5,
-                reviewCount: product.reviewCount || 0,
-                productCode: product.productCode,
-                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
-                   product.images?.[0]?.variants?.[0]?.url || null,
-                skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
-                        product.title?.toLowerCase().includes("skip") ||
-                        product.title?.toLowerCase().includes("priority"),
-                skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
-                ? (product.pricing?.summary?.fromPrice || 25) 
-                : null,
-            }));
-        }
-
-        const productsData = await productsResponse.json();
-        
-        if (!productsData.products || productsData.products.length === 0) {
-            // Fall back to basic freetext results
-            return products.slice(0, 20).map((product: any) => ({
-                title: product.title || "Activity",
-                price: product.pricing?.summary?.fromPrice || 25,
-                currency: product.pricing?.currency || "EUR",
-                duration: "2-3h",
-                description: product.shortDescription || product.description?.substring(0, 200) || "Popular activity",
-                rating: product.rating || 4.5,
-                reviewCount: product.reviewCount || 0,
-                productCode: product.productCode,
-                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.primaryImage?.url || product.images?.[0]?.url || null,
-                skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
-                        product.title?.toLowerCase().includes("skip") ||
-                        product.title?.toLowerCase().includes("priority"),
-                skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
-                ? (product.pricing?.summary?.fromPrice || 25) 
-                : null,
-            }));
-        }
-
-        return productsData.products.slice(0, 20).map((product: any) => ({
-            title: product.title,
-            price: product.pricing?.summary?.fromPrice || 25,
-            currency: product.pricing?.currency || "EUR",
-            duration: product.duration?.fixedDurationInMinutes 
-                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
-                : product.duration?.variableDurationFromMinutes
-                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
-                    : "2-3h",
-            description: product.description?.substring(0, 200) || "Popular activity",
-            rating: product.reviews?.combinedAverageRating || 4.5,
-            reviewCount: product.reviews?.totalReviews || 0,
-            productCode: product.productCode,
-            bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
-            image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
-                   product.images?.[0]?.variants?.[0]?.url || null,
-            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
-                        product.title?.toLowerCase().includes("skip") ||
-                        product.title?.toLowerCase().includes("priority"),
-            skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
-                ? (product.pricing?.summary?.fromPrice || 25) 
-                : null,
-        }));
-    } catch (error) {
-        console.error("❌ Viator activities error:", error);
-        throw error;
-    }
-}
-
-// Viator API - Search products by free text (backup method)
-async function searchViatorProductsByText(searchText: string, apiKey: string) {
-    try {
-        const response = await fetch(
-            "https://api.viator.com/partner/products/search",
-            {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json;version=2.0",
-                    "Accept-Language": "en-US",
-                    "Content-Type": "application/json",
-                    "exp-api-key": apiKey,
-                },
-                body: JSON.stringify({
-                    filtering: {
-                        searchTerm: searchText,
-                    },
-                    sorting: {
-                        sort: "TRAVELER_RATING",
-                        order: "DESC"
-                    },
-                    pagination: {
-                        start: 1,
-                        count: 10
-                    },
-                    currency: "EUR"
-                })
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Viator text search API error:", response.status, errorText);
-            throw new Error(`Viator text search failed: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.products || data.products.length === 0) {
-            return [];
-        }
-
-        return data.products.slice(0, 8).map((product: any) => ({
-            title: product.title,
-            price: product.pricing?.summary?.fromPrice || 25,
-            currency: product.pricing?.currency || "EUR",
-            duration: product.duration?.fixedDurationInMinutes 
-                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
-                : product.duration?.variableDurationFromMinutes
-                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
-                    : "2-3h",
-            description: product.description?.substring(0, 200) || "Popular activity",
-            rating: product.reviews?.combinedAverageRating || 4.5,
-            reviewCount: product.reviews?.totalReviews || 0,
-            productCode: product.productCode,
-            bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
-            image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
-                   product.images?.[0]?.variants?.[0]?.url || null,
-            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
-                        product.title?.toLowerCase().includes("skip") ||
-                        product.title?.toLowerCase().includes("priority"),
-            skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
-                ? (product.pricing?.summary?.fromPrice || 25) 
-                : null,
-        }));
-    } catch (error) {
-        console.error("❌ Viator text search error:", error);
-        throw error;
-    }
-}
-
-// Fallback activities - destination-specific
-function getFallbackActivities(destination: string) {
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
     const destLower = destination.toLowerCase();
-    
-    const destinationActivities: Record<string, Array<{title: string, price: string, duration: string, description: string}>> = {
-        "paris": [
-            { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
-            { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
-            { title: "Seine River Cruise", price: "€15", duration: "1h", description: "Scenic boat tour along the Seine" },
-            { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
-            { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
-        ],
-        "rome": [
-            { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
-            { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
-            { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
-            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
-        ],
-        "london": [
-            { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
-            { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
-            { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
-            { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
-            { title: "Thames River Cruise", price: "€15", duration: "1h", description: "Sightseeing boat tour" },
-        ],
-        "barcelona": [
-            { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
-            { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
-            { title: "Casa Batlló", price: "€35", duration: "1.5h", description: "Gaudí's stunning modernist building" },
-            { title: "La Pedrera", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
-            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
-        ],
-        "athens": [
-            { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
-            { title: "Acropolis Museum", price: "€15", duration: "2h", description: "Archaeological museum" },
-            { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
-            { title: "National Archaeological Museum", price: "€12", duration: "2h", description: "Greek art collection" },
-            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2h", description: "Historic neighborhoods" },
-        ],
-        "amsterdam": [
-            { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
-            { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
-            { title: "Rijksmuseum", price: "€22", duration: "3h", description: "Dutch art and history" },
-            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
-            { title: "Heineken Experience", price: "€23", duration: "1.5h", description: "Interactive brewery tour" },
-        ],
-    };
-    
-    for (const [city, activities] of Object.entries(destinationActivities)) {
+    for (const [city, coordinates] of Object.entries(coords)) {
         if (destLower.includes(city)) {
-            return activities;
+            return coordinates;
         }
     }
     
-    return [
-        { title: `City Tour of ${destination}`, price: "€25", duration: "3h", description: "Explore the main attractions" },
-        { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
-        { title: "Walking Tour", price: "€10", duration: "2h", description: "Guided walking tour of historic sites" },
-        { title: "Local Market", price: "Free", duration: "1-2h", description: "Experience local life and cuisine" },
-        { title: "Sunset Viewpoint", price: "Free", duration: "1h", description: "Best views of the city" },
-    ];
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
 }
 
-// Fallback restaurants - destination-specific
-function getFallbackRestaurants(destination: string) {
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
     const destLower = destination.toLowerCase();
-    
-    const destinationRestaurants: Record<string, Array<{name: string, priceRange: string, cuisine: string, rating: number}>> = {
-        "paris": [
-            { name: "Le Comptoir du Relais", priceRange: "€€€", cuisine: "French Bistro", rating: 4.5 },
-            { name: "L'As du Fallafel", priceRange: "€", cuisine: "Middle Eastern", rating: 4.6 },
-            { name: "Breizh Café", priceRange: "€€", cuisine: "Crêperie", rating: 4.4 },
-            { name: "Le Jules Verne", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.7 },
-            { name: "Marché des Enfants Rouges", priceRange: "€", cuisine: "Market Food", rating: 4.3 },
-        ],
-        "rome": [
-            { name: "Trattoria Da Enzo", priceRange: "€€", cuisine: "Traditional Roman", rating: 4.6 },
-            { name: "Pizzarium", priceRange: "€", cuisine: "Pizza al Taglio", rating: 4.5 },
-            { name: "La Pergola", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Roscioli", priceRange: "€€€", cuisine: "Italian Deli", rating: 4.7 },
-            { name: "Supplizio", priceRange: "€", cuisine: "Street Food", rating: 4.4 },
-        ],
-        "london": [
-            { name: "Dishoom", priceRange: "€€", cuisine: "Indian", rating: 4.5 },
-            { name: "Borough Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
-            { name: "The Ledbury", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Flat Iron", priceRange: "€€", cuisine: "Steakhouse", rating: 4.4 },
-            { name: "Padella", priceRange: "€€", cuisine: "Italian Pasta", rating: 4.7 },
-        ],
-        "barcelona": [
-            { name: "Cervecería Catalana", priceRange: "€€", cuisine: "Tapas", rating: 4.5 },
-            { name: "La Boqueria Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
-            { name: "Tickets Bar", priceRange: "€€€", cuisine: "Modern Tapas", rating: 4.7 },
-            { name: "Can Culleretes", priceRange: "€€", cuisine: "Traditional Catalan", rating: 4.4 },
-            { name: "El Xampanyet", priceRange: "€", cuisine: "Tapas Bar", rating: 4.5 },
-        ],
-        "athens": [
-            { name: "Taverna Tou Psyrri", priceRange: "€€", cuisine: "Traditional Greek", rating: 4.5 },
-            { name: "Kostas Souvlaki", priceRange: "€", cuisine: "Souvlaki", rating: 4.6 },
-            { name: "Spondi", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Karamanlidika", priceRange: "€€", cuisine: "Greek Meze", rating: 4.7 },
-            { name: "Varvakios Agora", priceRange: "€", cuisine: "Market Food", rating: 4.4 },
-        ],
-        "amsterdam": [
-            { name: "De Kas", priceRange: "€€€", cuisine: "Farm-to-Table", rating: 4.6 },
-            { name: "Foodhallen", priceRange: "€€", cuisine: "Food Hall", rating: 4.4 },
-            { name: "The Pantry", priceRange: "€€", cuisine: "Dutch Traditional", rating: 4.5 },
-            { name: "Café de Klos", priceRange: "€€", cuisine: "Grill House", rating: 4.6 },
-            { name: "Albert Cuyp Market", priceRange: "€", cuisine: "Street Food", rating: 4.3 },
-        ],
-    };
-    
-    for (const [city, restaurants] of Object.entries(destinationRestaurants)) {
+    for (const [city, coordinates] of Object.entries(coords)) {
         if (destLower.includes(city)) {
-            return restaurants;
+            return coordinates;
         }
     }
     
-    return [
-        { name: `Traditional ${destination} Restaurant`, priceRange: "€€", cuisine: "Local", rating: 4.5 },
-        { name: "Mediterranean Bistro", priceRange: "€€€", cuisine: "Mediterranean", rating: 4.3 },
-        { name: "Casual Dining Spot", priceRange: "€", cuisine: "International", rating: 4.0 },
-        { name: "Fine Dining Experience", priceRange: "€€€€", cuisine: "Fusion", rating: 4.7 },
-        { name: "Street Food Market", priceRange: "€", cuisine: "Various", rating: 4.2 },
-    ];
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
 }
 
-// Fallback hotels - destination-specific
-function getFallbackHotels(destination: string) {
-    return [
-        {
-            name: `Grand Hotel ${destination}`,
-            rating: "5",
-            price: "250",
-            currency: "EUR",
-            amenities: ["WiFi", "Pool", "Spa", "Restaurant", "Gym"],
-            address: `City Center, ${destination}`,
-            description: "Luxury 5-star hotel in the heart of the city with premium amenities.",
-        },
-        {
-            name: `${destination} Boutique Hotel`,
-            rating: "4",
-            price: "150",
-            currency: "EUR",
-            amenities: ["WiFi", "Breakfast", "Bar", "Room Service"],
-            address: `Historic District, ${destination}`,
-            description: "Charming boutique hotel with personalized service and unique character.",
-        },
-        {
-            name: `${destination} City Inn`,
-            rating: "3",
-            price: "80",
-            currency: "EUR",
-            amenities: ["WiFi", "Breakfast", "24h Reception"],
-            address: `Central ${destination}`,
-            description: "Comfortable and affordable accommodation in a convenient location.",
-        },
-    ];
-}
-
-// Generate transportation options (car rental, taxi, Uber) - DESTINATION SPECIFIC PRICING
-function generateTransportationOptions(destination: string, origin: string, travelers: number) {
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
     const destLower = destination.toLowerCase();
-    
-    // Destination-specific pricing data (based on real-world costs)
-    const destinationPricing: Record<string, {
-        taxiFromAirport: number;
-        uberX: { min: number; max: number };
-        uberComfort: { min: number; max: number };
-        bolt: { min: number; max: number };
-        carRentalEconomy: number;
-        carRentalCompact: number;
-        carRentalSUV: number;
-        metroTicket: number;
-        dayPass: number;
-        airportExpress: number;
-        premiumTransfer: number;
-    }> = {
-        "paris": {
-            taxiFromAirport: 55, // CDG to city center
-            uberX: { min: 45, max: 65 },
-            uberComfort: { min: 60, max: 85 },
-            bolt: { min: 40, max: 60 },
-            carRentalEconomy: 45,
-            carRentalCompact: 60,
-            carRentalSUV: 95,
-            metroTicket: 2.15,
-            dayPass: 16.60,
-            airportExpress: 11.50, // RER B
-            premiumTransfer: 120,
-        },
-        "london": {
-            taxiFromAirport: 70, // Heathrow to city center (GBP converted to EUR)
-            uberX: { min: 55, max: 80 },
-            uberComfort: { min: 75, max: 110 },
-            bolt: { min: 50, max: 75 },
-            carRentalEconomy: 55,
-            carRentalCompact: 70,
-            carRentalSUV: 120,
-            metroTicket: 6.50, // Tube zone 1-6
-            dayPass: 15.50,
-            airportExpress: 25, // Heathrow Express
-            premiumTransfer: 150,
-        },
-        "rome": {
-            taxiFromAirport: 50, // FCO to city center (fixed fare)
-            uberX: { min: 40, max: 55 },
-            uberComfort: { min: 55, max: 75 },
-            bolt: { min: 35, max: 45 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 85,
-            metroTicket: 1.50,
-            dayPass: 8.40,
-            airportExpress: 14, // Leonardo Express
-            premiumTransfer: 100,
-        },
-        "barcelona": {
-            taxiFromAirport: 42, // BCN to city center
-            uberX: { min: 30, max: 45 },
-            uberComfort: { min: 45, max: 65 },
-            bolt: { min: 25, max: 35 },
-            carRentalEconomy: 30,
-            carRentalCompact: 45,
-            carRentalSUV: 75,
-            metroTicket: 2.40,
-            dayPass: 11.20,
-            airportExpress: 7.75, // Aerobus
-            premiumTransfer: 90,
-        },
-        "amsterdam": {
-            taxiFromAirport: 50, // Schiphol to city center
-            uberX: { min: 40, max: 55 },
-            uberComfort: { min: 55, max: 75 },
-            bolt: { min: 35, max: 45 },
-            carRentalEconomy: 45,
-            carRentalCompact: 60,
-            carRentalSUV: 95,
-            metroTicket: 3.40,
-            dayPass: 9,
-            airportExpress: 5.70, // AirTrain + Subway
-            premiumTransfer: 110,
-        },
-        "athens": {
-            taxiFromAirport: 40, // ATH to city center (fixed fare)
-            uberX: { min: 30, max: 40 },
-            uberComfort: { min: 40, max: 50 },
-            bolt: { min: 25, max: 35 },
-            carRentalEconomy: 25,
-            carRentalCompact: 40,
-            carRentalSUV: 65,
-            metroTicket: 1.20,
-            dayPass: 6,
-            airportExpress: 2, // MetroLine 3
-            premiumTransfer: 75,
-        },
-        "berlin": {
-            taxiFromAirport: 45, // BER to city center
-            uberX: { min: 35, max: 50 },
-            uberComfort: { min: 50, max: 70 },
-            bolt: { min: 30, max: 45 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 80,
-            metroTicket: 3.20,
-            dayPass: 8.50,
-            airportExpress: 4, // S-Bahn
-            premiumTransfer: 95,
-        },
-        "madrid": {
-            taxiFromAirport: 33, // MAD to city center (fixed fare)
-            uberX: { min: 25, max: 40 },
-            uberComfort: { min: 40, max: 55 },
-            bolt: { min: 22, max: 35 },
-            carRentalEconomy: 28,
-            carRentalCompact: 42,
-            carRentalSUV: 70,
-            metroTicket: 1.50,
-            dayPass: 8.40,
-            airportExpress: 5, // Metro
-            premiumTransfer: 80,
-        },
-        "dubai": {
-            taxiFromAirport: 25, // DXB to city center (cheap taxis)
-            uberX: { min: 20, max: 35 },
-            uberComfort: { min: 35, max: 50 },
-            bolt: { min: 18, max: 28 },
-            carRentalEconomy: 60,
-            carRentalCompact: 80,
-            carRentalSUV: 120,
-            metroTicket: 2,
-            dayPass: 12,
-            airportExpress: 2.50, // MRT
-            premiumTransfer: 65,
-        },
-        "new york": {
-            taxiFromAirport: 75, // JFK to Manhattan (flat fare + tolls)
-            uberX: { min: 60, max: 90 },
-            uberComfort: { min: 85, max: 120 },
-            bolt: { min: 55, max: 85 },
-            carRentalEconomy: 65,
-            carRentalCompact: 85,
-            carRentalSUV: 130,
-            metroTicket: 2.90,
-            dayPass: 34, // 7-day unlimited
-            airportExpress: 11, // AirTrain + Subway
-            premiumTransfer: 180,
-        },
-        "tokyo": {
-            taxiFromAirport: 200, // NRT to city center (expensive!)
-            uberX: { min: 150, max: 220 },
-            uberComfort: { min: 200, max: 280 },
-            bolt: { min: 140, max: 200 },
-            carRentalEconomy: 50,
-            carRentalCompact: 70,
-            carRentalSUV: 110,
-            metroTicket: 2,
-            dayPass: 8,
-            airportExpress: 36, // Narita Express
-            premiumTransfer: 250,
-        },
-        "singapore": {
-            taxiFromAirport: 25, // Changi to city center
-            uberX: { min: 20, max: 30 },
-            uberComfort: { min: 30, max: 45 },
-            bolt: { min: 18, max: 28 },
-            carRentalEconomy: 60,
-            carRentalCompact: 80,
-            carRentalSUV: 120,
-            metroTicket: 2,
-            dayPass: 12,
-            airportExpress: 2.50, // MRT
-            premiumTransfer: 65,
-        },
-        "lisbon": {
-            taxiFromAirport: 20, // LIS to city center
-            uberX: { min: 15, max: 25 },
-            uberComfort: { min: 25, max: 40 },
-            bolt: { min: 12, max: 22 },
-            carRentalEconomy: 22,
-            carRentalCompact: 35,
-            carRentalSUV: 60,
-            metroTicket: 1.65,
-            dayPass: 6.80,
-            airportExpress: 2, // Metro
-            premiumTransfer: 55,
-        },
-        "prague": {
-            taxiFromAirport: 25, // PRG to city center
-            uberX: { min: 20, max: 35 },
-            uberComfort: { min: 35, max: 50 },
-            bolt: { min: 18, max: 30 },
-            carRentalEconomy: 25,
-            carRentalCompact: 38,
-            carRentalSUV: 65,
-            metroTicket: 1.30,
-            dayPass: 5,
-            airportExpress: 2.50, // Bus 119 + Metro
-            premiumTransfer: 65,
-        },
-        "vienna": {
-            taxiFromAirport: 40, // VIE to city center
-            uberX: { min: 30, max: 45 },
-            uberComfort: { min: 45, max: 65 },
-            bolt: { min: 28, max: 42 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 85,
-            metroTicket: 2.40,
-            dayPass: 8.60,
-            airportExpress: 13, // CAT train
-            premiumTransfer: 90,
-        },
-    };
-    
-    // Find matching destination pricing or use default
-    let pricing = null;
-    for (const [city, cityPricing] of Object.entries(destinationPricing)) {
+    for (const [city, coordinates] of Object.entries(coords)) {
         if (destLower.includes(city)) {
-            pricing = cityPricing;
-            break;
+            return coordinates;
         }
     }
     
-    // Default pricing for unknown destinations
-    if (!pricing) {
-        pricing = {
-            taxiFromAirport: 40,
-            uberX: { min: 30, max: 50 },
-            uberComfort: { min: 45, max: 70 },
-            bolt: { min: 25, max: 45 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 85,
-            metroTicket: 2,
-            dayPass: 8,
-            airportExpress: 10,
-            premiumTransfer: 90,
-        };
-    }
-    
-    // Car rental options with destination-specific pricing
-    const carRentals = [
-        {
-            type: "car_rental",
-            provider: "Europcar",
-            category: "Economy",
-            vehicle: "Fiat 500 or similar",
-            pricePerDay: pricing.carRentalEconomy,
-            currency: "EUR",
-            features: ["Air Conditioning", "Manual", "4 Seats", "2 Bags"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
-            bookingUrl: "https://www.europcar.com",
-        },
-        {
-            type: "car_rental",
-            provider: "Hertz",
-            category: "Compact",
-            vehicle: "Volkswagen Golf or similar",
-            pricePerDay: pricing.carRentalCompact,
-            currency: "EUR",
-            features: ["Air Conditioning", "Automatic", "5 Seats", "3 Bags"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
-            bookingUrl: "https://www.hertz.com",
-        },
-        {
-            type: "car_rental",
-            provider: "Sixt",
-            category: "SUV",
-            vehicle: "BMW X1 or similar",
-            pricePerDay: pricing.carRentalSUV,
-            currency: "EUR",
-            features: ["Air Conditioning", "Automatic", "5 Seats", "5 Bags", "GPS"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
-            bookingUrl: "https://www.sixt.com",
-        },
-    ];
-    
-    // Taxi/Transfer options with destination-specific pricing
-    const taxiOptions = [
-        {
-            type: "taxi",
-            provider: "Airport Taxi",
-            service: "Standard Taxi",
-            description: `Metered taxi from ${destination} airport to city center`,
-            estimatedPrice: pricing.taxiFromAirport,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "5-15 min at taxi stand",
-            features: ["Metered fare", "Available 24/7", "No booking required"],
-            bookingUrl: null,
-        },
-        {
-            type: "taxi",
-            provider: "Welcome Pickups",
-            service: "Pre-booked Transfer",
-            description: "Private transfer with driver waiting at arrivals",
-            estimatedPrice: Math.round(pricing.taxiFromAirport * 1.3),
-            currency: "EUR",
-            maxPassengers: travelers <= 3 ? 3 : 6,
-            waitingTime: "Driver waiting at arrivals",
-            features: ["Fixed price", "Meet & Greet", "Flight tracking", "Free cancellation"],
-            bookingUrl: "https://www.welcomepickups.com",
-        },
-        {
-            type: "taxi",
-            provider: "Blacklane",
-            service: "Premium Chauffeur",
-            description: "Luxury sedan with professional chauffeur",
-            estimatedPrice: pricing.premiumTransfer,
-            currency: "EUR",
-            maxPassengers: 3,
-            waitingTime: "Driver waiting at arrivals",
-            features: ["Luxury vehicle", "Professional chauffeur", "Complimentary water", "WiFi"],
-            bookingUrl: "https://www.blacklane.com",
-        },
-    ];
-    
-    // Ride-sharing options with destination-specific pricing
-    const rideSharingOptions = [
-        {
-            type: "rideshare",
-            provider: "Uber",
-            service: "UberX",
-            description: "Affordable everyday rides",
-            estimatedPrice: `${pricing.uberX.min}-${pricing.uberX.max}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "3-8 min",
-            features: ["App-based booking", "Cashless payment", "Driver rating", "Trip tracking"],
-            bookingUrl: "https://www.uber.com",
-        },
-        {
-            type: "rideshare",
-            provider: "Uber",
-            service: "Uber Comfort",
-            description: "Newer cars with extra legroom",
-            estimatedPrice: `${pricing.uberComfort.min}-${pricing.uberComfort.max}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "5-10 min",
-            features: ["Newer vehicles", "Extra legroom", "Experienced drivers", "Quiet mode available"],
-            bookingUrl: "https://www.uber.com",
-        },
-        {
-            type: "rideshare",
-            provider: "Bolt",
-            service: "Bolt Standard",
-            description: "Budget-friendly rides",
-            estimatedPrice: `${pricing.bolt.min}-${pricing.bolt.max}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "3-7 min",
-            features: ["App-based booking", "Often cheaper than Uber", "Cashless payment"],
-            bookingUrl: "https://www.bolt.eu",
-        },
-    ];
-    
-    // Public transport info with destination-specific pricing
-    const publicTransport = {
-        type: "public_transport",
-        provider: "Local Transit",
-        options: [
-            {
-                mode: "Metro/Subway",
-                description: "Fast and affordable way to get around the city",
-                singleTicketPrice: pricing.metroTicket,
-                dayPassPrice: pricing.dayPass,
-                currency: "EUR",
-                features: ["Frequent service", "City-wide coverage", "Air conditioned"],
-            },
-            {
-                mode: "Bus",
-                description: "Extensive network covering all areas",
-                singleTicketPrice: pricing.metroTicket,
-                dayPassPrice: pricing.dayPass,
-                currency: "EUR",
-                features: ["Wide coverage", "Night buses available", "Scenic routes"],
-            },
-            {
-                mode: "Airport Express",
-                description: `Direct connection from ${destination} airport to city center`,
-                price: pricing.airportExpress,
-                currency: "EUR",
-                duration: "30-45 min",
-                features: ["Direct service", "Luggage space", "WiFi"],
-            },
-        ],
-    };
-    
-    return [
-        ...carRentals,
-        ...taxiOptions,
-        ...rideSharingOptions,
-        publicTransport,
-    ];
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
 }
 
-// Generate Airbnb options based on destination
-function getAirbnbOptions(destination: string) {
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
     const destLower = destination.toLowerCase();
-    
-    // Destination-specific Airbnb pricing (average per night)
-    const airbnbPricing: Record<string, {
-        studio: number;
-        apartment: number;
-        villa: number;
-    }> = {
-        "paris": { studio: 85, apartment: 150, villa: 350 },
-        "london": { studio: 95, apartment: 180, villa: 450 },
-        "rome": { studio: 70, apartment: 120, villa: 280 },
-        "barcelona": { studio: 65, apartment: 110, villa: 250 },
-        "amsterdam": { studio: 90, apartment: 160, villa: 380 },
-        "athens": { studio: 50, apartment: 85, villa: 200 },
-        "berlin": { studio: 60, apartment: 100, villa: 220 },
-        "madrid": { studio: 55, apartment: 95, villa: 210 },
-        "lisbon": { studio: 55, apartment: 90, villa: 200 },
-        "prague": { studio: 45, apartment: 75, villa: 180 },
-        "vienna": { studio: 70, apartment: 120, villa: 280 },
-        "dubai": { studio: 80, apartment: 150, villa: 400 },
-        "new york": { studio: 120, apartment: 220, villa: 550 },
-        "tokyo": { studio: 70, apartment: 130, villa: 300 },
-        "singapore": { studio: 90, apartment: 170, villa: 400 },
-        "bali": { studio: 35, apartment: 60, villa: 150 },
-        "santorini": { studio: 100, apartment: 180, villa: 400 },
-    };
-    
-    // Find matching destination pricing or use default
-    let pricing = { studio: 65, apartment: 110, villa: 250 }; // Default
-    for (const [city, cityPricing] of Object.entries(airbnbPricing)) {
+    for (const [city, coordinates] of Object.entries(coords)) {
         if (destLower.includes(city)) {
-            pricing = cityPricing;
-            break;
+            return coordinates;
         }
     }
     
-    return [
-        {
-            type: "airbnb",
-            name: `Cozy Studio in ${destination}`,
-            rating: "4.7",
-            stars: 0, // Airbnb doesn't use stars
-            price: pricing.studio.toString(),
-            pricePerNight: pricing.studio,
-            currency: "EUR",
-            amenities: ["WiFi", "Kitchen", "Washer", "Air Conditioning"],
-            address: `Central ${destination}`,
-            description: "Charming studio apartment perfect for solo travelers or couples. Fully equipped kitchen and great location.",
-            propertyType: "Studio",
-            bedrooms: 0,
-            beds: 1,
-            bathrooms: 1,
-            maxGuests: 2,
-            superhost: true,
-            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
-            image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
-        },
-        {
-            type: "airbnb",
-            name: `Modern Apartment with View`,
-            rating: "4.9",
-            stars: 0,
-            price: pricing.apartment.toString(),
-            pricePerNight: pricing.apartment,
-            currency: "EUR",
-            amenities: ["WiFi", "Kitchen", "Washer", "Balcony", "City View", "Parking"],
-            address: `${destination} City Center`,
-            description: "Spacious 2-bedroom apartment with stunning city views. Perfect for families or groups of friends.",
-            propertyType: "Apartment",
-            bedrooms: 2,
-            beds: 3,
-            bathrooms: 1,
-            maxGuests: 4,
-            superhost: true,
-            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
-            image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400",
-        },
-        {
-            type: "airbnb",
-            name: `Luxury Villa with Pool`,
-            rating: "4.95",
-            stars: 0,
-            price: pricing.villa.toString(),
-            pricePerNight: pricing.villa,
-            currency: "EUR",
-            amenities: ["WiFi", "Kitchen", "Pool", "Garden", "BBQ", "Parking", "Hot Tub"],
-            address: `Exclusive Area, ${destination}`,
-            description: "Stunning private villa with pool and garden. Ideal for luxury getaways and special occasions.",
-            propertyType: "Villa",
-            bedrooms: 4,
-            beds: 5,
-            bathrooms: 3,
-            maxGuests: 8,
-            superhost: true,
-            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
-            image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400",
-        },
-    ];
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
 }
 
-// Helper function to extract IATA code from city name (simplified)
-function extractIATACode(cityName: string): string {
-    if (!cityName) {
-        console.warn("⚠️ extractIATACode called with empty city name");
-        return "ATH"; // Default fallback
-    }
-
-    const cityMap: Record<string, string> = {
-        // Europe
-        "athens": "ATH",
-        "athens international airport": "ATH",
-        "paris": "CDG",
-        "charles de gaulle": "CDG",
-        "london": "LHR",
-        "heathrow": "LHR",
-        "rome": "FCO",
-        "fiumicino": "FCO",
-        "barcelona": "BCN",
-        "madrid": "MAD",
-        "amsterdam": "AMS",
-        "schiphol": "AMS",
-        "berlin": "BER",
-        "munich": "MUC",
-        "frankfurt": "FRA",
-        "vienna": "VIE",
-        "zurich": "ZRH",
-        "brussels": "BRU",
-        "lisbon": "LIS",
-        "dublin": "DUB",
-        "copenhagen": "CPH",
-        "stockholm": "ARN",
-        "oslo": "OSL",
-        "helsinki": "HEL",
-        "milan": "MXP",
-        "malpensa": "MXP",
-        "venice": "VCE",
-        "istanbul": "IST",
-        "prague": "PRG",
-        "budapest": "BUD",
-        "warsaw": "WAW",
-        
-        // Americas
-        "new york": "JFK",
-        "jfk": "JFK",
-        "los angeles": "LAX",
-        "chicago": "ORD",
-        "miami": "MIA",
-        "san francisco": "SFO",
-        "boston": "BOS",
-        "washington": "IAD",
-        "toronto": "YYZ",
-        "vancouver": "YVR",
-        "mexico city": "MEX",
-        "sao paulo": "GRU",
-        "buenos aires": "EZE",
-        
-        // Middle East & Africa
-        "dubai": "DXB",
-        "abu dhabi": "AUH",
-        "doha": "DOH",
-        "riyadh": "RUH",
-        "jeddah": "JED",
-        "cairo": "CAI",
-        "tel aviv": "TLV",
-        "johannesburg": "JNB",
-        "cape town": "CPT",
-        
-        // Asia & Pacific
-        "tokyo": "NRT",
-        "narita": "NRT",
-        "singapore": "SIN",
-        "hong kong": "HKG",
-        "beijing": "PEK",
-        "shanghai": "PVG",
-        "seoul": "ICN",
-        "incheon": "ICN",
-        "bangkok": "BKK",
-        "kuala lumpur": "KUL",
-        "jakarta": "CGK",
-        "manila": "MNL",
-        "delhi": "DEL",
-        "mumbai": "BOM",
-        "sydney": "SYD",
-        "melbourne": "MEL",
-        "auckland": "AKL",
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
     };
-
-    // Normalize: lowercase, remove extra spaces, remove "airport" suffix
-    const normalized = cityName
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, ' ')
-        .replace(/ airport$/i, '')
-        .replace(/ international$/i, '')
-        .split(',')[0]
-        .trim();
-
-    const code = cityMap[normalized];
     
-    if (!code) {
-        console.warn(`⚠️ Unknown city/airport: "${cityName}" (normalized: "${normalized}"). Using ATH as fallback.`);
-        return "ATH"; // Default fallback
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
     }
     
-    return code;
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
 }
 
-// Helper function to convert airline carrier codes to full names
-function getAirlineName(carrierCode: string): string {
-    const airlineMap: Record<string, string> = {
-        "AA": "American Airlines",
-        "BA": "British Airways",
-        "AF": "Air France",
-        "LH": "Lufthansa",
-        "EK": "Emirates",
-        "QR": "Qatar Airways",
-        "TK": "Turkish Airlines",
-        "KL": "KLM Royal Dutch Airlines",
-        "IB": "Iberia",
-        "AZ": "ITA Airways",
-        "LX": "Swiss International Air Lines",
-        "OS": "Austrian Airlines",
-        "SN": "Brussels Airlines",
-        "TP": "TAP Air Portugal",
-        "SK": "SAS Scandinavian Airlines",
-        "AY": "Finnair",
-        "FR": "Ryanair",
-        "U2": "easyJet",
-        "W6": "Wizz Air",
-        "VY": "Vueling",
-        "A3": "Aegean Airlines",
-        "OA": "Olympic Air",
-        "DL": "Delta Air Lines",
-        "UA": "United Airlines",
-        "AC": "Air Canada",
-        "NH": "All Nippon Airways",
-        "JL": "Japan Airlines",
-        "SQ": "Singapore Airlines",
-        "CX": "Cathay Pacific",
-        "QF": "Qantas",
-        "EY": "Etihad Airways",
-        "SV": "Saudia",
-        "MS": "EgyptAir",
-        "ET": "Ethiopian Airlines",
-        "KE": "Korean Air",
-        "OZ": "Asiana Airlines",
-        "CI": "China Airlines",
-        "BR": "EVA Air",
-        "TG": "Thai Airways",
-        "MH": "Malaysia Airlines",
-        "GA": "Garuda Indonesia",
-        "PR": "Philippine Airlines",
-        "VN": "Vietnam Airlines",
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
     };
-
-    return airlineMap[carrierCode] || `${carrierCode} Airlines`;
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
 }
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.6503 },
+        "singapore": { latitude: 1.3521, longitude: 103.8198 },
+        "lisbon": { latitude: 38.7223, longitude: -9.1393 },
+        "prague": { latitude: 50.0755, longitude: 14.4378 },
+        "vienna": { latitude: 48.2082, longitude: 16.3738 },
+    };
+    
+    const destLower = destination.toLowerCase();
+    for (const [city, coordinates] of Object.entries(coords)) {
+        if (destLower.includes(city)) {
+            return coordinates;
+        }
+    }
+    
+    // Default to Athens if unknown
+    return { latitude: 37.9838, longitude: 23.7275 };
+}
+
+// Helper function to get fallback coordinates
+function getFallbackCoordinates(destination: string) {
+    const coords: Record<string, { latitude: number; longitude: number }> = {
+        "paris": { latitude: 48.8566, longitude: 2.3522 },
+        "london": { latitude: 51.5074, longitude: -0.1278 },
+        "rome": { latitude: 41.9028, longitude: 12.4964 },
+        "barcelona": { latitude: 41.3851, longitude: 2.1734 },
+        "amsterdam": { latitude: 52.3676, longitude: 4.9041 },
+        "athens": { latitude: 37.9838, longitude: 23.7275 },
+        "berlin": { latitude: 52.5200, longitude: 13.4050 },
+        "madrid": { latitude: 40.4168, longitude: -3.7038 },
+        "dubai": { latitude: 25.2048, longitude: 55.2708 },
+        "new york": { latitude: 40.7128, longitude: -74.0060 },
+        "tokyo": { latitude: 35.6762, longitude: 139.650

@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -906,13 +907,39 @@ export default function TripDetails() {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Map Preview */}
                 <View style={styles.mapPreviewContainer}>
-                    <Image 
-                        source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
-                        style={styles.mapImage} 
-                    />
+                    {trip.itinerary?.destinationCoordinates ? (
+                        <MapView
+                            style={styles.mapImage}
+                            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                            initialRegion={{
+                                latitude: trip.itinerary.destinationCoordinates.latitude,
+                                longitude: trip.itinerary.destinationCoordinates.longitude,
+                                latitudeDelta: 0.0922,
+                                longitudeDelta: 0.0421,
+                            }}
+                            scrollEnabled={false}
+                            zoomEnabled={false}
+                            rotateEnabled={false}
+                            pitchEnabled={false}
+                        >
+                            <Marker
+                                coordinate={{
+                                    latitude: trip.itinerary.destinationCoordinates.latitude,
+                                    longitude: trip.itinerary.destinationCoordinates.longitude,
+                                }}
+                                title={trip.destination}
+                            />
+                        </MapView>
+                    ) : (
+                        <Image 
+                            source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
+                            style={styles.mapImage} 
+                        />
+                    )}
                     <LinearGradient
                         colors={['transparent', 'rgba(248, 248, 245, 1)']}
                         style={styles.mapGradient}
+                        pointerEvents="none"
                     />
                     <TouchableOpacity style={styles.viewMapButton} onPress={() => openMap(trip.destination)}>
                         <Ionicons name="map" size={20} color="#F9F506" />
@@ -961,6 +988,13 @@ export default function TripDetails() {
                     >
                         <Ionicons name="car" size={18} color={activeFilter === 'transportation' ? "#1A1A1A" : "#64748B"} />
                         <Text style={[styles.filterText, activeFilter === 'transportation' && styles.filterTextActive]}>Transport</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.filterChip, activeFilter === 'map' && styles.filterChipActive]}
+                        onPress={() => setActiveFilter('map')}
+                    >
+                        <Ionicons name="map" size={18} color={activeFilter === 'map' ? "#1A1A1A" : "#64748B"} />
+                        <Text style={[styles.filterText, activeFilter === 'map' && styles.filterTextActive]}>Map</Text>
                     </TouchableOpacity>
                 </ScrollView>
 
@@ -1117,6 +1151,34 @@ export default function TripDetails() {
                             {(!trip.itinerary?.flights?.options || trip.itinerary.flights.options.length === 0) && (
                                 <Text style={styles.emptyText}>No flights found.</Text>
                             )}
+                        </View>
+                    )}
+
+                    {activeFilter === 'map' && (
+                        <View style={styles.mapContainer}>
+                            <Text style={styles.sectionTitle}>Destination Map</Text>
+                            <MapView
+                                provider={PROVIDER_GOOGLE}
+                                style={styles.map}
+                                initialRegion={{
+                                    latitude: trip.latitude || 37.9838,
+                                    longitude: trip.longitude || 23.7275,
+                                    latitudeDelta: 0.05,
+                                    longitudeDelta: 0.05,
+                                }}
+                            >
+                                <Marker
+                                    coordinate={{
+                                        latitude: trip.latitude || 37.9838,
+                                        longitude: trip.longitude || 23.7275,
+                                    }}
+                                    title={trip.destination}
+                                    description="Your destination"
+                                />
+                            </MapView>
+                            <Text style={styles.mapDescription}>
+                                Explore {trip.destination} and discover amazing places to visit, eat, and stay.
+                            </Text>
                         </View>
                     )}
 
@@ -1524,6 +1586,22 @@ const styles = StyleSheet.create({
     },
     filterTextActive: {
         color: "white",
+    },
+    mapContainer: {
+        marginBottom: 32,
+    },
+    map: {
+        width: "100%",
+        height: 300,
+        borderRadius: 16,
+        marginVertical: 16,
+        overflow: "hidden",
+    },
+    mapDescription: {
+        fontSize: 14,
+        color: "#64748B",
+        lineHeight: 20,
+        marginTop: 12,
     },
     itineraryContainer: {
         paddingHorizontal: 16,
