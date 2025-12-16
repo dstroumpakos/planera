@@ -989,13 +989,6 @@ export default function TripDetails() {
                         <Ionicons name="car" size={18} color={activeFilter === 'transportation' ? "#1A1A1A" : "#64748B"} />
                         <Text style={[styles.filterText, activeFilter === 'transportation' && styles.filterTextActive]}>Transport</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.filterChip, activeFilter === 'map' && styles.filterChipActive]}
-                        onPress={() => setActiveFilter('map')}
-                    >
-                        <Ionicons name="map" size={18} color={activeFilter === 'map' ? "#1A1A1A" : "#64748B"} />
-                        <Text style={[styles.filterText, activeFilter === 'map' && styles.filterTextActive]}>Map</Text>
-                    </TouchableOpacity>
                 </ScrollView>
 
                 {/* Content based on active filter */}
@@ -1151,34 +1144,6 @@ export default function TripDetails() {
                             {(!trip.itinerary?.flights?.options || trip.itinerary.flights.options.length === 0) && (
                                 <Text style={styles.emptyText}>No flights found.</Text>
                             )}
-                        </View>
-                    )}
-
-                    {activeFilter === 'map' && (
-                        <View style={styles.mapContainer}>
-                            <Text style={styles.sectionTitle}>Destination Map</Text>
-                            <MapView
-                                provider={PROVIDER_GOOGLE}
-                                style={styles.map}
-                                initialRegion={{
-                                    latitude: trip.latitude || 37.9838,
-                                    longitude: trip.longitude || 23.7275,
-                                    latitudeDelta: 0.05,
-                                    longitudeDelta: 0.05,
-                                }}
-                            >
-                                <Marker
-                                    coordinate={{
-                                        latitude: trip.latitude || 37.9838,
-                                        longitude: trip.longitude || 23.7275,
-                                    }}
-                                    title={trip.destination}
-                                    description="Your destination"
-                                />
-                            </MapView>
-                            <Text style={styles.mapDescription}>
-                                Explore {trip.destination} and discover amazing places to visit, eat, and stay.
-                            </Text>
                         </View>
                     )}
 

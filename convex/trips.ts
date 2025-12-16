@@ -249,7 +249,12 @@ export const regenerate = authMutation({
         Dates: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
         Interests: ${trip.interests.join(", ")}.`;
 
-        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId: args.tripId, prompt });
+        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 
+            tripId: args.tripId, 
+            prompt,
+            skipFlights: trip.skipFlights ?? false,
+            preferredFlightTime: trip.preferredFlightTime ?? "any",
+        });
     },
 });
 
