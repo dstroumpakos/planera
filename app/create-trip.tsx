@@ -268,7 +268,6 @@ export default function CreateTripScreen() {
     const [loading, setLoading] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
-    const [showLoadingScreen, setShowLoadingScreen] = useState(false);
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
@@ -456,7 +455,6 @@ export default function CreateTripScreen() {
         }
 
         setLoading(true);
-        setShowLoadingScreen(true);
 
         try {
             const tripId = await createTrip({
@@ -476,7 +474,6 @@ export default function CreateTripScreen() {
             // Reset states after navigation
             setTimeout(() => {
                 setLoading(false);
-                setShowLoadingScreen(false);
             }, 500);
         } catch (error: any) {
             console.error("Error creating trip:", error);
@@ -488,7 +485,6 @@ export default function CreateTripScreen() {
             
             Alert.alert("Error", cleanMessage);
             setLoading(false);
-            setShowLoadingScreen(false);
         }
     };
 
@@ -499,16 +495,6 @@ export default function CreateTripScreen() {
             setFormData({ ...formData, interests: [...formData.interests, interest] });
         }
     };
-
-    if (showLoadingScreen) {
-        return (
-            <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 20 }} />
-                <Text style={styles.loadingTitle}>Generating your dream trip...</Text>
-                <Text style={styles.loadingSubtitle}>This usually takes a few seconds.</Text>
-            </SafeAreaView>
-        );
-    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -1234,23 +1220,5 @@ const styles = StyleSheet.create({
     },
     calendar: {
         marginHorizontal: 10,
-    },
-    loadingContainer: {
-        flex: 1,
-        backgroundColor: "#FAF9F6",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    loadingTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#FFE500",
-        marginBottom: 8,
-        textAlign: "center",
-    },
-    loadingSubtitle: {
-        fontSize: 16,
-        color: "#9B9B9B",
-        textAlign: "center",
     },
 });
