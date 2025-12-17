@@ -3,6 +3,7 @@ import { authMutation, authQuery } from "./functions";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 
+// Trip management functions
 export const create = authMutation({
     args: {
         destination: v.string(),
@@ -15,7 +16,7 @@ export const create = authMutation({
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
-        localExperience: v.optional(v.boolean()),
+        localExperience: v.optional(v.boolean()), // For authentic local experience filtering
     },
     returns: v.id("trips"),
     handler: async (ctx, args) => {
