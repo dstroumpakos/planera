@@ -8,7 +8,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+
+// Conditionally import MapView only on native platforms
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+
+if (Platform.OS !== 'web') {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+    PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+}
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -250,7 +261,7 @@ export default function TripDetails() {
     const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
     const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0);
     const [checkedBaggageSelected, setCheckedBaggageSelected] = useState<boolean>(false);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'flights' | 'food' | 'sights' | 'stays' | 'transportation'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'flights' | 'food' | 'sights' | 'stays' | 'transportation' | 'map'>('all');
 
     const [editForm, setEditForm] = useState({
         destination: "",
@@ -907,13 +918,13 @@ export default function TripDetails() {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Map Preview */}
                 <View style={styles.mapPreviewContainer}>
-                    {trip.itinerary?.destinationCoordinates ? (
+                    {Platform.OS !== 'web' && trip.itinerary?.destinationCoordinates && MapView ? (
                         <MapView
                             style={styles.mapImage}
                             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                             initialRegion={{
-                                latitude: trip.itinerary.destinationCoordinates.latitude,
-                                longitude: trip.itinerary.destinationCoordinates.longitude,
+                                latitude: itinerary?.destinationCoordinates?.latitude || 37.9838,
+                                longitude: itinerary?.destinationCoordinates?.longitude || 23.7275,
                                 latitudeDelta: 0.0922,
                                 longitudeDelta: 0.0421,
                             }}
@@ -924,17 +935,23 @@ export default function TripDetails() {
                         >
                             <Marker
                                 coordinate={{
-                                    latitude: trip.itinerary.destinationCoordinates.latitude,
-                                    longitude: trip.itinerary.destinationCoordinates.longitude,
+                                    latitude: itinerary?.destinationCoordinates?.latitude || 37.9838,
+                                    longitude: itinerary?.destinationCoordinates?.longitude || 23.7275,
                                 }}
                                 title={trip.destination}
                             />
                         </MapView>
                     ) : (
-                        <Image 
-                            source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
-                            style={styles.mapImage} 
-                        />
+                        <TouchableOpacity style={styles.webMapFallback} onPress={() => openMap(trip.destination)}>
+                            <Image 
+                                source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=400&fit=crop` }} 
+                                style={styles.map} 
+                            />
+                            <View style={styles.webMapOverlay}>
+                                <Ionicons name="map" size={40} color="#FFFFFF" />
+                                <Text style={styles.webMapText}>Open in Maps</Text>
+                            </View>
+                        </TouchableOpacity>
                     )}
                     <LinearGradient
                         colors={['transparent', 'rgba(248, 248, 245, 1)']}
@@ -1157,25 +1174,38 @@ export default function TripDetails() {
                     {activeFilter === 'map' && (
                         <View style={styles.mapContainer}>
                             <Text style={styles.sectionTitle}>Destination Map</Text>
-                            <MapView
-                                provider={PROVIDER_GOOGLE}
-                                style={styles.map}
-                                initialRegion={{
-                                    latitude: trip.latitude || 37.9838,
-                                    longitude: trip.longitude || 23.7275,
-                                    latitudeDelta: 0.05,
-                                    longitudeDelta: 0.05,
-                                }}
-                            >
-                                <Marker
-                                    coordinate={{
-                                        latitude: trip.latitude || 37.9838,
-                                        longitude: trip.longitude || 23.7275,
+                            {Platform.OS !== 'web' && MapView ? (
+                                <MapView
+                                    provider={PROVIDER_GOOGLE}
+                                    style={styles.map}
+                                    initialRegion={{
+                                        latitude: itinerary?.destinationCoordinates?.latitude || 37.9838,
+                                        longitude: itinerary?.destinationCoordinates?.longitude || 23.7275,
+                                        latitudeDelta: 0.05,
+                                        longitudeDelta: 0.05,
                                     }}
-                                    title={trip.destination}
-                                    description="Your destination"
-                                />
-                            </MapView>
+                                >
+                                    <Marker
+                                        coordinate={{
+                                            latitude: itinerary?.destinationCoordinates?.latitude || 37.9838,
+                                            longitude: itinerary?.destinationCoordinates?.longitude || 23.7275,
+                                        }}
+                                        title={trip.destination}
+                                        description="Your destination"
+                                    />
+                                </MapView>
+                            ) : (
+                                <TouchableOpacity style={styles.webMapFallback} onPress={() => openMap(trip.destination)}>
+                                    <Image 
+                                        source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=400&fit=crop` }} 
+                                        style={styles.map} 
+                                    />
+                                    <View style={styles.webMapOverlay}>
+                                        <Ionicons name="map" size={40} color="#FFFFFF" />
+                                        <Text style={styles.webMapText}>Open in Maps</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
                             <Text style={styles.mapDescription}>
                                 Explore {trip.destination} and discover amazing places to visit, eat, and stay.
                             </Text>
@@ -2441,5 +2471,26 @@ const styles = StyleSheet.create({
         backgroundColor: "#E2E8F0",
         alignItems: "center",
         justifyContent: "center",
+    },
+    webMapFallback: {
+        position: "relative",
+        borderRadius: 16,
+        overflow: "hidden",
+    },
+    webMapOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.4)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    webMapText: {
+        color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: "600",
+        marginTop: 8,
     },
 });
