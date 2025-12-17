@@ -270,12 +270,23 @@ export const regenerate = authMutation({
 
         await ctx.db.patch(args.tripId, { status: "generating" });
 
+        const localExperiencePrompt = trip.localExperience 
+            ? `\nIMPORTANT - LOCAL EXPERIENCE MODE ENABLED:\nThe traveler wants an AUTHENTIC LOCAL experience, NOT a typical tourist trip. Please focus on:\n- Hidden gems and off-the-beaten-path locations that only locals know about\n- Local neighborhood restaurants, cafes, and street food spots (avoid tourist traps and chain restaurants)\n- Authentic cultural experiences and local traditions\n- Local markets, artisan shops, and family-owned businesses\n- Neighborhoods where locals actually live and hang out\n- Local festivals, events, or gatherings if happening during the trip dates\n- Public transportation tips that locals use\n- Lesser-known viewpoints and photo spots\n- Local etiquette and customs to follow\n- Authentic local cuisine and dishes to try (not tourist versions)\n- Small local tours run by residents rather than big tour companies\n- Places to interact with locals and learn about daily life\nAVOID: Major tourist attractions, tourist-heavy areas, international chain restaurants, and typical \"must-see\" lists.\n`
+            : "";
+
         const prompt = `Plan a trip to ${trip.destination} from ${trip.origin} for ${trip.travelers} people.
         Budget: ${trip.budget}.
         Dates: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
-        Interests: ${trip.interests.join(", ")}.`;
+        Interests: ${trip.interests.join(", ")}.
+        ${localExperiencePrompt}`;
 
-        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId: args.tripId, prompt });
+        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 
+            tripId: args.tripId, 
+            prompt,
+            skipFlights: trip.skipFlights ?? false,
+            preferredFlightTime: trip.preferredFlightTime ?? "any",
+            localExperience: trip.localExperience ?? false,
+        });
     },
 });
 
