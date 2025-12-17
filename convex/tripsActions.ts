@@ -92,15 +92,25 @@ export const generate = internalAction({
         // Check if API keys are configured
         const hasAmadeusKeys = !!(process.env.AMADEUS_API_KEY && process.env.AMADEUS_API_SECRET);
         const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+        const hasViatorKey = !!process.env.VIATOR_API_KEY;
+        const hasTripAdvisorKey = !!process.env.TRIPADVISOR_API_KEY;
 
-        console.log("  - Amadeus API:", hasAmadeusKeys ? "✅ Configured" : "❌ Missing");
         console.log("  - OpenAI API:", hasOpenAIKey ? "✅ Configured" : "❌ Missing");
+        console.log("  - Amadeus API:", hasAmadeusKeys ? "✅ Configured" : "❌ Missing");
+        console.log("  - Viator API:", hasViatorKey ? "✅ Configured" : "❌ Missing");
+        console.log("  - TripAdvisor API:", hasTripAdvisorKey ? "✅ Configured" : "❌ Missing");
 
         if (!hasAmadeusKeys) {
-            console.warn("⚠️ Amadeus API keys not configured. Using AI-generated data.");
+            console.warn("⚠️ Amadeus API keys not configured. Using AI-generated flight data.");
         }
         if (!hasOpenAIKey) {
             console.warn("⚠️ OpenAI API key not configured. Using basic itinerary.");
+        }
+        if (!hasViatorKey) {
+            console.warn("⚠️ Viator API key not configured. Using fallback activities.");
+        }
+        if (!hasTripAdvisorKey) {
+            console.warn("⚠️ TripAdvisor API key not configured. Using fallback restaurants.");
         }
 
         console.log("\n" + "=".repeat(80));
