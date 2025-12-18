@@ -11,8 +11,6 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import GeneratingLoadingScreen from "@/components/GeneratingLoadingScreen";
 
-import logoImage from "@/assets/images/image.png";
-
 // Airport database with country/region groupings
 const AIRPORTS = [
     // Australia
@@ -524,7 +522,9 @@ export default function CreateTripScreen() {
                             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                         </TouchableOpacity>
                         <View style={styles.logoContainer}>
-                            <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
+                            <View style={styles.headerLogo}>
+                                <Ionicons name="airplane" size={20} color="#FFE500" />
+                            </View>
                             <Text style={styles.headerLogoText}>PLANERA</Text>
                         </View>
                         <TouchableOpacity style={styles.settingsButton}>
@@ -899,6 +899,10 @@ const styles = StyleSheet.create({
     headerLogo: {
         width: 28,
         height: 28,
+        borderRadius: 8,
+        backgroundColor: "#1A1A1A",
+        justifyContent: "center",
+        alignItems: "center",
     },
     headerLogoText: {
         fontSize: 16,
