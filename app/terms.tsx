@@ -40,7 +40,7 @@ export default function TermsOfService() {
                 <View style={styles.titleSection}>
                     <Text style={styles.mainTitle}>Planera</Text>
                     <Text style={styles.subtitle}>Terms of Use</Text>
-                    <Text style={styles.lastUpdated}>Last updated: December 18, 2024</Text>
+                    <Text style={styles.lastUpdated}>Last updated: December 18, 2025</Text>
                 </View>
 
                 {/* Section 1 */}
