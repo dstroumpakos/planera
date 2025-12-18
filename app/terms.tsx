@@ -95,9 +95,9 @@ export default function TermsOfService() {
                     </Text>
                     <Text style={styles.aiDisclaimerSubtitle}>AI-generated content:</Text>
                     <View style={styles.bulletList}>
-                        <Text style={styles.bulletItem}>• Is informational only</Text>
-                        <Text style={styles.bulletItem}>• May contain inaccuracies</Text>
-                        <Text style={styles.bulletItem}>• Should not be considered professional travel advice</Text>
+                        <Text style={styles.aiDisclaimerBullet}>• Is informational only</Text>
+                        <Text style={styles.aiDisclaimerBullet}>• May contain inaccuracies</Text>
+                        <Text style={styles.aiDisclaimerBullet}>• Should not be considered professional travel advice</Text>
                     </View>
                     <Text style={styles.aiDisclaimerTextBold}>
                         Users must independently verify all travel information.
@@ -360,6 +360,11 @@ const styles = StyleSheet.create({
         color: "#FFD900",
         fontWeight: "600",
         marginTop: 12,
+    },
+    aiDisclaimerBullet: {
+        fontSize: 15,
+        lineHeight: 26,
+        color: "#FFFFFF",
     },
     footer: {
         height: 40,
