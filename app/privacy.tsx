@@ -91,7 +91,7 @@ export default function PrivacyPolicyScreen() {
                     <Text style={styles.sectionTitle}>8. Changes</Text>
                     <Text style={styles.paragraph}>This policy may be updated periodically. Continued use implies acceptance.</Text>
                 </View>
-                <View style={styles.footer}><Text style={styles.footerText}>© 2024 Planera. All rights reserved.</Text></View>
+                <View style={styles.footer}><Text style={styles.footerText}>© 2026 Planera. All rights reserved.</Text></View>
             </ScrollView>
         </SafeAreaView>
     );
