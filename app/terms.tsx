@@ -84,6 +84,26 @@ export default function TermsOfService() {
                     </Text>
                 </View>
 
+                {/* AI Disclaimer Box */}
+                <View style={styles.aiDisclaimerBox}>
+                    <View style={styles.aiDisclaimerHeader}>
+                        <Ionicons name="warning" size={20} color="#FFD900" />
+                        <Text style={styles.aiDisclaimerTitle}>AI DISCLAIMER</Text>
+                    </View>
+                    <Text style={styles.aiDisclaimerText}>
+                        Planera uses artificial intelligence to generate travel plans.
+                    </Text>
+                    <Text style={styles.aiDisclaimerSubtitle}>AI-generated content:</Text>
+                    <View style={styles.bulletList}>
+                        <Text style={styles.bulletItem}>• Is informational only</Text>
+                        <Text style={styles.bulletItem}>• May contain inaccuracies</Text>
+                        <Text style={styles.bulletItem}>• Should not be considered professional travel advice</Text>
+                    </View>
+                    <Text style={styles.aiDisclaimerTextBold}>
+                        Users must independently verify all travel information.
+                    </Text>
+                </View>
+
                 {/* Section 4 */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>4. User Responsibilities</Text>
@@ -303,6 +323,43 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#D4A853",
         marginLeft: 12,
+    },
+    aiDisclaimerBox: {
+        backgroundColor: "#1A1A1A",
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 28,
+    },
+    aiDisclaimerHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    aiDisclaimerTitle: {
+        fontSize: 16,
+        fontWeight: "800",
+        color: "#FFD900",
+        marginLeft: 10,
+        letterSpacing: 1,
+    },
+    aiDisclaimerText: {
+        fontSize: 15,
+        lineHeight: 24,
+        color: "#FFFFFF",
+        marginBottom: 12,
+    },
+    aiDisclaimerSubtitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#CCCCCC",
+        marginBottom: 8,
+    },
+    aiDisclaimerTextBold: {
+        fontSize: 15,
+        lineHeight: 24,
+        color: "#FFD900",
+        fontWeight: "600",
+        marginTop: 12,
     },
     footer: {
         height: 40,
