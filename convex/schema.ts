@@ -17,6 +17,17 @@ export default defineSchema({
         localExperience: v.optional(v.boolean()), // When true, AI generates more local/authentic recommendations
         status: v.string(),
         itinerary: v.optional(v.any()),
+        // Unsplash destination image (following Unsplash API guidelines)
+        destinationImage: v.optional(v.object({
+            imageUrl: v.string(), // Hotlinked URL (regular size)
+            imageUrlSmall: v.string(),
+            imageUrlThumb: v.string(),
+            unsplashPhotoId: v.string(),
+            unsplashDownloadLocation: v.string(),
+            photographerName: v.string(),
+            photographerUsername: v.string(),
+            photographerUrl: v.string(),
+        })),
     }).index("by_user", ["userId"]),
     userPlans: defineTable({
         userId: v.string(),
