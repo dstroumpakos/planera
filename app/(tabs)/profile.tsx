@@ -154,6 +154,11 @@ export default function Profile() {
                         <Text style={styles.helpText}>Terms of Service</Text>
                     </TouchableOpacity>
                     
+                    <TouchableOpacity style={styles.helpItem} onPress={() => router.push("/privacy")}>
+                        <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.textSecondary} />
+                        <Text style={styles.helpText}>Privacy Policy</Text>
+                    </TouchableOpacity>
+                    
                     <TouchableOpacity style={styles.helpItem} onPress={handleLogout}>
                         <Ionicons name="log-out-outline" size={20} color={COLORS.textSecondary} />
                         <Text style={styles.helpText}>Log Out</Text>
