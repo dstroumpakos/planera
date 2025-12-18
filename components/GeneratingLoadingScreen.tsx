@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import logoImage from "@/assets/images/image.png";
 
 interface Props { onCancel?: () => void; }
 
@@ -40,7 +39,7 @@ export default function GeneratingLoadingScreen({ onCancel }: Props) {
 
     return (
         <SafeAreaView style={s.container}>
-            <View style={s.header}><View style={s.brand}><Image source={logoImage} style={s.logo} /><Text style={s.brandText}>PLANERA</Text></View></View>
+            <View style={s.header}><View style={s.brand}><View style={s.logo}><Ionicons name="airplane" size={14} color="#FFE500" /></View><Text style={s.brandText}>PLANERA</Text></View></View>
             <View style={s.main}>
                 <View style={s.visual}>
                     <View style={s.ring}>
@@ -66,7 +65,7 @@ const s = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#FAF9F6" },
     header: { alignItems: "center", paddingTop: 24, paddingBottom: 16 },
     brand: { flexDirection: "row", alignItems: "center", gap: 8 },
-    logo: { width: 24, height: 24 },
+    logo: { width: 24, height: 24, borderRadius: 6, backgroundColor: "#1A1A1A", justifyContent: "center", alignItems: "center" },
     brandText: { fontSize: 14, fontWeight: "700", letterSpacing: 2, color: "#1A1A1A" },
     main: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
     visual: { width: 280, height: 280, marginBottom: 40, alignItems: "center", justifyContent: "center" },
