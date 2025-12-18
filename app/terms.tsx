@@ -163,25 +163,37 @@ export default function TermsOfService() {
                     </Text>
                 </View>
 
-                {/* Section 8 */}
+                {/* Section 8 - Subscription Terms */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>8. Termination</Text>
+                    <Text style={styles.sectionTitle}>8. Subscription Terms</Text>
+                    <View style={styles.bulletList}>
+                        <Text style={styles.bulletItem}>• Subscriptions unlock premium features</Text>
+                        <Text style={styles.bulletItem}>• Billing is handled by Apple App Store or Google Play</Text>
+                        <Text style={styles.bulletItem}>• Auto-renewal applies unless canceled</Text>
+                        <Text style={styles.bulletItem}>• Cancellation must be done through your store account</Text>
+                        <Text style={styles.bulletItem}>• No refunds are issued directly by Planera</Text>
+                    </View>
+                </View>
+
+                {/* Section 9 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>9. Termination</Text>
                     <Text style={styles.sectionText}>
                         We reserve the right to suspend or terminate access to Planera if these Terms are violated.
                     </Text>
                 </View>
 
-                {/* Section 9 */}
+                {/* Section 10 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>9. Governing Law</Text>
+                    <Text style={styles.sectionTitle}>10. Governing Law</Text>
                     <Text style={styles.sectionText}>
                         These Terms are governed by the laws of the European Union and applicable national legislation.
                     </Text>
                 </View>
 
-                {/* Section 10 */}
+                {/* Section 11 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>10. Contact</Text>
+                    <Text style={styles.sectionTitle}>11. Contact</Text>
                     <Text style={styles.sectionText}>
                         For questions regarding these Terms, contact:
                     </Text>
