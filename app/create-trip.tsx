@@ -473,7 +473,13 @@ export default function CreateTripScreen() {
                 localExperience: formData.localExperience,
             });
             
-            router.push(`/trip/${tripId}`);
+            // Validate tripId before navigating
+            if (!tripId) {
+                throw new Error("Failed to create trip - no trip ID returned");
+            }
+            
+            // Use replace to avoid back navigation issues
+            router.replace(`/trip/${tripId}` as any);
             // Reset states after navigation
             setTimeout(() => {
                 setLoading(false);
