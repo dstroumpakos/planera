@@ -470,7 +470,7 @@ export default function CreateTripScreen() {
                 skipFlights: formData.skipFlights,
                 skipHotel: formData.skipHotel,
                 preferredFlightTime: formData.preferredFlightTime,
-                localExperience: formData.localExperience,
+                // localExperience removed - coming soon feature
             });
             
             // Validate tripId before navigating
@@ -776,27 +776,72 @@ export default function CreateTripScreen() {
                     </View>
                 </View>
 
-                {/* Local Experience Toggle */}
-                <TouchableOpacity 
-                    style={[styles.card, styles.localExperienceCard, formData.localExperience && styles.localExperienceCardActive]}
-                    onPress={() => setFormData(prev => ({ ...prev, localExperience: !prev.localExperience }))}
-                    activeOpacity={0.8}
+                {/* Local Experience Toggle - Coming Soon */}
+                <View 
+                    style={[styles.card, styles.localExperienceCard, styles.localExperienceCardDisabled]}
                 >
                     <View style={styles.localExperienceContent}>
-                        <View style={[styles.localExperienceIconContainer, formData.localExperience && styles.localExperienceIconContainerActive]}>
-                            <Ionicons name="compass" size={28} color={formData.localExperience ? "#1A1A1A" : "#FFE500"} />
+                        <View style={[styles.localExperienceIconContainer, styles.localExperienceIconContainerDisabled]}>
+                            <Ionicons name="compass" size={28} color="#9B9B9B" />
                         </View>
                         <View style={styles.localExperienceTextContainer}>
-                            <Text style={styles.localExperienceTitle}>Local Experience</Text>
-                            <Text style={styles.localExperienceDescription}>
+                            <View style={styles.localExperienceTitleRow}>
+                                <Text style={[styles.localExperienceTitle, styles.localExperienceTitleDisabled]}>Local Experience</Text>
+                                <View style={styles.comingSoonBadge}>
+                                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                                </View>
+                            </View>
+                            <Text style={[styles.localExperienceDescription, styles.localExperienceDescriptionDisabled]}>
                                 Discover hidden gems & authentic spots only locals know
                             </Text>
                         </View>
-                        <View style={[styles.localExperienceToggle, formData.localExperience && styles.localExperienceToggleActive]}>
-                            <View style={[styles.localExperienceToggleKnob, formData.localExperience && styles.localExperienceToggleKnobActive]} />
+                    </View>
+                </View>
+
+                {/* Flight Preferences */}
+                <View style={styles.card}>
+                    <Text style={styles.sectionLabel}>Flight Preferences</Text>
+                    <View style={styles.flightPreferencesContainer}>
+                        <View style={styles.flightTimeOption}>
+                            <View style={styles.flightTimeOptionHeader}>
+                                <Ionicons name="time-outline" size={20} color="#1A1A1A" />
+                                <Text style={styles.flightTimeOptionTitle}>Preferred Flight Time</Text>
+                            </View>
+                            <View style={styles.flightTimeOptions}>
+                                {["any", "morning", "afternoon", "evening", "night"].map((time) => (
+                                    <TouchableOpacity
+                                        key={time}
+                                        style={[
+                                            styles.flightTimeOptionButton,
+                                            formData.preferredFlightTime === time && styles.flightTimeOptionButtonActive,
+                                        ]}
+                                        onPress={() => setFormData(prev => ({ ...prev, preferredFlightTime: time }))}
+                                    >
+                                        <Ionicons 
+                                            name={
+                                                time === "any" ? "hourglass-outline" : 
+                                                time === "morning" ? "sun-outline" : 
+                                                time === "afternoon" ? "cloud-outline" : 
+                                                time === "evening" ? "moon-outline" : "night-outline"
+                                            } 
+                                            size={20} 
+                                            color={formData.preferredFlightTime === time ? "#FFE500" : "#9B9B9B"}
+                                        />
+                                        <Text style={[
+                                            styles.flightTimeOptionButtonText,
+                                            formData.preferredFlightTime === time && styles.flightTimeOptionButtonTextActive,
+                                        ]}>
+                                            {time === "any" ? "Any Time" : 
+                                             time === "morning" ? "Morning (6AM-12PM)" : 
+                                             time === "afternoon" ? "Afternoon (12PM-6PM)" : 
+                                             time === "evening" ? "Evening (6PM-10PM)" : "Night (10PM-6AM)"}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
                     </View>
-                </TouchableOpacity>
+                </View>
 
                 {/* Generate Button */}
                 <TouchableOpacity 
@@ -1220,6 +1265,13 @@ const styles = StyleSheet.create({
         borderColor: "#FFE500",
         backgroundColor: "#FFFEF5",
     },
+    localExperienceCardDisabled: {
+        opacity: 0.7,
+        borderColor: "#E5E5E5",
+    },
+    localExperienceIconContainerDisabled: {
+        backgroundColor: "#F0F0F0",
+    },
     localExperienceContent: {
         flexDirection: "row",
         alignItems: "center",
@@ -1249,6 +1301,26 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#9B9B9B",
         lineHeight: 18,
+    },
+    localExperienceCardDisabled: {
+        opacity: 0.7,
+        borderColor: "#E5E5E5",
+    },
+    localExperienceIconContainerDisabled: {
+        backgroundColor: "#F0F0F0",
+    },
+    localExperienceTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 4,
+    },
+    localExperienceTitleDisabled: {
+        color: "#9B9B9B",
+        marginBottom: 0,
+    },
+    localExperienceDescriptionDisabled: {
+        color: "#BEBEBE",
     },
     localExperienceToggle: {
         width: 52,
