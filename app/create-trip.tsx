@@ -480,16 +480,12 @@ export default function CreateTripScreen() {
             
             console.log("Trip created successfully, navigating to:", tripId);
             
-            // Use href object format for more reliable navigation
-            router.replace({
-                pathname: "/trip/[id]",
-                params: { id: tripId }
-            });
-            // Reset states after navigation
+            // Small delay to ensure route is ready, then navigate
             setTimeout(() => {
+                router.push(`/trip/${tripId}`);
                 setLoading(false);
                 setShowLoadingScreen(false);
-            }, 500);
+            }, 100);
         } catch (error: any) {
             console.error("Error creating trip:", error);
             
