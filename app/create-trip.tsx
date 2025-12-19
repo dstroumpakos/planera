@@ -478,8 +478,13 @@ export default function CreateTripScreen() {
                 throw new Error("Failed to create trip - no trip ID returned");
             }
             
-            // Use replace to avoid back navigation issues
-            router.replace(`/trip/${tripId}` as any);
+            console.log("Trip created successfully, navigating to:", tripId);
+            
+            // Use href object format for more reliable navigation
+            router.replace({
+                pathname: "/trip/[id]",
+                params: { id: tripId }
+            });
             // Reset states after navigation
             setTimeout(() => {
                 setLoading(false);
