@@ -778,20 +778,20 @@ export default function CreateTripScreen() {
 
                 {/* Local Experience Toggle - Coming Soon */}
                 <View 
-                    style={[styles.card, styles.localExperienceCard, styles.localExperienceCardDisabled]}
+                    style={[styles.card, styles.localExperienceCard]}
                 >
                     <View style={styles.localExperienceContent}>
-                        <View style={[styles.localExperienceIconContainer, styles.localExperienceIconContainerDisabled]}>
+                        <View style={[styles.localExperienceIconContainer]}>
                             <Ionicons name="compass" size={28} color="#9B9B9B" />
                         </View>
                         <View style={styles.localExperienceTextContainer}>
                             <View style={styles.localExperienceTitleRow}>
-                                <Text style={[styles.localExperienceTitle, styles.localExperienceTitleDisabled]}>Local Experience</Text>
+                                <Text style={[styles.localExperienceTitle]}>Local Experience</Text>
                                 <View style={styles.comingSoonBadge}>
                                     <Text style={styles.comingSoonText}>Coming Soon</Text>
                                 </View>
                             </View>
-                            <Text style={[styles.localExperienceDescription, styles.localExperienceDescriptionDisabled]}>
+                            <Text style={[styles.localExperienceDescription]}>
                                 Discover hidden gems & authentic spots only locals know
                             </Text>
                         </View>
@@ -815,14 +815,14 @@ export default function CreateTripScreen() {
                                             styles.flightTimeOptionButton,
                                             formData.preferredFlightTime === time && styles.flightTimeOptionButtonActive,
                                         ]}
-                                        onPress={() => setFormData(prev => ({ ...prev, preferredFlightTime: time }))}
+                                        onPress={() => setFormData(prev => ({ ...prev, preferredFlightTime: time as "any" | "morning" | "afternoon" | "evening" | "night" }))}
                                     >
                                         <Ionicons 
                                             name={
                                                 time === "any" ? "hourglass-outline" : 
-                                                time === "morning" ? "sun-outline" : 
+                                                time === "morning" ? "sunny-outline" : 
                                                 time === "afternoon" ? "cloud-outline" : 
-                                                time === "evening" ? "moon-outline" : "night-outline"
+                                                time === "evening" ? "moon-outline" : "moon-outline"
                                             } 
                                             size={20} 
                                             color={formData.preferredFlightTime === time ? "#FFE500" : "#9B9B9B"}
@@ -1255,7 +1255,7 @@ const styles = StyleSheet.create({
         color: "#1A1A1A",
     },
     interestTagTextActive: {
-        color: "#1A1A1A",
+        color: "#FFE500",
     },
     localExperienceCard: {
         borderWidth: 2,
@@ -1264,13 +1264,6 @@ const styles = StyleSheet.create({
     localExperienceCardActive: {
         borderColor: "#FFE500",
         backgroundColor: "#FFFEF5",
-    },
-    localExperienceCardDisabled: {
-        opacity: 0.7,
-        borderColor: "#E5E5E5",
-    },
-    localExperienceIconContainerDisabled: {
-        backgroundColor: "#F0F0F0",
     },
     localExperienceContent: {
         flexDirection: "row",
@@ -1301,13 +1294,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#9B9B9B",
         lineHeight: 18,
-    },
-    localExperienceCardDisabled: {
-        opacity: 0.7,
-        borderColor: "#E5E5E5",
-    },
-    localExperienceIconContainerDisabled: {
-        backgroundColor: "#F0F0F0",
     },
     localExperienceTitleRow: {
         flexDirection: "row",
@@ -1405,5 +1391,52 @@ const styles = StyleSheet.create({
     },
     calendar: {
         marginHorizontal: 10,
+    },
+    flightPreferencesContainer: {
+        gap: 16,
+    },
+    flightTimeOption: {
+        gap: 12,
+    },
+    flightTimeOptionHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    flightTimeOptionTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    flightTimeOptions: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    flightTimeOptionButton: {
+        flex: 1,
+        minWidth: "45%",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        backgroundColor: "#FFF8E1",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E8E6E1",
+    },
+    flightTimeOptionButtonActive: {
+        backgroundColor: "#1A1A1A",
+        borderColor: "#1A1A1A",
+    },
+    flightTimeOptionButtonText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    flightTimeOptionButtonTextActive: {
+        color: "#FFE500",
     },
 });
