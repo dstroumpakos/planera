@@ -264,16 +264,16 @@ const INTERESTS = [
 export default function CreateTripScreen() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
-    const userPlan = useQuery(api.users.getPlan);
     const [loading, setLoading] = useState(false);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+    const [pendingTripId, setPendingTripId] = useState<Id<"trips"> | null>(null);
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
     const [destinationSuggestions, setDestinationSuggestions] = useState<typeof DESTINATIONS>([]);
     const [showOriginInput, setShowOriginInput] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const convexClient = useConvex();
 
     const [formData, setFormData] = useState({
@@ -318,6 +318,18 @@ export default function CreateTripScreen() {
         
         detectLocation();
     }, []);
+
+    // Handle navigation after trip is created
+    React.useEffect(() => {
+        if (pendingTripId) {
+            // Small delay to ensure router is ready
+            const timer = setTimeout(() => {
+                router.push(`/trip/${pendingTripId}`);
+                setPendingTripId(null);
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [pendingTripId, router]);
 
     const formatDate = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -466,10 +478,8 @@ export default function CreateTripScreen() {
         setLoading(true);
         setShowLoadingScreen(true);
 
-        let tripId: Id<"trips"> | null = null;
-
         try {
-            tripId = await createTrip({
+            const tripId = await createTrip({
                 destination: formData.destination,
                 origin: formData.origin,
                 startDate: Number(formData.startDate),
@@ -488,17 +498,14 @@ export default function CreateTripScreen() {
             
             console.log("Trip created with ID:", tripId);
             
-            // Navigate immediately - the trip details page handles the "generating" status
-            // with its own loading screen
-            console.log("Navigating to trip:", tripId);
-            router.push(`/trip/${tripId}`);
+            // Set pending trip ID to trigger navigation via useEffect
+            setPendingTripId(tripId);
             
         } catch (error: any) {
             console.error("Error creating trip:", error);
             const errorMessage = error.message || "Failed to create trip. Please try again.";
             const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
             Alert.alert("Error", cleanMessage);
-        } finally {
             setLoading(false);
             setShowLoadingScreen(false);
         }
