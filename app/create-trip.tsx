@@ -265,8 +265,6 @@ export default function CreateTripScreen() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
     const [loading, setLoading] = useState(false);
-    const [showLoadingScreen, setShowLoadingScreen] = useState(false);
-    const [pendingTripId, setPendingTripId] = useState<Id<"trips"> | null>(null);
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
@@ -318,18 +316,6 @@ export default function CreateTripScreen() {
         
         detectLocation();
     }, []);
-
-    // Handle navigation after trip is created
-    React.useEffect(() => {
-        if (pendingTripId) {
-            // Small delay to ensure router is ready
-            const timer = setTimeout(() => {
-                router.push(`/trip/${pendingTripId}`);
-                setPendingTripId(null);
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-    }, [pendingTripId, router]);
 
     const formatDate = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -476,7 +462,6 @@ export default function CreateTripScreen() {
         }
 
         setLoading(true);
-        setShowLoadingScreen(true);
 
         try {
             const tripId = await createTrip({
@@ -498,8 +483,8 @@ export default function CreateTripScreen() {
             
             console.log("Trip created with ID:", tripId);
             
-            // Set pending trip ID to trigger navigation via useEffect
-            setPendingTripId(tripId);
+            // Navigate to loading screen route
+            router.push(`/loading/${tripId}`);
             
         } catch (error: any) {
             console.error("Error creating trip:", error);
@@ -507,7 +492,6 @@ export default function CreateTripScreen() {
             const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
             Alert.alert("Error", cleanMessage);
             setLoading(false);
-            setShowLoadingScreen(false);
         }
     };
 
@@ -521,14 +505,7 @@ export default function CreateTripScreen() {
 
     const handleCancelGeneration = () => {
         setLoading(false);
-        setShowLoadingScreen(false);
     };
-
-    if (showLoadingScreen) {
-        return (
-            <GeneratingLoadingScreen onCancel={handleCancelGeneration} />
-        );
-    }
 
     return (
         <SafeAreaView style={styles.container}>
