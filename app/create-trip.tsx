@@ -488,66 +488,16 @@ export default function CreateTripScreen() {
             
             console.log("Trip created with ID:", tripId);
             
-            // Poll for trip completion with improved error handling
-            const maxAttempts = 90;
-            let attempts = 0;
-            let consecutiveErrors = 0;
-            
-            while (attempts < maxAttempts) {
-                attempts++;
-                
-                try {
-                    const result = await convexClient.query(api.trips.getTripStatus, { tripId });
-                    consecutiveErrors = 0; // Reset on success
-                    
-                    if (!result.exists) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        continue;
-                    }
-                    
-                    if (result.status === "completed") {
-                        console.log("Trip generation completed!");
-                        break;
-                    } else if (result.status === "failed") {
-                        throw new Error("Trip generation failed. Please try again.");
-                    }
-                    
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                } catch (pollError: any) {
-                    console.error("Polling error:", pollError);
-                    consecutiveErrors++;
-                    
-                    // If it's a "failed" status error, throw it
-                    if (pollError.message?.includes("failed")) {
-                        throw pollError;
-                    }
-                    
-                    // After 5 consecutive errors, navigate anyway
-                    if (consecutiveErrors >= 5) {
-                        console.log("Too many polling errors, navigating anyway");
-                        break;
-                    }
-                    
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-            
-            // Navigate to trip
+            // Navigate immediately - the trip details page handles the "generating" status
+            // with its own loading screen
             console.log("Navigating to trip:", tripId);
             router.push(`/trip/${tripId}`);
             
         } catch (error: any) {
             console.error("Error creating trip:", error);
-            
-            // If we have a tripId, navigate to it anyway (trip might still be generating)
-            if (tripId) {
-                console.log("Error occurred but tripId exists, navigating anyway:", tripId);
-                router.push(`/trip/${tripId}`);
-            } else {
-                const errorMessage = error.message || "Failed to create trip. Please try again.";
-                const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
-                Alert.alert("Error", cleanMessage);
-            }
+            const errorMessage = error.message || "Failed to create trip. Please try again.";
+            const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
+            Alert.alert("Error", cleanMessage);
         } finally {
             setLoading(false);
             setShowLoadingScreen(false);
