@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 
 // Trip management functions
@@ -161,6 +161,30 @@ export const getTripDetails = internalQuery({
     ),
     handler: async (ctx, args) => {
         return await ctx.db.get(args.tripId);
+    },
+});
+
+// Public query to check trip status for polling during generation
+export const getTripStatus = query({
+    args: { tripId: v.id("trips") },
+    returns: v.union(
+        v.object({
+            status: v.string(),
+            exists: v.literal(true),
+        }),
+        v.object({
+            exists: v.literal(false),
+        })
+    ),
+    handler: async (ctx, args) => {
+        const trip = await ctx.db.get(args.tripId);
+        if (!trip) {
+            return { exists: false as const };
+        }
+        return { 
+            status: trip.status,
+            exists: true as const,
+        };
     },
 });
 

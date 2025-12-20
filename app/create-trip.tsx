@@ -2,7 +2,7 @@ import { useState } from "react";
 import React from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image, Switch, FlatList } from "react-native";
 import { useRouter } from "expo-router";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -273,6 +273,7 @@ export default function CreateTripScreen() {
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
     const [destinationSuggestions, setDestinationSuggestions] = useState<typeof DESTINATIONS>([]);
     const [showOriginInput, setShowOriginInput] = useState(false);
+    const convexClient = useConvex();
 
     const [formData, setFormData] = useState({
         destination: "",
@@ -440,18 +441,24 @@ export default function CreateTripScreen() {
     };
 
     const handleSubmit = async () => {
-        if (!formData.destination) {
+        // Validation checks...
+        if (!formData.destination.trim()) {
             Alert.alert("Error", "Please enter a destination");
             return;
         }
 
-        if (!formData.skipFlights && !formData.origin) {
-            Alert.alert("Error", "Please enter an origin city or enable 'Skip Flights'");
+        if (!formData.origin.trim()) {
+            Alert.alert("Error", "Please enter your departure location");
             return;
         }
 
         if (!formData.budget || isNaN(Number(formData.budget)) || Number(formData.budget) <= 0) {
             Alert.alert("Error", "Please enter a valid budget amount");
+            return;
+        }
+
+        if (formData.interests.length === 0) {
+            Alert.alert("Error", "Please select at least one interest");
             return;
         }
 
@@ -473,19 +480,58 @@ export default function CreateTripScreen() {
                 // localExperience removed - coming soon feature
             });
             
-            // Validate tripId before navigating
+            // Validate tripId before polling
             if (!tripId) {
                 throw new Error("Failed to create trip - no trip ID returned");
             }
             
-            console.log("Trip created successfully, navigating to:", tripId);
+            console.log("Trip created, waiting for generation to complete:", tripId);
             
-            // Small delay to ensure route is ready, then navigate
-            setTimeout(() => {
-                router.push(`/trip/${tripId}`);
-                setLoading(false);
-                setShowLoadingScreen(false);
-            }, 100);
+            // Poll for trip completion
+            const maxAttempts = 120; // 2 minutes max (120 * 1 second)
+            let attempts = 0;
+            
+            const pollForCompletion = async (): Promise<boolean> => {
+                while (attempts < maxAttempts) {
+                    attempts++;
+                    
+                    try {
+                        const result = await convexClient.query(api.trips.getTripStatus, { tripId });
+                        
+                        if (!result.exists) {
+                            // Trip doesn't exist yet, keep polling
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            continue;
+                        }
+                        
+                        if (result.status === "completed") {
+                            console.log("Trip generation completed!");
+                            return true;
+                        } else if (result.status === "failed") {
+                            throw new Error("Trip generation failed. Please try again.");
+                        }
+                        
+                        // Still generating, wait 1 second before next poll
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    } catch (pollError) {
+                        console.error("Polling error:", pollError);
+                        // Continue polling unless it's a known failure
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                // Timeout reached
+                throw new Error("Trip generation is taking too long. Please check your trips list.");
+            };
+            
+            await pollForCompletion();
+            
+            // Generation complete, now navigate
+            console.log("Navigating to trip:", tripId);
+            router.push(`/trip/${tripId}`);
+            setLoading(false);
+            setShowLoadingScreen(false);
+            
         } catch (error: any) {
             console.error("Error creating trip:", error);
             
@@ -779,20 +825,20 @@ export default function CreateTripScreen() {
 
                 {/* Local Experience Toggle - Coming Soon */}
                 <View 
-                    style={[styles.card, styles.localExperienceCard, styles.localExperienceCardDisabled]}
+                    style={[styles.card, styles.localExperienceCard]}
                 >
                     <View style={styles.localExperienceContent}>
-                        <View style={[styles.localExperienceIconContainer, styles.localExperienceIconContainerDisabled]}>
+                        <View style={[styles.localExperienceIconContainer]}>
                             <Ionicons name="compass" size={28} color="#9B9B9B" />
                         </View>
                         <View style={styles.localExperienceTextContainer}>
                             <View style={styles.localExperienceTitleRow}>
-                                <Text style={[styles.localExperienceTitle, styles.localExperienceTitleDisabled]}>Local Experience</Text>
+                                <Text style={styles.localExperienceTitle}>Local Experience</Text>
                                 <View style={styles.comingSoonBadge}>
                                     <Text style={styles.comingSoonText}>Coming Soon</Text>
                                 </View>
                             </View>
-                            <Text style={[styles.localExperienceDescription, styles.localExperienceDescriptionDisabled]}>
+                            <Text style={styles.localExperienceDescription}>
                                 Discover hidden gems & authentic spots only locals know
                             </Text>
                         </View>
@@ -809,7 +855,7 @@ export default function CreateTripScreen() {
                                 <Text style={styles.flightTimeOptionTitle}>Preferred Flight Time</Text>
                             </View>
                             <View style={styles.flightTimeOptions}>
-                                {["any", "morning", "afternoon", "evening", "night"].map((time) => (
+                                {(["any", "morning", "afternoon", "evening", "night"] as const).map((time) => (
                                     <TouchableOpacity
                                         key={time}
                                         style={[
@@ -821,9 +867,9 @@ export default function CreateTripScreen() {
                                         <Ionicons 
                                             name={
                                                 time === "any" ? "hourglass-outline" : 
-                                                time === "morning" ? "sun-outline" : 
-                                                time === "afternoon" ? "cloud-outline" : 
-                                                time === "evening" ? "moon-outline" : "night-outline"
+                                                time === "morning" ? "sunny-outline" : 
+                                                time === "afternoon" ? "partly-sunny-outline" : 
+                                                time === "evening" ? "moon-outline" : "cloudy-night-outline"
                                             } 
                                             size={20} 
                                             color={formData.preferredFlightTime === time ? "#FFE500" : "#9B9B9B"}
@@ -1134,6 +1180,51 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#1A1A1A',
     },
+    flightPreferencesContainer: {
+        marginTop: 12,
+    },
+    flightTimeOption: {
+        marginBottom: 8,
+    },
+    flightTimeOptionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 12,
+    },
+    flightTimeOptionTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1A1A1A',
+    },
+    flightTimeOptions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    flightTimeOptionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        backgroundColor: '#F5F5F3',
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    flightTimeOptionButtonActive: {
+        backgroundColor: '#1A1A1A',
+        borderColor: '#1A1A1A',
+    },
+    flightTimeOptionButtonText: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#9B9B9B',
+    },
+    flightTimeOptionButtonTextActive: {
+        color: '#FFE500',
+    },
     datesContainer: {
         flexDirection: "row",
         alignItems: "center",
@@ -1303,18 +1394,10 @@ const styles = StyleSheet.create({
         color: "#9B9B9B",
         lineHeight: 18,
     },
-    localExperienceCardDisabled: {
-        opacity: 0.7,
-        borderColor: "#E5E5E5",
-    },
-    localExperienceIconContainerDisabled: {
-        backgroundColor: "#F0F0F0",
-    },
     localExperienceTitleRow: {
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        marginBottom: 4,
     },
     localExperienceTitleDisabled: {
         color: "#9B9B9B",
