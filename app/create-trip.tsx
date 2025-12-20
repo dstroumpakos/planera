@@ -4,6 +4,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert,
 import { useRouter } from "expo-router";
 import { useMutation, useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
@@ -441,7 +442,7 @@ export default function CreateTripScreen() {
     };
 
     const handleSubmit = async () => {
-        // Validation checks...
+        // Validation checks
         if (!formData.destination.trim()) {
             Alert.alert("Error", "Please enter a destination");
             return;
@@ -465,8 +466,10 @@ export default function CreateTripScreen() {
         setLoading(true);
         setShowLoadingScreen(true);
 
+        let tripId: Id<"trips"> | null = null;
+
         try {
-            const tripId = await createTrip({
+            tripId = await createTrip({
                 destination: formData.destination,
                 origin: formData.origin,
                 startDate: Number(formData.startDate),
@@ -477,70 +480,75 @@ export default function CreateTripScreen() {
                 skipFlights: formData.skipFlights,
                 skipHotel: formData.skipHotel,
                 preferredFlightTime: formData.preferredFlightTime,
-                // localExperience removed - coming soon feature
             });
             
-            // Validate tripId before polling
             if (!tripId) {
                 throw new Error("Failed to create trip - no trip ID returned");
             }
             
-            console.log("Trip created, waiting for generation to complete:", tripId);
+            console.log("Trip created with ID:", tripId);
             
-            // Poll for trip completion
-            const maxAttempts = 120; // 2 minutes max (120 * 1 second)
+            // Poll for trip completion with improved error handling
+            const maxAttempts = 90;
             let attempts = 0;
+            let consecutiveErrors = 0;
             
-            const pollForCompletion = async (): Promise<boolean> => {
-                while (attempts < maxAttempts) {
-                    attempts++;
-                    
-                    try {
-                        const result = await convexClient.query(api.trips.getTripStatus, { tripId });
-                        
-                        if (!result.exists) {
-                            // Trip doesn't exist yet, keep polling
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            continue;
-                        }
-                        
-                        if (result.status === "completed") {
-                            console.log("Trip generation completed!");
-                            return true;
-                        } else if (result.status === "failed") {
-                            throw new Error("Trip generation failed. Please try again.");
-                        }
-                        
-                        // Still generating, wait 1 second before next poll
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    } catch (pollError) {
-                        console.error("Polling error:", pollError);
-                        // Continue polling unless it's a known failure
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
+            while (attempts < maxAttempts) {
+                attempts++;
                 
-                // Timeout reached
-                throw new Error("Trip generation is taking too long. Please check your trips list.");
-            };
+                try {
+                    const result = await convexClient.query(api.trips.getTripStatus, { tripId });
+                    consecutiveErrors = 0; // Reset on success
+                    
+                    if (!result.exists) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        continue;
+                    }
+                    
+                    if (result.status === "completed") {
+                        console.log("Trip generation completed!");
+                        break;
+                    } else if (result.status === "failed") {
+                        throw new Error("Trip generation failed. Please try again.");
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (pollError: any) {
+                    console.error("Polling error:", pollError);
+                    consecutiveErrors++;
+                    
+                    // If it's a "failed" status error, throw it
+                    if (pollError.message?.includes("failed")) {
+                        throw pollError;
+                    }
+                    
+                    // After 5 consecutive errors, navigate anyway
+                    if (consecutiveErrors >= 5) {
+                        console.log("Too many polling errors, navigating anyway");
+                        break;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
             
-            await pollForCompletion();
-            
-            // Generation complete, now navigate
+            // Navigate to trip
             console.log("Navigating to trip:", tripId);
             router.push(`/trip/${tripId}`);
-            setLoading(false);
-            setShowLoadingScreen(false);
             
         } catch (error: any) {
             console.error("Error creating trip:", error);
             
-            // Extract error message
-            const errorMessage = error.message || "Failed to create trip. Please try again.";
-            // Clean up Convex error prefix if present
-            const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
-            
-            Alert.alert("Error", cleanMessage);
+            // If we have a tripId, navigate to it anyway (trip might still be generating)
+            if (tripId) {
+                console.log("Error occurred but tripId exists, navigating anyway:", tripId);
+                router.push(`/trip/${tripId}`);
+            } else {
+                const errorMessage = error.message || "Failed to create trip. Please try again.";
+                const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
+                Alert.alert("Error", cleanMessage);
+            }
+        } finally {
             setLoading(false);
             setShowLoadingScreen(false);
         }
@@ -824,11 +832,9 @@ export default function CreateTripScreen() {
                 </View>
 
                 {/* Local Experience Toggle - Coming Soon */}
-                <View 
-                    style={[styles.card, styles.localExperienceCard]}
-                >
+                <View style={[styles.card, styles.localExperienceCard]}>
                     <View style={styles.localExperienceContent}>
-                        <View style={[styles.localExperienceIconContainer]}>
+                        <View style={styles.localExperienceIconContainer}>
                             <Ionicons name="compass" size={28} color="#9B9B9B" />
                         </View>
                         <View style={styles.localExperienceTextContainer}>
@@ -1083,6 +1089,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: "#1A1A1A",
+        flex: 1,
     },
     destinationInput: {
         flex: 1,
@@ -1338,8 +1345,8 @@ const styles = StyleSheet.create({
         borderColor: "#FFE500",
     },
     interestTagActive: {
-        borderColor: "#FFE500",
-        backgroundColor: "#FFFEF5",
+        borderColor: "#1A1A1A",
+        backgroundColor: "#1A1A1A",
     },
     interestTagText: {
         fontSize: 14,
@@ -1347,22 +1354,11 @@ const styles = StyleSheet.create({
         color: "#1A1A1A",
     },
     interestTagTextActive: {
-        color: "#1A1A1A",
+        color: "white",
     },
     localExperienceCard: {
         borderWidth: 2,
         borderColor: "transparent",
-    },
-    localExperienceCardActive: {
-        borderColor: "#FFE500",
-        backgroundColor: "#FFFEF5",
-    },
-    localExperienceCardDisabled: {
-        opacity: 0.7,
-        borderColor: "#E5E5E5",
-    },
-    localExperienceIconContainerDisabled: {
-        backgroundColor: "#F0F0F0",
     },
     localExperienceContent: {
         flexDirection: "row",
@@ -1376,9 +1372,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFF8E1",
         justifyContent: "center",
         alignItems: "center",
-    },
-    localExperienceIconContainerActive: {
-        backgroundColor: "#FFE500",
     },
     localExperienceTextContainer: {
         flex: 1,
@@ -1398,38 +1391,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-    },
-    localExperienceTitleDisabled: {
-        color: "#9B9B9B",
-        marginBottom: 0,
-    },
-    localExperienceDescriptionDisabled: {
-        color: "#BEBEBE",
-    },
-    localExperienceToggle: {
-        width: 52,
-        height: 30,
-        borderRadius: 15,
-        backgroundColor: "#E8E6E1",
-        padding: 3,
-        justifyContent: "center",
-    },
-    localExperienceToggleActive: {
-        backgroundColor: "#FFE500",
-    },
-    localExperienceToggleKnob: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: "white",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    localExperienceToggleKnobActive: {
-        alignSelf: "flex-end",
     },
     generateButton: {
         flexDirection: "row",
