@@ -2,9 +2,8 @@ import { useState } from "react";
 import React from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image, Switch, FlatList } from "react-native";
 import { useRouter } from "expo-router";
-import { useMutation, useQuery, useConvex } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
@@ -264,15 +263,16 @@ const INTERESTS = [
 export default function CreateTripScreen() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
+    const userPlan = useQuery(api.users.getPlan);
     const [loading, setLoading] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
+    const [showLoadingScreen, setShowLoadingScreen] = useState(false);
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
     const [destinationSuggestions, setDestinationSuggestions] = useState<typeof DESTINATIONS>([]);
     const [showOriginInput, setShowOriginInput] = useState(false);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
-    const convexClient = useConvex();
 
     const [formData, setFormData] = useState({
         destination: "",
@@ -440,14 +440,13 @@ export default function CreateTripScreen() {
     };
 
     const handleSubmit = async () => {
-        // Validation checks
-        if (!formData.destination.trim()) {
+        if (!formData.destination) {
             Alert.alert("Error", "Please enter a destination");
             return;
         }
 
-        if (!formData.origin.trim()) {
-            Alert.alert("Error", "Please enter your departure location");
+        if (!formData.skipFlights && !formData.origin) {
+            Alert.alert("Error", "Please enter an origin city or enable 'Skip Flights'");
             return;
         }
 
@@ -456,12 +455,8 @@ export default function CreateTripScreen() {
             return;
         }
 
-        if (formData.interests.length === 0) {
-            Alert.alert("Error", "Please select at least one interest");
-            return;
-        }
-
         setLoading(true);
+        setShowLoadingScreen(true);
 
         try {
             const tripId = await createTrip({
@@ -475,23 +470,32 @@ export default function CreateTripScreen() {
                 skipFlights: formData.skipFlights,
                 skipHotel: formData.skipHotel,
                 preferredFlightTime: formData.preferredFlightTime,
+                // localExperience removed - coming soon feature
             });
             
+            // Validate tripId before navigating
             if (!tripId) {
                 throw new Error("Failed to create trip - no trip ID returned");
             }
             
-            console.log("Trip created with ID:", tripId);
-            
-            // Navigate to loading screen route
-            router.push(`/loading/${tripId}`);
-            
+            // Use replace to avoid back navigation issues
+            router.replace(`/trip/${tripId}` as any);
+            // Reset states after navigation
+            setTimeout(() => {
+                setLoading(false);
+                setShowLoadingScreen(false);
+            }, 500);
         } catch (error: any) {
             console.error("Error creating trip:", error);
+            
+            // Extract error message
             const errorMessage = error.message || "Failed to create trip. Please try again.";
+            // Clean up Convex error prefix if present
             const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
+            
             Alert.alert("Error", cleanMessage);
             setLoading(false);
+            setShowLoadingScreen(false);
         }
     };
 
@@ -505,7 +509,14 @@ export default function CreateTripScreen() {
 
     const handleCancelGeneration = () => {
         setLoading(false);
+        setShowLoadingScreen(false);
     };
+
+    if (showLoadingScreen) {
+        return (
+            <GeneratingLoadingScreen onCancel={handleCancelGeneration} />
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -766,19 +777,21 @@ export default function CreateTripScreen() {
                 </View>
 
                 {/* Local Experience Toggle - Coming Soon */}
-                <View style={[styles.card, styles.localExperienceCard]}>
+                <View 
+                    style={[styles.card, styles.localExperienceCard, styles.localExperienceCardDisabled]}
+                >
                     <View style={styles.localExperienceContent}>
-                        <View style={styles.localExperienceIconContainer}>
+                        <View style={[styles.localExperienceIconContainer, styles.localExperienceIconContainerDisabled]}>
                             <Ionicons name="compass" size={28} color="#9B9B9B" />
                         </View>
                         <View style={styles.localExperienceTextContainer}>
                             <View style={styles.localExperienceTitleRow}>
-                                <Text style={styles.localExperienceTitle}>Local Experience</Text>
+                                <Text style={[styles.localExperienceTitle, styles.localExperienceTitleDisabled]}>Local Experience</Text>
                                 <View style={styles.comingSoonBadge}>
                                     <Text style={styles.comingSoonText}>Coming Soon</Text>
                                 </View>
                             </View>
-                            <Text style={styles.localExperienceDescription}>
+                            <Text style={[styles.localExperienceDescription, styles.localExperienceDescriptionDisabled]}>
                                 Discover hidden gems & authentic spots only locals know
                             </Text>
                         </View>
@@ -795,7 +808,7 @@ export default function CreateTripScreen() {
                                 <Text style={styles.flightTimeOptionTitle}>Preferred Flight Time</Text>
                             </View>
                             <View style={styles.flightTimeOptions}>
-                                {(["any", "morning", "afternoon", "evening", "night"] as const).map((time) => (
+                                {["any", "morning", "afternoon", "evening", "night"].map((time) => (
                                     <TouchableOpacity
                                         key={time}
                                         style={[
@@ -807,9 +820,9 @@ export default function CreateTripScreen() {
                                         <Ionicons 
                                             name={
                                                 time === "any" ? "hourglass-outline" : 
-                                                time === "morning" ? "sunny-outline" : 
-                                                time === "afternoon" ? "partly-sunny-outline" : 
-                                                time === "evening" ? "moon-outline" : "cloudy-night-outline"
+                                                time === "morning" ? "sun-outline" : 
+                                                time === "afternoon" ? "cloud-outline" : 
+                                                time === "evening" ? "moon-outline" : "night-outline"
                                             } 
                                             size={20} 
                                             color={formData.preferredFlightTime === time ? "#FFE500" : "#9B9B9B"}
@@ -1023,7 +1036,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: "#1A1A1A",
-        flex: 1,
     },
     destinationInput: {
         flex: 1,
@@ -1120,51 +1132,6 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '700',
         color: '#1A1A1A',
-    },
-    flightPreferencesContainer: {
-        marginTop: 12,
-    },
-    flightTimeOption: {
-        marginBottom: 8,
-    },
-    flightTimeOptionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 12,
-    },
-    flightTimeOptionTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
-    flightTimeOptions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    flightTimeOptionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: 10,
-        backgroundColor: '#F5F5F3',
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    flightTimeOptionButtonActive: {
-        backgroundColor: '#1A1A1A',
-        borderColor: '#1A1A1A',
-    },
-    flightTimeOptionButtonText: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: '#9B9B9B',
-    },
-    flightTimeOptionButtonTextActive: {
-        color: '#FFE500',
     },
     datesContainer: {
         flexDirection: "row",
@@ -1279,8 +1246,8 @@ const styles = StyleSheet.create({
         borderColor: "#FFE500",
     },
     interestTagActive: {
-        borderColor: "#1A1A1A",
-        backgroundColor: "#1A1A1A",
+        borderColor: "#FFE500",
+        backgroundColor: "#FFFEF5",
     },
     interestTagText: {
         fontSize: 14,
@@ -1288,11 +1255,22 @@ const styles = StyleSheet.create({
         color: "#1A1A1A",
     },
     interestTagTextActive: {
-        color: "white",
+        color: "#1A1A1A",
     },
     localExperienceCard: {
         borderWidth: 2,
         borderColor: "transparent",
+    },
+    localExperienceCardActive: {
+        borderColor: "#FFE500",
+        backgroundColor: "#FFFEF5",
+    },
+    localExperienceCardDisabled: {
+        opacity: 0.7,
+        borderColor: "#E5E5E5",
+    },
+    localExperienceIconContainerDisabled: {
+        backgroundColor: "#F0F0F0",
     },
     localExperienceContent: {
         flexDirection: "row",
@@ -1306,6 +1284,9 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFF8E1",
         justifyContent: "center",
         alignItems: "center",
+    },
+    localExperienceIconContainerActive: {
+        backgroundColor: "#FFE500",
     },
     localExperienceTextContainer: {
         flex: 1,
@@ -1321,10 +1302,50 @@ const styles = StyleSheet.create({
         color: "#9B9B9B",
         lineHeight: 18,
     },
+    localExperienceCardDisabled: {
+        opacity: 0.7,
+        borderColor: "#E5E5E5",
+    },
+    localExperienceIconContainerDisabled: {
+        backgroundColor: "#F0F0F0",
+    },
     localExperienceTitleRow: {
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
+        marginBottom: 4,
+    },
+    localExperienceTitleDisabled: {
+        color: "#9B9B9B",
+        marginBottom: 0,
+    },
+    localExperienceDescriptionDisabled: {
+        color: "#BEBEBE",
+    },
+    localExperienceToggle: {
+        width: 52,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: "#E8E6E1",
+        padding: 3,
+        justifyContent: "center",
+    },
+    localExperienceToggleActive: {
+        backgroundColor: "#FFE500",
+    },
+    localExperienceToggleKnob: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: "white",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    localExperienceToggleKnobActive: {
+        alignSelf: "flex-end",
     },
     generateButton: {
         flexDirection: "row",
