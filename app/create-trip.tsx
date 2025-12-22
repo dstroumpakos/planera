@@ -479,7 +479,7 @@ export default function CreateTripScreen() {
             }
             
             // Use replace to avoid back navigation issues
-            router.replace(`/trip-loading?tripId=${tripId}` as any);
+            router.replace(`/trip/${tripId}` as any);
             // Reset states after navigation
             setTimeout(() => {
                 setLoading(false);
@@ -808,36 +808,45 @@ export default function CreateTripScreen() {
                                 <Text style={styles.flightTimeOptionTitle}>Preferred Flight Time</Text>
                             </View>
                             <View style={styles.flightTimeOptions}>
-                                {["any", "morning", "afternoon", "evening", "night"].map((time) => (
-                                    <TouchableOpacity
-                                        key={time}
-                                        style={[
-                                            styles.flightTimeOptionButton,
-                                            formData.preferredFlightTime === time && styles.flightTimeOptionButtonActive,
-                                        ]}
-                                        onPress={() => setFormData(prev => ({ ...prev, preferredFlightTime: time as "any" | "morning" | "afternoon" | "evening" | "night" }))}
-                                    >
-                                        <Ionicons 
-                                            name={
-                                                time === "any" ? "hourglass-outline" : 
-                                                time === "morning" ? "sunny-outline" : 
-                                                time === "afternoon" ? "cloud-outline" : 
-                                                time === "evening" ? "moon-outline" : "moon-outline"
-                                            } 
-                                            size={20} 
-                                            color={formData.preferredFlightTime === time ? "#FFE500" : "#9B9B9B"}
-                                        />
-                                        <Text style={[
-                                            styles.flightTimeOptionButtonText,
-                                            formData.preferredFlightTime === time && styles.flightTimeOptionButtonTextActive,
-                                        ]}>
-                                            {time === "any" ? "Any Time" : 
-                                             time === "morning" ? "Morning (6AM-12PM)" : 
-                                             time === "afternoon" ? "Afternoon (12PM-6PM)" : 
-                                             time === "evening" ? "Evening (6PM-10PM)" : "Night (10PM-6AM)"}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                                {["any", "morning", "afternoon", "evening", "night"].map((time) => {
+                                    const isActive = formData.preferredFlightTime === time;
+                                    const timeLabel = 
+                                        time === "any" ? "Any Time" : 
+                                        time === "morning" ? "Morning" : 
+                                        time === "afternoon" ? "Afternoon" : 
+                                        time === "evening" ? "Evening" : "Night";
+                                    
+                                    const iconName = 
+                                        time === "any" ? "hourglass-outline" : 
+                                        time === "morning" ? "sunny-outline" : 
+                                        time === "afternoon" ? "cloud-outline" : "moon-outline";
+                                    
+                                    return (
+                                        <TouchableOpacity
+                                            key={time}
+                                            style={[
+                                                styles.flightTimeOptionButton,
+                                                isActive && styles.flightTimeOptionButtonActive,
+                                            ]}
+                                            onPress={() => setFormData(prev => ({ 
+                                                ...prev, 
+                                                preferredFlightTime: time as any
+                                            }))}
+                                        >
+                                            <Ionicons 
+                                                name={iconName as any}
+                                                size={20} 
+                                                color={isActive ? "#FFE500" : "#9B9B9B"}
+                                            />
+                                            <Text style={[
+                                                styles.flightTimeOptionButtonText,
+                                                isActive && styles.flightTimeOptionButtonTextActive,
+                                            ]}>
+                                                {timeLabel}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
                             </View>
                         </View>
                     </View>
