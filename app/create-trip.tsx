@@ -479,7 +479,7 @@ export default function CreateTripScreen() {
             }
             
             // Use replace to avoid back navigation issues
-            router.replace(`/trip/${tripId}` as any);
+            router.replace(`/trip-loading?tripId=${tripId}` as any);
             // Reset states after navigation
             setTimeout(() => {
                 setLoading(false);
