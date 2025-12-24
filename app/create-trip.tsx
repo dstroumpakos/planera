@@ -478,8 +478,8 @@ export default function CreateTripScreen() {
                 throw new Error("Failed to create trip - no trip ID returned");
             }
             
-            // Use replace to avoid back navigation issues
-            router.replace(`/trip/${tripId}` as any);
+            // Navigate to loading page instead of directly to trip details
+            router.replace(`/trip-loading/${tripId}` as any);
             // Reset states after navigation
             setTimeout(() => {
                 setLoading(false);
