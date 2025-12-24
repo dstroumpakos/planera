@@ -12,9 +12,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
 import { useQuery, useAction, useConvexAuth } from "convex/react";
-import { useFocusEffect } from "@react-navigation/native";
 import { api } from "@/convex/_generated/api";
 
 const COLORS = {
@@ -44,6 +43,7 @@ interface Message {
 
 export default function AssistantScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { isAuthenticated } = useConvexAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -59,26 +59,19 @@ export default function AssistantScreen() {
 
   const userPlan = useQuery(api.users.getPlan);
   const chatAction = useAction(api.aiAssistant.chat);
-  const weatherAction = useAction(api.aiAssistant.getWeather);
 
   // Hide tab bar when this screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      const parent = router.getParent();
-      if (parent) {
-        parent.setOptions({
-          tabBarStyle: { display: "none" },
-        });
-      }
-      return () => {
-        if (parent) {
-          parent.setOptions({
-            tabBarStyle: undefined,
-          });
-        }
-      };
-    }, [router])
-  );
+  useEffect(() => {
+    navigation.getParent()?.setOptions({
+      tabBarStyle: { display: "none" },
+    });
+
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined,
+      });
+    };
+  }, [navigation]);
 
   // Check subscription access
   useEffect(() => {
@@ -108,40 +101,20 @@ export default function AssistantScreen() {
     setLoading(true);
 
     try {
-      // Check if user is asking about weather
-      const isWeatherQuery = /weather|temperature|forecast|rain|snow|wind|humidity|condition/i.test(inputText);
-      const locationMatch = inputText.match(/(?:in|at|for)\s+([A-Za-z\s]+?)(?:\s+(?:right\s+)?now|weather|\?|$)/i);
-      const location = locationMatch?.[1]?.trim();
-
-      let assistantContent = "";
-      let weatherData = undefined;
-
-      if (isWeatherQuery && location) {
-        try {
-          weatherData = await weatherAction({ location });
-          assistantContent = `It's pleasant out! A great time to walk around. Would you like a forecast for the weekend?`;
-        } catch (error) {
-          // Fall back to AI response if weather API fails
-          assistantContent = await chatAction({ message: inputText, location });
-        }
-      } else {
-        assistantContent = await chatAction({ message: inputText, location });
-      }
-
+      const response = await chatAction({ message: inputText });
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "assistant",
-        content: assistantContent,
+        content: response,
         timestamp: new Date(),
-        weatherData,
       };
-
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
+      console.error("Chat error:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "assistant",
-        content: "Sorry, I couldn't process that. Please try again.",
+        content: "Sorry, I encountered an error. Please try again.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -150,86 +123,41 @@ export default function AssistantScreen() {
     }
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    if (item.type === "user") {
-      return (
-        <View style={styles.userMessageContainer}>
-          <View style={styles.userMessage}>
-            <Text style={styles.userMessageText}>{item.content}</Text>
-            <Text style={styles.timestamp}>
-              {item.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </Text>
-          </View>
+  const renderMessage = ({ item }: { item: Message }) => (
+    <View style={[styles.messageRow, item.type === "user" && styles.userRow]}>
+      {item.type === "assistant" && (
+        <View style={styles.avatarAssistant}>
+          <Ionicons name="sparkles" size={20} color={COLORS.primary} />
         </View>
-      );
-    }
-
-    return (
-      <View style={styles.assistantMessageContainer}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Ionicons name="sparkles" size={20} color={COLORS.secondary} />
-          </View>
-        </View>
-        <View style={styles.assistantContent}>
-          <Text style={styles.assistantLabel}>Planera AI</Text>
-          {item.weatherData ? (
-            <View style={styles.weatherCard}>
-              <View style={styles.weatherHeader}>
-                <View>
-                  <Text style={styles.temperature}>{item.weatherData.temperature}°C</Text>
-                  <Text style={styles.location}>{item.weatherData.location}</Text>
-                </View>
-                <View style={styles.weatherIconContainer}>
-                  <Ionicons name="partly-sunny" size={56} color={COLORS.white} />
-                </View>
-              </View>
-              <Text style={styles.condition}>{item.weatherData.condition}</Text>
-              <View style={styles.weatherDivider} />
-              <View style={styles.weatherDetails}>
-                <View style={styles.weatherDetail}>
-                  <Text style={styles.weatherLabel}>Humidity</Text>
-                  <Text style={styles.weatherValue}>{item.weatherData.humidity}%</Text>
-                </View>
-                <View style={styles.weatherDetail}>
-                  <Text style={styles.weatherLabel}>Wind</Text>
-                  <Text style={styles.weatherValue}>{item.weatherData.wind} km/h</Text>
-                </View>
-                <View style={styles.weatherDetail}>
-                  <Text style={styles.weatherLabel}>UV Index</Text>
-                  <Text style={styles.weatherValue}>
-                    {item.weatherData.uvIndex > 6 ? "High" : item.weatherData.uvIndex > 3 ? "Moderate" : "Low"}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.assistantMessage}>
-              <Text style={styles.assistantMessageText}>{item.content}</Text>
-            </View>
-          )}
-        </View>
+      )}
+      <View
+        style={[
+          styles.messageBubble,
+          item.type === "user" ? styles.userBubble : styles.assistantBubble,
+        ]}
+      >
+        <Text
+          style={[
+            styles.messageText,
+            item.type === "user" && styles.userText,
+          ]}
+        >
+          {item.content}
+        </Text>
+        <Text style={styles.timestamp}>
+          {item.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </Text>
       </View>
-    );
-  };
-
-  if (!isAuthenticated || (userPlan && userPlan.plan === "free")) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.lockedContainer}>
-          <Ionicons name="lock-closed" size={64} color={COLORS.lightText} />
-          <Text style={styles.lockedTitle}>Premium Feature</Text>
-          <Text style={styles.lockedText}>AI Assistant is available for monthly and yearly subscribers only.</Text>
-          <TouchableOpacity
-            style={styles.upgradeButton}
-            onPress={() => router.push("/subscription")}
-          >
-            <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
-          </TouchableOpacity>
+      {item.type === "user" && (
+        <View style={styles.avatarUser}>
+          <Ionicons name="person-circle" size={32} color={COLORS.secondary} />
         </View>
-      </SafeAreaView>
-    );
-  }
+      )}
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -238,19 +166,13 @@ export default function AssistantScreen() {
           <Ionicons name="chevron-back" size={28} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.title}>Planera AI Assistant</Text>
+          <Text style={styles.title}>Planera AI</Text>
           <View style={styles.statusBadge}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Weather & Info</Text>
+            <Text style={styles.statusText}>Online</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.menuButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.dateContainer}>
-        <Text style={styles.dateText}>Today</Text>
+        <View style={styles.menuButton} />
       </View>
 
       <FlatList
@@ -267,10 +189,6 @@ export default function AssistantScreen() {
         style={styles.inputContainer}
       >
         <View style={styles.inputWrapper}>
-          <TouchableOpacity style={styles.addButton}>
-            <Ionicons name="add" size={24} color={COLORS.lightText} />
-          </TouchableOpacity>
-
           <TextInput
             style={styles.input}
             placeholder="Ask about weather, info..."
@@ -288,9 +206,9 @@ export default function AssistantScreen() {
             disabled={loading || !inputText.trim()}
           >
             {loading ? (
-              <ActivityIndicator size="small" color={COLORS.text} />
+              <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
-              <Ionicons name="arrow-up" size={20} color={COLORS.text} />
+              <Ionicons name="arrow-up" size={20} color={COLORS.white} />
             )}
           </TouchableOpacity>
         </View>
@@ -303,36 +221,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  lockedContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  lockedTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginTop: 16,
-  },
-  lockedText: {
-    fontSize: 14,
-    color: COLORS.lightText,
-    marginTop: 8,
-    textAlign: "center",
-  },
-  upgradeButton: {
-    marginTop: 24,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  upgradeButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.text,
   },
   header: {
     flexDirection: "row",
@@ -358,150 +246,73 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: COLORS.success,
-    marginRight: 6,
+    marginRight: 4,
   },
   statusText: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.lightText,
   },
   menuButton: {
-    padding: 8,
-  },
-  dateContainer: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  dateText: {
-    fontSize: 14,
-    color: COLORS.lightText,
-    backgroundColor: "#E8E8E8",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
   },
   messagesList: {
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  userMessageContainer: {
+  messageRow: {
     flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 12,
+  },
+  userRow: {
     justifyContent: "flex-end",
-    marginBottom: 16,
   },
-  userMessage: {
-    maxWidth: "85%",
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-  },
-  userMessageText: {
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: "500",
-    lineHeight: 22,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: COLORS.text,
-    marginTop: 4,
-    textAlign: "right",
-    opacity: 0.7,
-  },
-  assistantMessageContainer: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  avatarContainer: {
-    marginRight: 12,
-    marginTop: 4,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E0E0E0",
+  avatarAssistant: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
-  assistantContent: {
-    flex: 1,
+  avatarUser: {
+    marginLeft: 8,
   },
-  assistantLabel: {
-    fontSize: 12,
-    color: COLORS.lightText,
-    marginBottom: 4,
-    fontWeight: "500",
+  messageBubble: {
+    maxWidth: "75%",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
-  assistantMessage: {
+  assistantBubble: {
     backgroundColor: COLORS.white,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
-  assistantMessageText: {
-    fontSize: 16,
+  userBubble: {
+    backgroundColor: COLORS.primary,
+  },
+  messageText: {
+    fontSize: 14,
     color: COLORS.text,
-    lineHeight: 22,
+    lineHeight: 20,
   },
-  weatherCard: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 8,
-  },
-  weatherHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  temperature: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: COLORS.white,
-  },
-  location: {
-    fontSize: 14,
-    color: COLORS.white,
-    marginTop: 4,
-  },
-  weatherIconContainer: {
-    alignItems: "center",
-  },
-  condition: {
-    fontSize: 16,
-    color: COLORS.white,
+  userText: {
+    color: COLORS.text,
     fontWeight: "500",
-    marginBottom: 12,
   },
-  weatherDivider: {
-    height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    marginBottom: 12,
-  },
-  weatherDetails: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  weatherDetail: {
-    alignItems: "center",
-  },
-  weatherLabel: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginBottom: 4,
-  },
-  weatherValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.white,
+  timestamp: {
+    fontSize: 11,
+    color: COLORS.lightText,
+    marginTop: 4,
   },
   inputContainer: {
     paddingHorizontal: 16,
@@ -513,21 +324,16 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "flex-end",
-    backgroundColor: "#F5F5F5",
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  addButton: {
-    padding: 8,
-    marginRight: 4,
+    gap: 8,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    backgroundColor: COLORS.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 14,
     color: COLORS.text,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
     maxHeight: 100,
   },
   sendButton: {
@@ -537,7 +343,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 4,
   },
   sendButtonDisabled: {
     opacity: 0.5,
