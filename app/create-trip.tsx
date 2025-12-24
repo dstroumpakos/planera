@@ -11,6 +11,8 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import GeneratingLoadingScreen from "@/components/GeneratingLoadingScreen";
 
+import logoImage from "@/assets/images/image.png";
+
 // Airport database with country/region groupings
 const AIRPORTS = [
     // Australia
@@ -285,7 +287,6 @@ export default function CreateTripScreen() {
         skipFlights: false,
         skipHotel: false,
         preferredFlightTime: "any" as "any" | "morning" | "afternoon" | "evening" | "night",
-        localExperience: false,
     });
 
     // Detect device location on mount
@@ -470,7 +471,6 @@ export default function CreateTripScreen() {
                 skipFlights: formData.skipFlights,
                 skipHotel: formData.skipHotel,
                 preferredFlightTime: formData.preferredFlightTime,
-                localExperience: formData.localExperience,
             });
             
             router.push(`/trip/${tripId}`);
@@ -522,9 +522,7 @@ export default function CreateTripScreen() {
                             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                         </TouchableOpacity>
                         <View style={styles.logoContainer}>
-                            <View style={styles.headerLogo}>
-                                <Ionicons name="airplane" size={20} color="#FFE500" />
-                            </View>
+                            <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
                             <Text style={styles.headerLogoText}>PLANERA</Text>
                         </View>
                         <TouchableOpacity style={styles.settingsButton}>
@@ -770,28 +768,6 @@ export default function CreateTripScreen() {
                     </View>
                 </View>
 
-                {/* Local Experience Toggle */}
-                <TouchableOpacity 
-                    style={[styles.card, styles.localExperienceCard, formData.localExperience && styles.localExperienceCardActive]}
-                    onPress={() => setFormData(prev => ({ ...prev, localExperience: !prev.localExperience }))}
-                    activeOpacity={0.8}
-                >
-                    <View style={styles.localExperienceContent}>
-                        <View style={[styles.localExperienceIconContainer, formData.localExperience && styles.localExperienceIconContainerActive]}>
-                            <Ionicons name="compass" size={28} color={formData.localExperience ? "#1A1A1A" : "#FFE500"} />
-                        </View>
-                        <View style={styles.localExperienceTextContainer}>
-                            <Text style={styles.localExperienceTitle}>Local Experience</Text>
-                            <Text style={styles.localExperienceDescription}>
-                                Discover hidden gems & authentic spots only locals know
-                            </Text>
-                        </View>
-                        <View style={[styles.localExperienceToggle, formData.localExperience && styles.localExperienceToggleActive]}>
-                            <View style={[styles.localExperienceToggleKnob, formData.localExperience && styles.localExperienceToggleKnobActive]} />
-                        </View>
-                    </View>
-                </TouchableOpacity>
-
                 {/* Generate Button */}
                 <TouchableOpacity 
                     style={[styles.generateButton, loading && styles.disabledButton]}
@@ -899,10 +875,6 @@ const styles = StyleSheet.create({
     headerLogo: {
         width: 28,
         height: 28,
-        borderRadius: 8,
-        backgroundColor: "#1A1A1A",
-        justifyContent: "center",
-        alignItems: "center",
     },
     headerLogoText: {
         fontSize: 16,
@@ -1195,8 +1167,8 @@ const styles = StyleSheet.create({
         borderColor: "#FFE500",
     },
     interestTagActive: {
+        backgroundColor: "#FFE500",
         borderColor: "#FFE500",
-        backgroundColor: "#FFFEF5",
     },
     interestTagText: {
         fontSize: 14,
@@ -1205,69 +1177,6 @@ const styles = StyleSheet.create({
     },
     interestTagTextActive: {
         color: "#1A1A1A",
-    },
-    localExperienceCard: {
-        borderWidth: 2,
-        borderColor: "transparent",
-    },
-    localExperienceCardActive: {
-        borderColor: "#FFE500",
-        backgroundColor: "#FFFEF5",
-    },
-    localExperienceContent: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 14,
-    },
-    localExperienceIconContainer: {
-        width: 52,
-        height: 52,
-        borderRadius: 16,
-        backgroundColor: "#FFF8E1",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    localExperienceIconContainerActive: {
-        backgroundColor: "#FFE500",
-    },
-    localExperienceTextContainer: {
-        flex: 1,
-    },
-    localExperienceTitle: {
-        fontSize: 17,
-        fontWeight: "700",
-        color: "#1A1A1A",
-        marginBottom: 4,
-    },
-    localExperienceDescription: {
-        fontSize: 13,
-        color: "#9B9B9B",
-        lineHeight: 18,
-    },
-    localExperienceToggle: {
-        width: 52,
-        height: 30,
-        borderRadius: 15,
-        backgroundColor: "#E8E6E1",
-        padding: 3,
-        justifyContent: "center",
-    },
-    localExperienceToggleActive: {
-        backgroundColor: "#FFE500",
-    },
-    localExperienceToggleKnob: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: "white",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    localExperienceToggleKnobActive: {
-        alignSelf: "flex-end",
     },
     generateButton: {
         flexDirection: "row",

@@ -41,11 +41,10 @@ export const generate = internalAction({
         prompt: v.string(), 
         skipFlights: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
-        localExperience: v.optional(v.boolean()),
     },
     returns: v.null(),
     handler: async (ctx, args) => {
-        const { tripId, skipFlights, preferredFlightTime, localExperience } = args;
+        const { tripId, skipFlights, preferredFlightTime } = args;
 
         console.log("=".repeat(80));
         console.log("🚀 TRIP GENERATION STARTED");
@@ -54,7 +53,6 @@ export const generate = internalAction({
         console.log("Prompt:", args.prompt);
         console.log("Skip Flights:", skipFlights ? "Yes" : "No");
         console.log("Preferred Flight Time:", preferredFlightTime || "any");
-        console.log("Local Experience Mode:", localExperience ? "✅ ENABLED" : "No");
 
         // Get trip details
         const trip = await ctx.runQuery(internal.trips.getTripDetails, { tripId });

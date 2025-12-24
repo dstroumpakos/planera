@@ -3,7 +3,6 @@ import { authMutation, authQuery } from "./functions";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 
-// Trip management functions
 export const create = authMutation({
     args: {
         destination: v.string(),
@@ -16,7 +15,6 @@ export const create = authMutation({
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
-        localExperience: v.optional(v.boolean()), // For authentic local experience filtering
     },
     returns: v.id("trips"),
     handler: async (ctx, args) => {
@@ -88,39 +86,17 @@ export const create = authMutation({
             skipFlights: args.skipFlights ?? false,
             skipHotel: args.skipHotel ?? false,
             preferredFlightTime: args.preferredFlightTime ?? "any",
-            localExperience: args.localExperience ?? false,
         });
 
         const flightInfo = args.skipFlights 
             ? "Note: User already has flights booked, so DO NOT include flight recommendations."
             : `Flying from: ${args.origin}. Preferred flight time: ${args.preferredFlightTime || "any"}`;
 
-        const localExperiencePrompt = args.localExperience 
-            ? `
-IMPORTANT - LOCAL EXPERIENCE MODE ENABLED:
-The traveler wants an AUTHENTIC LOCAL experience, NOT a typical tourist trip. Please focus on:
-- Hidden gems and off-the-beaten-path locations that only locals know about
-- Local neighborhood restaurants, cafes, and street food spots (avoid tourist traps and chain restaurants)
-- Authentic cultural experiences and local traditions
-- Local markets, artisan shops, and family-owned businesses
-- Neighborhoods where locals actually live and hang out
-- Local festivals, events, or gatherings if happening during the trip dates
-- Public transportation tips that locals use
-- Lesser-known viewpoints and photo spots
-- Local etiquette and customs to follow
-- Authentic local cuisine and dishes to try (not tourist versions)
-- Small local tours run by residents rather than big tour companies
-- Places to interact with locals and learn about daily life
-AVOID: Major tourist attractions, tourist-heavy areas, international chain restaurants, and typical "must-see" lists.
-`
-            : "";
-
         const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
         ${flightInfo}
         Budget: ${args.budget}.
         Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
-        Interests: ${args.interests.join(", ")}.
-        ${localExperiencePrompt}`;
+        Interests: ${args.interests.join(", ")}.`;
 
         // Schedule the generation action from tripsActions.ts
         await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 
@@ -128,7 +104,6 @@ AVOID: Major tourist attractions, tourist-heavy areas, international chain resta
             prompt, 
             skipFlights: args.skipFlights ?? false,
             preferredFlightTime: args.preferredFlightTime ?? "any",
-            localExperience: args.localExperience ?? false,
         });
 
         return tripId;
@@ -154,7 +129,6 @@ export const getTripDetails = internalQuery({
             skipFlights: v.optional(v.boolean()),
             skipHotel: v.optional(v.boolean()),
             preferredFlightTime: v.optional(v.string()),
-            localExperience: v.optional(v.boolean()),
             status: v.string(),
             itinerary: v.optional(v.any()),
         })
@@ -197,7 +171,6 @@ export const list = authQuery({
             skipFlights: v.optional(v.boolean()),
             skipHotel: v.optional(v.boolean()),
             preferredFlightTime: v.optional(v.string()),
-            localExperience: v.optional(v.boolean()),
             status: v.string(),
             itinerary: v.optional(v.any()),
         })
@@ -271,23 +244,12 @@ export const regenerate = authMutation({
 
         await ctx.db.patch(args.tripId, { status: "generating" });
 
-        const localExperiencePrompt = trip.localExperience 
-            ? `\nIMPORTANT - LOCAL EXPERIENCE MODE ENABLED:\nThe traveler wants an AUTHENTIC LOCAL experience, NOT a typical tourist trip. Please focus on:\n- Hidden gems and off-the-beaten-path locations that only locals know about\n- Local neighborhood restaurants, cafes, and street food spots (avoid tourist traps and chain restaurants)\n- Authentic cultural experiences and local traditions\n- Local markets, artisan shops, and family-owned businesses\n- Neighborhoods where locals actually live and hang out\n- Local festivals, events, or gatherings if happening during the trip dates\n- Public transportation tips that locals use\n- Lesser-known viewpoints and photo spots\n- Local etiquette and customs to follow\n- Authentic local cuisine and dishes to try (not tourist versions)\n- Small local tours run by residents rather than big tour companies\n- Places to interact with locals and learn about daily life\nAVOID: Major tourist attractions, tourist-heavy areas, international chain restaurants, and typical \"must-see\" lists.\n`
-            : "";
-
         const prompt = `Plan a trip to ${trip.destination} from ${trip.origin} for ${trip.travelers} people.
         Budget: ${trip.budget}.
         Dates: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
-        Interests: ${trip.interests.join(", ")}.
-        ${localExperiencePrompt}`;
+        Interests: ${trip.interests.join(", ")}.`;
 
-        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 
-            tripId: args.tripId, 
-            prompt,
-            skipFlights: trip.skipFlights ?? false,
-            preferredFlightTime: trip.preferredFlightTime ?? "any",
-            localExperience: trip.localExperience ?? false,
-        });
+        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId: args.tripId, prompt });
     },
 });
 

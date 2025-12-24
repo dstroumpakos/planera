@@ -149,11 +149,6 @@ export default function Profile() {
                         <Text style={styles.helpText}>Help & Support</Text>
                     </TouchableOpacity>
                     
-                    <TouchableOpacity style={styles.helpItem} onPress={() => router.push("/terms")}>
-                        <Ionicons name="document-text-outline" size={20} color={COLORS.textSecondary} />
-                        <Text style={styles.helpText}>Terms of Service</Text>
-                    </TouchableOpacity>
-                    
                     <TouchableOpacity style={styles.helpItem} onPress={handleLogout}>
                         <Ionicons name="log-out-outline" size={20} color={COLORS.textSecondary} />
                         <Text style={styles.helpText}>Log Out</Text>
@@ -161,7 +156,7 @@ export default function Profile() {
                 </View>
 
                 {/* Version */}
-                <Text style={styles.versionText}>PLANERA V2.4.0</Text>
+                <Text style={styles.versionText}>PLANORA V2.4.0</Text>
 
                 {/* Bottom Spacing */}
                 <View style={{ height: 120 }} />

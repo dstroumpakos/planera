@@ -14,7 +14,6 @@ export default defineSchema({
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()), // "morning", "afternoon", "evening", "night", "any"
-        localExperience: v.optional(v.boolean()), // When true, AI generates more local/authentic recommendations
         status: v.string(),
         itinerary: v.optional(v.any()),
     }).index("by_user", ["userId"]),
