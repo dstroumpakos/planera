@@ -9,7 +9,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
-import GeneratingLoadingScreen from "@/components/GeneratingLoadingScreen";
 
 import logoImage from "@/assets/images/image.png";
 
@@ -501,14 +500,13 @@ export default function CreateTripScreen() {
         }
     };
 
-    const handleCancelGeneration = () => {
-        setLoading(false);
-        setShowLoadingScreen(false);
-    };
-
     if (showLoadingScreen) {
         return (
-            <GeneratingLoadingScreen onCancel={handleCancelGeneration} />
+            <SafeAreaView style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 20 }} />
+                <Text style={styles.loadingTitle}>Generating your dream trip...</Text>
+                <Text style={styles.loadingSubtitle}>This usually takes a few seconds.</Text>
+            </SafeAreaView>
         );
     }
 
@@ -1000,7 +998,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: '#F0F0F5',
+        borderTopColor: '#F0F0F0',
     },
     checkbox: {
         width: 20,
@@ -1236,5 +1234,23 @@ const styles = StyleSheet.create({
     },
     calendar: {
         marginHorizontal: 10,
+    },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: "#FAF9F6",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    loadingTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#FFE500",
+        marginBottom: 8,
+        textAlign: "center",
+    },
+    loadingSubtitle: {
+        fontSize: 16,
+        color: "#9B9B9B",
+        textAlign: "center",
     },
 });

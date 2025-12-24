@@ -8,7 +8,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
-import GeneratingLoadingScreen from "@/components/GeneratingLoadingScreen";
 
 // Conditionally import MapView only on native platforms
 let MapView: any = null;
@@ -431,7 +430,11 @@ export default function TripDetails() {
 
     if (trip.status === "generating") {
         return (
-            <GeneratingLoadingScreen />
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color="#FFE500" />
+                <Text style={styles.generatingText}>Generating your dream trip...</Text>
+                <Text style={styles.generatingSubtext}>This usually takes a few seconds.</Text>
+            </View>
         );
     }
 
@@ -1583,7 +1586,7 @@ const styles = StyleSheet.create({
     },
     viewMapText: {
         fontSize: 14,
-        fontWeight: "700",
+        fontWeight: "600",
         color: "#1A1A1A",
     },
     filterContainer: {
