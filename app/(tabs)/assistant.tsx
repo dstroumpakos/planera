@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery, useAction, useConvexAuth } from "convex/react";
+import { useFocusEffect } from "@react-navigation/native";
 import { api } from "@/convex/_generated/api";
 
 const COLORS = {
@@ -59,6 +60,25 @@ export default function AssistantScreen() {
   const userPlan = useQuery(api.users.getPlan);
   const chatAction = useAction(api.aiAssistant.chat);
   const weatherAction = useAction(api.aiAssistant.getWeather);
+
+  // Hide tab bar when this screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = router.getParent();
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: { display: "none" },
+        });
+      }
+      return () => {
+        if (parent) {
+          parent.setOptions({
+            tabBarStyle: undefined,
+          });
+        }
+      };
+    }, [router])
+  );
 
   // Check subscription access
   useEffect(() => {
@@ -214,6 +234,9 @@ export default function AssistantScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.push("/(tabs)")}>
+          <Ionicons name="chevron-back" size={28} color={COLORS.text} />
+        </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.title}>Planera AI Assistant</Text>
           <View style={styles.statusBadge}>
