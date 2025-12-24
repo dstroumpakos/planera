@@ -479,7 +479,7 @@ export default function CreateTripScreen() {
             }
             
             // Navigate to loading page instead of directly to trip details
-            router.replace(`/trip-loading/${tripId}` as any);
+            router.replace(`/trip-details/${tripId}` as any);
             // Reset states after navigation
             setTimeout(() => {
                 setLoading(false);
@@ -1206,7 +1206,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
     },
