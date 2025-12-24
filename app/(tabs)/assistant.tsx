@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useNavigation } from "expo-router";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useAction, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -31,19 +32,10 @@ interface Message {
   type: "user" | "assistant";
   content: string;
   timestamp: Date;
-  weatherData?: {
-    location: string;
-    temperature: number;
-    condition: string;
-    humidity: number;
-    wind: number;
-    uvIndex: number;
-  };
 }
 
-export default function AssistantScreen() {
+function AssistantContent() {
   const router = useRouter();
-  const navigation = useNavigation();
   const { isAuthenticated } = useConvexAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -59,19 +51,6 @@ export default function AssistantScreen() {
 
   const userPlan = useQuery(api.users.getPlan);
   const chatAction = useAction(api.aiAssistant.chat);
-
-  // Hide tab bar when this screen is focused
-  useEffect(() => {
-    navigation.getParent()?.setOptions({
-      tabBarStyle: { display: "none" },
-    });
-
-    return () => {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: undefined,
-      });
-    };
-  }, [navigation]);
 
   // Check subscription access
   useEffect(() => {
@@ -206,15 +185,28 @@ export default function AssistantScreen() {
             disabled={loading || !inputText.trim()}
           >
             {loading ? (
-              <ActivityIndicator size="small" color={COLORS.white} />
+              <ActivityIndicator size="small" color={COLORS.text} />
             ) : (
-              <Ionicons name="arrow-up" size={20} color={COLORS.white} />
+              <Ionicons name="arrow-up" size={20} color={COLORS.text} />
             )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+export default function AssistantScreen() {
+  useFocusEffect(
+    React.useCallback(() => {
+      // Tab bar will be hidden via screenOptions
+      return () => {
+        // Cleanup if needed
+      };
+    }, [])
+  );
+
+  return <AssistantContent />;
 }
 
 const styles = StyleSheet.create({
