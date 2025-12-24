@@ -214,9 +214,6 @@ export default function AssistantScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={28} color={COLORS.text} />
-        </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.title}>Planera AI Assistant</Text>
           <View style={styles.statusBadge}>
