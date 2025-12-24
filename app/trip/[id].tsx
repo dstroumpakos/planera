@@ -9,7 +9,6 @@ import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
 import GeneratingLoadingScreen from "@/components/GeneratingLoadingScreen";
-import UnsplashAttribution from "@/components/UnsplashAttribution";
 
 // Conditionally import MapView only on native platforms
 let MapView: any = null;
@@ -914,23 +913,9 @@ export default function TripDetails() {
             </SafeAreaView>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Hero Image / Map Preview */}
+                {/* Map Preview */}
                 <View style={styles.mapPreviewContainer}>
-                    {/* Show Unsplash destination image if available */}
-                    {itinerary?.destinationImage?.imageUrl ? (
-                        <View style={styles.heroImageContainer}>
-                            <Image 
-                                source={{ uri: itinerary.destinationImage.imageUrl }} 
-                                style={styles.mapImage} 
-                                resizeMode="cover"
-                            />
-                            <UnsplashAttribution
-                                photographerName={itinerary.destinationImage.photographerName}
-                                photographerUrl={itinerary.destinationImage.photographerUrl}
-                                style={styles.unsplashAttribution}
-                            />
-                        </View>
-                    ) : Platform.OS !== 'web' && trip.itinerary?.destinationCoordinates && MapView ? (
+                    {Platform.OS !== 'web' && trip.itinerary?.destinationCoordinates && MapView ? (
                         <MapView
                             style={styles.mapImage}
                             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
@@ -956,7 +941,7 @@ export default function TripDetails() {
                     ) : (
                         <TouchableOpacity style={styles.webMapFallback} onPress={() => openMap(trip.destination)}>
                             <Image 
-                                source={{ uri: `https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=400&fit=crop` }} 
+                                source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=400&fit=crop` }} 
                                 style={styles.map} 
                             />
                             <View style={styles.webMapOverlay}>
@@ -1571,17 +1556,6 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
         resizeMode: "cover",
-    },
-    heroImageContainer: {
-        width: "100%",
-        height: "100%",
-        position: "relative",
-    },
-    unsplashAttribution: {
-        position: "absolute",
-        bottom: 60,
-        left: 12,
-        zIndex: 10,
     },
     mapGradient: {
         position: "absolute",

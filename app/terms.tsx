@@ -40,7 +40,7 @@ export default function TermsOfService() {
                 <View style={styles.titleSection}>
                     <Text style={styles.mainTitle}>Planera</Text>
                     <Text style={styles.subtitle}>Terms of Use</Text>
-                    <Text style={styles.lastUpdated}>Last updated: December 18, 2025</Text>
+                    <Text style={styles.lastUpdated}>Last updated: December 18, 2024</Text>
                 </View>
 
                 {/* Section 1 */}
@@ -81,26 +81,6 @@ export default function TermsOfService() {
                     </Text>
                     <Text style={styles.sectionTextBold}>
                         Planera assumes no liability for errors, omissions, or changes related to AI-generated content.
-                    </Text>
-                </View>
-
-                {/* AI Disclaimer Box */}
-                <View style={styles.aiDisclaimerBox}>
-                    <View style={styles.aiDisclaimerHeader}>
-                        <Ionicons name="warning" size={20} color="#FFD900" />
-                        <Text style={styles.aiDisclaimerTitle}>AI DISCLAIMER</Text>
-                    </View>
-                    <Text style={styles.aiDisclaimerText}>
-                        Planera uses artificial intelligence to generate travel plans.
-                    </Text>
-                    <Text style={styles.aiDisclaimerSubtitle}>AI-generated content:</Text>
-                    <View style={styles.bulletList}>
-                        <Text style={styles.aiDisclaimerBullet}>• Is informational only</Text>
-                        <Text style={styles.aiDisclaimerBullet}>• May contain inaccuracies</Text>
-                        <Text style={styles.aiDisclaimerBullet}>• Should not be considered professional travel advice</Text>
-                    </View>
-                    <Text style={styles.aiDisclaimerTextBold}>
-                        Users must independently verify all travel information.
                     </Text>
                 </View>
 
@@ -163,37 +143,25 @@ export default function TermsOfService() {
                     </Text>
                 </View>
 
-                {/* Section 8 - Subscription Terms */}
+                {/* Section 8 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>8. Subscription Terms</Text>
-                    <View style={styles.bulletList}>
-                        <Text style={styles.bulletItem}>• Subscriptions unlock premium features</Text>
-                        <Text style={styles.bulletItem}>• Billing is handled by Apple App Store or Google Play</Text>
-                        <Text style={styles.bulletItem}>• Auto-renewal applies unless canceled</Text>
-                        <Text style={styles.bulletItem}>• Cancellation must be done through your store account</Text>
-                        <Text style={styles.bulletItem}>• No refunds are issued directly by Planera</Text>
-                    </View>
-                </View>
-
-                {/* Section 9 */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>9. Termination</Text>
+                    <Text style={styles.sectionTitle}>8. Termination</Text>
                     <Text style={styles.sectionText}>
                         We reserve the right to suspend or terminate access to Planera if these Terms are violated.
                     </Text>
                 </View>
 
-                {/* Section 10 */}
+                {/* Section 9 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>10. Governing Law</Text>
+                    <Text style={styles.sectionTitle}>9. Governing Law</Text>
                     <Text style={styles.sectionText}>
                         These Terms are governed by the laws of the European Union and applicable national legislation.
                     </Text>
                 </View>
 
-                {/* Section 11 */}
+                {/* Section 10 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>11. Contact</Text>
+                    <Text style={styles.sectionTitle}>10. Contact</Text>
                     <Text style={styles.sectionText}>
                         For questions regarding these Terms, contact:
                     </Text>
@@ -335,48 +303,6 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#D4A853",
         marginLeft: 12,
-    },
-    aiDisclaimerBox: {
-        backgroundColor: "#1A1A1A",
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 28,
-    },
-    aiDisclaimerHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    aiDisclaimerTitle: {
-        fontSize: 16,
-        fontWeight: "800",
-        color: "#FFD900",
-        marginLeft: 10,
-        letterSpacing: 1,
-    },
-    aiDisclaimerText: {
-        fontSize: 15,
-        lineHeight: 24,
-        color: "#FFFFFF",
-        marginBottom: 12,
-    },
-    aiDisclaimerSubtitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#CCCCCC",
-        marginBottom: 8,
-    },
-    aiDisclaimerTextBold: {
-        fontSize: 15,
-        lineHeight: 24,
-        color: "#FFD900",
-        fontWeight: "600",
-        marginTop: 12,
-    },
-    aiDisclaimerBullet: {
-        fontSize: 15,
-        lineHeight: 26,
-        color: "#FFFFFF",
     },
     footer: {
         height: 40,

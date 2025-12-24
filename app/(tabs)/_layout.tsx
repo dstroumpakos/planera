@@ -19,11 +19,11 @@ export default function TabLayout() {
     
     return (
         <Tabs
-            screenOptions={({route}) => ({
+            screenOptions={{
                 headerShown: false,
                 tabBarActiveTintColor: COLORS.primary,
                 tabBarInactiveTintColor: COLORS.inactive,
-                tabBarStyle: route.name === "assistant" ? { display: "none" } : {
+                tabBarStyle: {
                     backgroundColor: COLORS.background,
                     borderTopWidth: 0,
                     paddingTop: 8,
@@ -46,7 +46,7 @@ export default function TabLayout() {
                 tabBarItemStyle: {
                     paddingTop: 4,
                 },
-            })}
+            }}
         >
             <Tabs.Screen
                 name="index"
@@ -86,9 +86,9 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="assistant"
+                name="deals"
                 options={{
-                    title: "Assistant",
+                    title: "Deals",
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? "chatbubble" : "chatbubble-outline"} size={24} color={color} />
                     ),

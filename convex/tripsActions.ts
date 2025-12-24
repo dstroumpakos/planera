@@ -35,13 +35,6 @@ import {
     searchTripAdvisorRestaurants,
 } from "./helpers/apiHelpers";
 
-import {
-    getDestinationPhoto,
-    formatPhotoForStorage,
-    trackPhotoDownload,
-    getFallbackDestinationImage,
-} from "./helpers/unsplashHelpers";
-
 export const generate = internalAction({
     args: { 
         tripId: v.id("trips"), 
@@ -256,29 +249,7 @@ export const generate = internalAction({
                 destinationCoordinates = getFallbackCoordinates(trip.destination);
             }
 
-            // 7. Fetch destination photo from Unsplash
-            console.log("📸 Fetching destination photo from Unsplash...");
-            let destinationImage = null;
-            const hasUnsplashKey = !!process.env.UNSPLASH_ACCESS_KEY;
-            console.log("  - Unsplash API:", hasUnsplashKey ? "✅ Configured" : "❌ Missing");
-            
-            if (hasUnsplashKey) {
-                try {
-                    const { photo } = await getDestinationPhoto(trip.destination);
-                    if (photo) {
-                        destinationImage = formatPhotoForStorage(photo);
-                        // Track the download as per Unsplash guidelines
-                        await trackPhotoDownload(photo);
-                        console.log(`✅ Unsplash photo ready: ${photo.id} by ${photo.user.name}`);
-                    } else {
-                        console.warn("⚠️ No Unsplash photos found for destination");
-                    }
-                } catch (error) {
-                    console.error("❌ Unsplash photo fetch failed:", error);
-                }
-            }
-
-            // 8. Generate day-by-day itinerary with OpenAI
+            // 7. Generate day-by-day itinerary with OpenAI
             console.log("📝 Generating itinerary with OpenAI...");
             let dayByDayItinerary;
             if (hasOpenAIKey) {
@@ -364,7 +335,6 @@ Make sure prices are realistic for ${trip.destination}. Museums typically cost �
                 destinationCoordinates,
                 dayByDayItinerary,
                 estimatedDailyExpenses: calculateDailyExpenses(Number(trip.budget)),
-                destinationImage,
             };
 
             console.log("✅ Trip generation complete!");
