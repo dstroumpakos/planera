@@ -8,6 +8,7 @@ export const chat = action({
     message: v.string(),
     location: v.optional(v.string()),
   },
+  returns: v.string(),
   handler: async (ctx, args) => {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY environment variable is required");
@@ -65,6 +66,14 @@ export const getWeather = action({
   args: {
     location: v.string(),
   },
+  returns: v.object({
+    location: v.string(),
+    temperature: v.number(),
+    condition: v.string(),
+    humidity: v.number(),
+    wind: v.number(),
+    uvIndex: v.number(),
+  }),
   handler: async (ctx, args) => {
     // Using Open-Meteo free weather API (no key required)
     try {
