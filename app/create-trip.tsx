@@ -766,6 +766,57 @@ export default function CreateTripScreen() {
                     </View>
                 </View>
 
+                {/* Flight Preferences Section */}
+                {!formData.skipFlights && (
+                    <View style={styles.card}>
+                        <Text style={styles.sectionLabel}>Flight Preference</Text>
+                        <View style={styles.flightPreferencesContainer}>
+                            {(['any', 'morning', 'afternoon', 'evening', 'night'] as const).map((time) => (
+                                <TouchableOpacity
+                                    key={time}
+                                    style={[
+                                        styles.flightTimeButton,
+                                        formData.preferredFlightTime === time && styles.flightTimeButtonActive,
+                                    ]}
+                                    onPress={() => setFormData({ ...formData, preferredFlightTime: time })}
+                                >
+                                    <Ionicons 
+                                        name={
+                                            time === 'morning' ? 'sunny' :
+                                            time === 'afternoon' ? 'partly-sunny' :
+                                            time === 'evening' ? 'sunset' :
+                                            time === 'night' ? 'moon' :
+                                            'time'
+                                        }
+                                        size={20}
+                                        color={formData.preferredFlightTime === time ? '#1A1A1A' : '#FFE500'}
+                                    />
+                                    <Text style={[
+                                        styles.flightTimeText,
+                                        formData.preferredFlightTime === time && styles.flightTimeTextActive,
+                                    ]}>
+                                        {time.charAt(0).toUpperCase() + time.slice(1)}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                )}
+
+                {/* Hotel Preference Section */}
+                <View style={styles.card}>
+                    <Text style={styles.sectionLabel}>Hotel Preference</Text>
+                    <TouchableOpacity 
+                        style={styles.skipHotelContainer}
+                        onPress={() => setFormData(prev => ({ ...prev, skipHotel: !prev.skipHotel }))}
+                    >
+                        <View style={[styles.checkbox, formData.skipHotel && styles.checkboxChecked]}>
+                            {formData.skipHotel && <Ionicons name="checkmark" size={14} color="#1A1A1A" />}
+                        </View>
+                        <Text style={styles.skipFlightsText}>I already have accommodation (Skip hotel search)</Text>
+                    </TouchableOpacity>
+                </View>
+
                 {/* Generate Button */}
                 <TouchableOpacity 
                     style={[styles.generateButton, loading && styles.disabledButton]}
@@ -1252,5 +1303,44 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#9B9B9B",
         textAlign: "center",
+    },
+    flightPreferencesContainer: {
+        flexDirection: "row",
+        gap: 10,
+        flexWrap: "wrap",
+    },
+    flightTimeButton: {
+        flex: 1,
+        minWidth: "30%",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: "#FFF8E1",
+        borderWidth: 2,
+        borderColor: "#FFE500",
+    },
+    flightTimeButtonActive: {
+        backgroundColor: "#FFE500",
+        borderColor: "#FFE500",
+    },
+    flightTimeText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    flightTimeTextActive: {
+        color: "#1A1A1A",
+    },
+    skipHotelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: '#FFF8E1',
+        borderRadius: 12,
     },
 });
