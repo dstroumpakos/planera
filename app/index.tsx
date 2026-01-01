@@ -1,7 +1,7 @@
 import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform, Dimensions } from "react-native";
 import { Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "convex/react";
 import { authClient } from "@/lib/auth-client";
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState, useRef, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,6 +33,7 @@ export default function Index() {
     const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+    const router = useRouter();
 
     // Add timeout for auth loading
     useEffect(() => {
@@ -341,7 +342,7 @@ export default function Index() {
                 )}
                 
                 <Text style={styles.termsText}>
-                    By continuing, you agree to our <Text style={styles.termsLink}>Terms of Service</Text> and{"\n"}<Text style={styles.termsLink}>Privacy Policy</Text>.
+                    By continuing, you agree to our <Text style={styles.termsLink} onPress={() => router.push("/terms")}>Terms of Service</Text> and{"\n"}<Text style={styles.termsLink} onPress={() => router.push("/privacy")}>Privacy Policy</Text>.
                 </Text>
             </ScrollView>
         </KeyboardAvoidingView>
