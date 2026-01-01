@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -30,6 +31,7 @@ export default function AIAssistant() {
     const [inputText, setInputText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
     const userPlan = useQuery(api.users.getPlan);
     const askAssistant = useAction(api.aiAssistant.askAssistant);
@@ -82,7 +84,11 @@ export default function AIAssistant() {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+                    </TouchableOpacity>
                     <Text style={styles.headerTitle}>Travel Assistant</Text>
+                    <View style={styles.headerSpacer} />
                 </View>
 
                 <View style={styles.lockedContainer}>
@@ -111,8 +117,14 @@ export default function AIAssistant() {
                 style={styles.keyboardAvoid}
             >
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Travel Assistant</Text>
-                    <Text style={styles.headerSubtitle}>Ask about weather, visas, and travel tips</Text>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+                    </TouchableOpacity>
+                    <View style={styles.headerContent}>
+                        <Text style={styles.headerTitle}>Travel Assistant</Text>
+                        <Text style={styles.headerSubtitle}>Ask about weather, visas, and travel tips</Text>
+                    </View>
+                    <View style={styles.headerSpacer} />
                 </View>
 
                 {messages.length === 0 ? (
@@ -206,11 +218,23 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        paddingHorizontal: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 12,
         paddingTop: 8,
         paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.border,
+    },
+    backButton: {
+        padding: 8,
+        marginRight: 8,
+    },
+    headerContent: {
+        flex: 1,
+    },
+    headerSpacer: {
+        width: 40,
     },
     headerTitle: {
         fontSize: 28,
