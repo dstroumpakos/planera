@@ -10,7 +10,7 @@ import { Calendar, DateData } from 'react-native-calendars';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import logoImage from "@/assets/images/image.png";
+import logoImage from "@/assets/images/logo-a-stapr6.png";
 
 // Airport database with country/region groupings
 const AIRPORTS = [
