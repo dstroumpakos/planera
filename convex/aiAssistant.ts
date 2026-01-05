@@ -9,6 +9,11 @@ export const askAssistant = action({
   args: {
     question: v.string(),
   },
+  returns: v.object({
+    question: v.string(),
+    answer: v.string(),
+    timestamp: v.number(),
+  }),
   handler: async (ctx, args) => {
     // Get authenticated user
     const user = await authComponent.getAuthUser(ctx);

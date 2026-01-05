@@ -783,8 +783,8 @@ export default function CreateTripScreen() {
                                     <Ionicons 
                                         name={
                                             time === 'morning' ? 'sunny' :
-                                            time === 'afternoon' ? 'partly-sunny' :
-                                            time === 'evening' ? 'sunset' :
+                                            time === 'afternoon' ? 'cloud' :
+                                            time === 'evening' ? 'cloud' :
                                             time === 'night' ? 'moon' :
                                             'time'
                                         }
