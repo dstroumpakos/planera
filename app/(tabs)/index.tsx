@@ -34,8 +34,8 @@ const FEATURED_TRIPS = [
 export default function HomeScreen() {
     const router = useRouter();
     const { isAuthenticated } = useConvexAuth();
-    const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
+    const userId = useQuery(api.users.getCurrentUserId, isAuthenticated ? {} : "skip");
     
     // Feedback modal state
     const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
@@ -45,10 +45,9 @@ export default function HomeScreen() {
     } | null>(null);
     
     // Get trips needing feedback
-    const user = session?.user;
     const tripsNeedingFeedback = useQuery(
         api.feedback.getTripsNeedingFeedback,
-        user?.id ? { userId: user.id } : "skip"
+        userId ? { userId } : "skip"
     );
     
     // Show feedback modal if there are trips needing feedback
@@ -69,7 +68,7 @@ export default function HomeScreen() {
         setFeedbackTrip(null);
     };
 
-    const userName = user?.name?.split(" ")[0] || "Traveler";
+    const userName = "Traveler";
     
     // Get greeting based on time
     const getGreeting = () => {
