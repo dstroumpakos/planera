@@ -30,7 +30,7 @@ export const askAssistant = action({
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-5-turbo",
         messages: [
           {
             role: "system",
