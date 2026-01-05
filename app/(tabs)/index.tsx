@@ -485,14 +485,13 @@ const styles = StyleSheet.create({
     },
     trendingInfo: {
         padding: 16,
+        backgroundColor: COLORS.backgroundDark,
+        borderRadius: 12,
     },
     trendingName: {
         fontSize: 18,
         fontWeight: "700",
         color: COLORS.white,
-        position: "absolute",
-        bottom: 60,
-        left: 16,
     },
     trendingLocation: {
         flexDirection: "row",
@@ -502,7 +501,7 @@ const styles = StyleSheet.create({
     },
     trendingCountry: {
         fontSize: 14,
-        color: COLORS.textMuted,
+        color: COLORS.text,
     },
     trendingPrice: {
         fontSize: 18,
