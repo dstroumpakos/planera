@@ -784,7 +784,7 @@ export default function CreateTripScreen() {
                                         name={
                                             time === 'morning' ? 'sunny' :
                                             time === 'afternoon' ? 'partly-sunny' :
-                                            time === 'evening' ? 'sunset' :
+                                            time === 'evening' ? 'sunny-outline' :
                                             time === 'night' ? 'moon' :
                                             'time'
                                         }

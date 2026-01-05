@@ -7,6 +7,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth-client";
 import TripCounter from "@/components/TripCounter";
+import TripFeedbackModal from "@/components/TripFeedbackModal";
+import { useState, useEffect } from "react";
 
 // Planera Colors
 const COLORS = {
@@ -34,8 +36,39 @@ export default function HomeScreen() {
     const { isAuthenticated } = useConvexAuth();
     const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
-
+    
+    // Feedback modal state
+    const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+    const [feedbackTrip, setFeedbackTrip] = useState<{
+        _id: Id<"trips">;
+        destination: string;
+    } | null>(null);
+    
+    // Get trips needing feedback
     const user = session?.user;
+    const tripsNeedingFeedback = useQuery(
+        api.feedback.getTripsNeedingFeedback,
+        user?.id ? { userId: user.id } : "skip"
+    );
+    
+    // Show feedback modal if there are trips needing feedback
+    useEffect(() => {
+        if (tripsNeedingFeedback && tripsNeedingFeedback.length > 0 && !feedbackModalVisible) {
+            // Show feedback for the first trip that needs it
+            const trip = tripsNeedingFeedback[0];
+            setFeedbackTrip({
+                _id: trip._id,
+                destination: trip.destination,
+            });
+            setFeedbackModalVisible(true);
+        }
+    }, [tripsNeedingFeedback]);
+    
+    const handleFeedbackClose = () => {
+        setFeedbackModalVisible(false);
+        setFeedbackTrip(null);
+    };
+
     const userName = user?.name?.split(" ")[0] || "Traveler";
     
     // Get greeting based on time
@@ -223,6 +256,16 @@ export default function HomeScreen() {
                 {/* Bottom Spacing for Tab Bar */}
                 <View style={{ height: 100 }} />
             </ScrollView>
+            
+            {/* Trip Feedback Modal */}
+            {feedbackTrip && (
+                <TripFeedbackModal
+                    visible={feedbackModalVisible}
+                    tripId={feedbackTrip._id}
+                    destination={feedbackTrip.destination}
+                    onClose={handleFeedbackClose}
+                />
+            )}
         </SafeAreaView>
     );
 }

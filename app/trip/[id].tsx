@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
+import TravelerInsights from "@/components/TravelerInsights";
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -919,6 +920,9 @@ export default function TripDetails() {
                         <Text style={styles.viewMapText}>View Map</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* Traveler Insights - Tips from confirmed travelers */}
+                <TravelerInsights destination={trip.destination} />
 
                 {/* Filter Chips */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
