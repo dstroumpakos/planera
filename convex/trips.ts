@@ -7,10 +7,10 @@ export const create = authMutation({
     args: {
         destination: v.string(),
         origin: v.string(),
-        startDate: v.number(),
-        endDate: v.number(),
-        budget: v.union(v.number(), v.string()), // Accept both for backward compatibility
-        travelers: v.number(),
+        startDate: v.float64(),
+        endDate: v.float64(),
+        budget: v.union(v.float64(), v.string()), // Accept both for backward compatibility
+        travelers: v.float64(),
         interests: v.array(v.string()),
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
