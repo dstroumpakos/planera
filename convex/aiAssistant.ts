@@ -10,9 +10,7 @@ export const askAssistant = action({
     question: v.string(),
   },
   returns: v.object({
-    question: v.string(),
     answer: v.string(),
-    timestamp: v.number(),
   }),
   handler: async (ctx, args) => {
     // Get authenticated user
@@ -21,18 +19,18 @@ export const askAssistant = action({
       throw new Error("Authentication required");
     }
 
-    // Check user subscription - only monthly or yearly subscribers can use AI assistant
+    // Check user subscription
     const userPlan: any = await ctx.runQuery(api.users.getPlan);
     
-    if (!userPlan.isSubscriptionActive) {
-      throw new Error("AI Assistant is only available for monthly or yearly subscribers. Please upgrade your plan.");
+    if (!userPlan?.isSubscriptionActive) {
+      throw new Error("AI Assistant is only available for subscribers");
     }
 
     if (!process.env.OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY environment variable is required");
     }
 
-    // Call OpenAI API with system prompt for weather/general info only
+    // Call OpenAI API
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -44,18 +42,7 @@ export const askAssistant = action({
         messages: [
           {
             role: "system",
-            content: `You are a helpful travel assistant for Planera. You can only answer questions about:
-1. Weather and climate information for travel destinations
-2. General travel information (visa requirements, best time to visit, cultural tips, etc.)
-3. General knowledge questions related to travel
-
-Do NOT answer questions about:
-- Trip planning or itinerary creation (that's what the main app does)
-- Booking flights, hotels, or activities
-- Personal financial advice
-- Medical or legal advice
-
-Keep responses concise and helpful. If a question is outside your scope, politely redirect the user to the main trip planning features.`,
+            content: `You are a helpful travel assistant. Answer questions about weather, visa requirements, cultural tips, and general travel information. Keep responses concise and helpful.`,
           },
           {
             role: "user",
@@ -76,9 +63,7 @@ Keep responses concise and helpful. If a question is outside your scope, politel
     const answer = data.choices[0]?.message?.content || "I couldn't generate a response. Please try again.";
 
     return {
-      question: args.question,
       answer,
-      timestamp: Date.now(),
     };
   },
 });
