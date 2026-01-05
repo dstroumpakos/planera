@@ -3,7 +3,6 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
-import { api } from "./_generated/api";
 
 export const askAssistant = action({
   args: {
@@ -17,13 +16,6 @@ export const askAssistant = action({
     const user = await authComponent.getAuthUser(ctx);
     if (!user) {
       throw new Error("Authentication required");
-    }
-
-    // Check user subscription
-    const userPlan: any = await ctx.runQuery(api.users.getPlan);
-    
-    if (!userPlan?.isSubscriptionActive) {
-      throw new Error("AI Assistant is only available for subscribers");
     }
 
     if (!process.env.OPENAI_API_KEY) {
