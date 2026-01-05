@@ -7,7 +7,6 @@ import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth-client";
 import TripCounter from "@/components/TripCounter";
-import { useState, useEffect } from "react";
 
 // Planera Colors
 const COLORS = {
@@ -33,25 +32,11 @@ const FEATURED_TRIPS = [
 export default function HomeScreen() {
     const router = useRouter();
     const { isAuthenticated } = useConvexAuth();
+    const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
-    const userId = useQuery(api.users.getCurrentUserId, isAuthenticated ? {} : "skip");
-    
-    // Get trips needing feedback
-    const tripsNeedingFeedback = useQuery(
-        api.feedback.getTripsNeedingFeedback,
-        userId ? { userId } : "skip"
-    );
-    
-    // Show feedback modal if there are trips needing feedback
-    useEffect(() => {
-        if (tripsNeedingFeedback && tripsNeedingFeedback.length > 0) {
-            // Navigate to trip-feedback page for the first trip that needs it
-            const trip = tripsNeedingFeedback[0];
-            router.push(`/trip-feedback?tripId=${trip._id}`);
-        }
-    }, [tripsNeedingFeedback]);
 
-    const userName = "Traveler";
+    const user = session?.user;
+    const userName = user?.name?.split(" ")[0] || "Traveler";
     
     // Get greeting based on time
     const getGreeting = () => {
@@ -458,13 +443,14 @@ const styles = StyleSheet.create({
     },
     trendingInfo: {
         padding: 16,
-        backgroundColor: COLORS.backgroundDark,
-        borderRadius: 12,
     },
     trendingName: {
         fontSize: 18,
         fontWeight: "700",
         color: COLORS.white,
+        position: "absolute",
+        bottom: 60,
+        left: 16,
     },
     trendingLocation: {
         flexDirection: "row",
@@ -474,7 +460,7 @@ const styles = StyleSheet.create({
     },
     trendingCountry: {
         fontSize: 14,
-        color: COLORS.text,
+        color: COLORS.textMuted,
     },
     trendingPrice: {
         fontSize: 18,

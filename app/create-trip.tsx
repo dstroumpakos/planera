@@ -486,26 +486,7 @@ export default function CreateTripScreen() {
             // Clean up Convex error prefix if present
             const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
             
-            // Check if it's a credits/subscription error
-            if (cleanMessage.includes("No trip credits available") || cleanMessage.includes("Please purchase a trip pack or subscribe")) {
-                Alert.alert(
-                    "Upgrade Required",
-                    "You need to either purchase a trip pack or subscribe to a plan to create more trips.",
-                    [
-                        { text: "Cancel", onPress: () => {} },
-                        { 
-                            text: "View Plans", 
-                            onPress: () => {
-                                setLoading(false);
-                                setShowLoadingScreen(false);
-                                router.push("/subscription");
-                            }
-                        }
-                    ]
-                );
-            } else {
-                Alert.alert("Error", cleanMessage);
-            }
+            Alert.alert("Error", cleanMessage);
             setLoading(false);
             setShowLoadingScreen(false);
         }
@@ -803,7 +784,7 @@ export default function CreateTripScreen() {
                                         name={
                                             time === 'morning' ? 'sunny' :
                                             time === 'afternoon' ? 'partly-sunny' :
-                                            time === 'evening' ? 'sunny-outline' :
+                                            time === 'evening' ? 'sunset' :
                                             time === 'night' ? 'moon' :
                                             'time'
                                         }

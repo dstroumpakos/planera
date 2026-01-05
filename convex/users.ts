@@ -358,12 +358,3 @@ export const cancelSubscription = authMutation({
         return { success: true };
     },
 });
-
-// Get current user's ID
-export const getCurrentUserId = authQuery({
-    args: {},
-    returns: v.string(),
-    handler: async (ctx) => {
-        return ctx.user._id;
-    },
-});
