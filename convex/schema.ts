@@ -80,4 +80,11 @@ export default defineSchema({
         dealAlerts: v.optional(v.boolean()),
         tripReminders: v.optional(v.boolean()),
     }).index("by_user", ["userId"]),
+    tripFeedback: defineTable({
+        tripId: v.id("trips"),
+        completed: v.boolean(),
+        tip: v.optional(v.string()),
+        destination: v.string(),
+        submittedAt: v.float64(),
+    }).index("by_trip", ["tripId"]).index("by_destination", ["destination"]),
 });
