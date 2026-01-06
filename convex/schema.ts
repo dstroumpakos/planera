@@ -80,4 +80,21 @@ export default defineSchema({
         dealAlerts: v.optional(v.boolean()),
         tripReminders: v.optional(v.boolean()),
     }).index("by_user", ["userId"]),
+    insights: defineTable({
+        userId: v.string(),
+        destination: v.string(),
+        content: v.string(),
+        category: v.union(
+            v.literal("food"),
+            v.literal("transport"),
+            v.literal("neighborhoods"),
+            v.literal("timing"),
+            v.literal("hidden_gem"),
+            v.literal("avoid"),
+            v.literal("other")
+        ),
+        verified: v.boolean(),
+        likes: v.float64(),
+        createdAt: v.float64(),
+    }).index("by_destination", ["destination"]).index("by_user", ["userId"]),
 });
