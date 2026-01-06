@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
 import { paginationOptsValidator } from "convex/server";
 
+// Traveler insights functions
 export const list = authQuery({
     args: {
         destination: v.optional(v.string()),
