@@ -49,7 +49,6 @@ export default function HomeScreen() {
     const quickActions = [
         { id: "ai", icon: "sparkles", label: "AI", sublabel: "Trip Planner", color: COLORS.primary, onPress: () => router.push("/create-trip") },
         { id: "multi", icon: "git-compare-outline", label: "Multi-City", sublabel: "Route", color: COLORS.white, onPress: () => router.push("/create-trip") },
-        { id: "deals", icon: "pricetag-outline", label: "Explore", sublabel: "Deals", color: COLORS.white, onPress: () => router.push("/(tabs)/deals") },
     ];
 
     return (
