@@ -65,8 +65,6 @@ export default function TravelPreferences() {
         try {
             await updatePreferences({
                 homeAirport,
-                defaultBudget: parseFloat(defaultBudget) || 2000,
-                defaultTravelers: parseInt(defaultTravelers) || 1,
                 defaultInterests,
                 defaultSkipFlights,
                 defaultSkipHotel,
