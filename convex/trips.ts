@@ -179,6 +179,9 @@ export const list = authQuery({
             preferredFlightTime: v.optional(v.string()),
             status: v.string(),
             itinerary: v.optional(v.any()),
+            isMultiCity: v.optional(v.boolean()),
+            optimizedRoute: v.optional(v.any()),
+            destinations: v.optional(v.any()),
         })
     ),
     handler: async (ctx) => {
