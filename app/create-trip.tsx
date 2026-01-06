@@ -9,6 +9,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, DateData } from 'react-native-calendars';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AIRPORTS } from "@/lib/airports";
+import { INTERESTS } from "@/lib/data";
 
 import logoImage from "@/assets/images/appicon-1024x1024-01-1vb1vx.png";
 
@@ -28,7 +30,7 @@ export default function CreateTripScreen() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
     const userPlan = useQuery(api.users.getPlan);
-    const userSettings = useQuery(api.users.getSettings);
+    const userSettings = useQuery(api.users.getSettings) as any;
     const [loading, setLoading] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');

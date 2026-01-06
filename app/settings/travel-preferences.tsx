@@ -10,7 +10,7 @@ import { AIRPORTS } from "@/lib/airports";
 
 export default function TravelPreferences() {
     const router = useRouter();
-    const settings = useQuery(api.users.getSettings);
+    const settings = useQuery(api.users.getSettings) as any;
     const updatePreferences = useMutation(api.users.updateTravelPreferences);
 
     const [homeAirport, setHomeAirport] = useState("");
