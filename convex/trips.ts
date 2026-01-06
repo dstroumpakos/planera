@@ -92,8 +92,13 @@ export const create = authMutation({
             ? "Note: User already has flights booked, so DO NOT include flight recommendations."
             : `Flying from: ${args.origin}. Preferred flight time: ${args.preferredFlightTime || "any"}`;
 
+        const hotelInfo = args.skipHotel
+            ? "Note: User already has accommodation booked, so DO NOT include hotel recommendations."
+            : "";
+
         const prompt = `Plan a trip to ${args.destination} for ${args.travelers} people.
         ${flightInfo}
+        ${hotelInfo}
         Budget: ${args.budget}.
         Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
         Interests: ${args.interests.join(", ")}.`;
@@ -103,6 +108,7 @@ export const create = authMutation({
             tripId, 
             prompt, 
             skipFlights: args.skipFlights ?? false,
+            skipHotel: args.skipHotel ?? false,
             preferredFlightTime: args.preferredFlightTime ?? "any",
         });
 

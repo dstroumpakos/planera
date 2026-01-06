@@ -10,11 +10,12 @@ export const generate = internalAction({
         tripId: v.id("trips"), 
         prompt: v.string(), 
         skipFlights: v.optional(v.boolean()),
+        skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
     },
     returns: v.null(),
     handler: async (ctx, args) => {
-        const { tripId, skipFlights, preferredFlightTime } = args;
+        const { tripId, skipFlights, skipHotel, preferredFlightTime } = args;
 
         console.log("=".repeat(80));
         console.log("🚀 TRIP GENERATION STARTED");
@@ -22,6 +23,7 @@ export const generate = internalAction({
         console.log("Trip ID:", tripId);
         console.log("Prompt:", args.prompt);
         console.log("Skip Flights:", skipFlights ? "Yes" : "No");
+        console.log("Skip Hotel:", skipHotel ? "Yes" : "No");
         console.log("Preferred Flight Time:", preferredFlightTime || "any");
 
         // Get trip details
@@ -136,7 +138,14 @@ export const generate = internalAction({
 
             // 2. Fetch hotels (with fallback)
             console.log("🏨 Fetching hotels...");
-            if (hasAmadeusKeys) {
+            if (skipHotel) {
+                console.log("✈️ Skipping hotel search - user already has accommodation booked");
+                hotels = {
+                    skipped: true,
+                    message: "You indicated you already have accommodation booked",
+                    dataSource: "user-provided",
+                };
+            } else if (hasAmadeusKeys) {
                 try {
                     const amadeusToken = await getAmadeusToken();
                     hotels = await searchHotels(
@@ -157,7 +166,7 @@ export const generate = internalAction({
             } else {
                 hotels = getFallbackHotels(trip.destination);
             }
-            console.log(`✅ Hotels ready: ${hotels.length} options`);
+            console.log(`✅ Hotels ready: ${typeof hotels === 'object' && 'skipped' in hotels ? "Skipped" : (Array.isArray(hotels) ? hotels.length + " options" : "Unknown")}`);
 
             // 3. Fetch activities (with fallback)
             console.log("🎯 Fetching activities...");
@@ -634,160 +643,212 @@ async function searchFlights(
     console.log(`   Preferred time: ${preferredFlightTime}`);
 
     try {
-        // Search for outbound flights - get more results for multiple options
-        const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${originCode}&destinationLocationCode=${destCode}&departureDate=${departureDate}&adults=${adults}&nonStop=false&max=10`;
+        let flights = null;
+        let hotels;
+        let activities;
+        let restaurants;
 
-        const response = await fetch(url, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-            console.error("❌ Amadeus API error:", data);
-            console.warn("⚠️ Falling back to AI-generated flight data");
-            return generateRealisticFlights(
-                origin,
-                originCode,
-                destination,
-                destCode,
-                departureDate,
-                returnDate,
-                adults,
-                preferredFlightTime
-            );
-        }
-        
-        if (!data.data || data.data.length === 0) {
-            console.warn("⚠️ No flights found in Amadeus. Generating realistic flight data with AI...");
-            return generateRealisticFlights(
-                origin,
-                originCode,
-                destination,
-                destCode,
-                departureDate,
-                returnDate,
-                adults,
-                preferredFlightTime
-            );
-        }
-
-        console.log(`✅ Found ${data.data.length} flight offers from Amadeus`);
-
-        // Now search for return flights separately
-        const returnUrl = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${destCode}&destinationLocationCode=${originCode}&departureDate=${returnDate}&adults=${adults}&nonStop=false&max=10`;
-
-        const returnResponse = await fetch(returnUrl, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-
-        const returnData = await returnResponse.json();
-        
-        if (!returnResponse.ok || !returnData.data || returnData.data.length === 0) {
-            console.warn("⚠️ No return flights found, using outbound data for both directions");
-        }
-
-        // Process multiple flight options
-        const flightOptions = [];
-        const numOptions = Math.min(data.data.length, 4); // Up to 4 options
-        
-        // Find the best (lowest) price
-        let bestPrice = Infinity;
-        for (let i = 0; i < numOptions; i++) {
-            const outboundOffer = data.data[i];
-            const returnOffer = returnData.data?.[i] || returnData.data?.[0] || outboundOffer;
-            const totalPrice = parseFloat(outboundOffer.price.total) + (returnData.data?.[i] ? parseFloat(returnOffer.price.total) : parseFloat(outboundOffer.price.total));
-            if (totalPrice < bestPrice) {
-                bestPrice = totalPrice;
+        // 1. Fetch flights (with fallback) - SKIP if user already has flights
+        if (skipFlights) {
+            console.log("✈️ Skipping flight search - user already has flights booked");
+            flights = {
+                skipped: true,
+                message: "You indicated you already have flights booked",
+                dataSource: "user-provided",
+            };
+        } else {
+            console.log("✈️ Fetching flights...");
+            console.log("  - Preferred time:", preferredFlightTime || "any");
+            if (hasAmadeusKeys) {
+                try {
+                    const amadeusToken = await getAmadeusToken();
+                    flights = await searchFlights(
+                        amadeusToken,
+                        origin,
+                        destination,
+                        departureDate,
+                        returnDate,
+                        adults,
+                        preferredFlightTime || "any"
+                    );
+                } catch (error) {
+                    console.error("❌ Amadeus flights failed:", error);
+                    flights = await generateRealisticFlights(
+                        origin,
+                        originCode,
+                        destination,
+                        destCode,
+                        departureDate,
+                        returnDate,
+                        adults,
+                        preferredFlightTime || "any"
+                    );
+                }
+            } else {
+                flights = await generateRealisticFlights(
+                    origin,
+                    originCode,
+                    destination,
+                    destCode,
+                    departureDate,
+                    returnDate,
+                    adults,
+                    preferredFlightTime || "any"
+                );
             }
+            console.log("✅ Flights ready:", flights.dataSource);
         }
 
-        for (let i = 0; i < numOptions; i++) {
-            const outboundOffer = data.data[i];
-            const outbound = outboundOffer.itineraries[0];
-            
-            const returnOffer = returnData.data?.[i] || returnData.data?.[0] || outboundOffer;
-            const returnFlight = returnOffer.itineraries[0];
-            
-            const totalPrice = parseFloat(outboundOffer.price.total) + (returnData.data?.[i] ? parseFloat(returnOffer.price.total) : parseFloat(outboundOffer.price.total));
-            
-            // Determine flight time category
-            const departureHour = new Date(outbound.segments[0].departure.at).getHours();
-            let timeCategory = "morning";
-            if (departureHour >= 12 && departureHour < 17) timeCategory = "afternoon";
-            else if (departureHour >= 17 && departureHour < 21) timeCategory = "evening";
-            else if (departureHour >= 21 || departureHour < 6) timeCategory = "night";
-            
-            // Generate a booking URL (Skyscanner deep link)
-            // Format: YYMMDD
-            const depDateStr = departureDate.slice(2).replace(/-/g, '');
-            const retDateStr = returnDate.slice(2).replace(/-/g, '');
-            const bookingUrl = `https://www.skyscanner.com/transport/flights/${originCode}/${destCode}/${depDateStr}/${retDateStr}`;
+        // 2. Fetch hotels (with fallback)
+        console.log("🏨 Fetching hotels...");
+        if (skipHotel) {
+            console.log("✈️ Skipping hotel search - user already has accommodation booked");
+            hotels = {
+                skipped: true,
+                message: "You indicated you already have accommodation booked",
+                dataSource: "user-provided",
+            };
+        } else if (hasAmadeusKeys) {
+            try {
+                const amadeusToken = await getAmadeusToken();
+                hotels = await searchHotels(
+                    amadeusToken,
+                    extractIATACode(destination),
+                    departureDate,
+                    returnDate,
+                    adults
+                );
+                if (hotels.length === 0) {
+                    console.warn("⚠️ No hotels from Amadeus, using fallback");
+                    hotels = getFallbackHotels(destination);
+                }
+            } catch (error) {
+                console.error("❌ Amadeus hotels failed:", error);
+                hotels = getFallbackHotels(destination);
+            }
+        } else {
+            hotels = getFallbackHotels(destination);
+        }
+        console.log(`✅ Hotels ready: ${hotels.skipped ? "Skipped" : hotels.length + " options"}`);
 
-            flightOptions.push({
-                id: i + 1,
-                outbound: {
-                    airline: getAirlineName(outbound.segments[0].carrierCode),
-                    airlineCode: outbound.segments[0].carrierCode,
-                    flightNumber: `${outbound.segments[0].carrierCode}${outbound.segments[0].number}`,
-                    duration: formatDuration(outbound.duration),
-                    departure: formatTime(outbound.segments[0].departure.at),
-                    arrival: formatTime(outbound.segments[outbound.segments.length - 1].arrival.at),
-                    stops: outbound.segments.length - 1,
-                    departureTime: outbound.segments[0].departure.at,
-                },
-                return: {
-                    airline: getAirlineName(returnFlight.segments[0].carrierCode),
-                    airlineCode: returnFlight.segments[0].carrierCode,
-                    flightNumber: `${returnFlight.segments[0].carrierCode}${returnFlight.segments[0].number}`,
-                    duration: formatDuration(returnFlight.duration),
-                    departure: formatTime(returnFlight.segments[0].departure.at),
-                    arrival: formatTime(returnFlight.segments[returnFlight.segments.length - 1].arrival.at),
-                    stops: returnFlight.segments.length - 1,
-                    departureTime: returnFlight.segments[0].departure.at,
-                },
-                luggage: `${outboundOffer.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags?.quantity || 0} checked bag(s) included`,
-                cabinBaggage: "1 cabin bag included",
-                pricePerPerson: totalPrice,
-                totalPrice: totalPrice * adults,
-                currency: outboundOffer.price.currency || "EUR",
-                isBestPrice: totalPrice === bestPrice,
-                timeCategory,
-                matchesPreference: preferredFlightTime === "any" || timeCategory === preferredFlightTime,
-                bookingUrl,
+        // 3. Fetch activities (with fallback)
+        console.log("🎯 Fetching activities...");
+        activities = await searchActivities(destination);
+        console.log(`✅ Activities ready: ${activities.length} options`);
+
+        // 4. Fetch restaurants (with fallback)
+        console.log("🍽️ Fetching restaurants...");
+        restaurants = await searchRestaurants(destination);
+        console.log(`✅ Restaurants ready: ${restaurants.length} options`);
+
+        // 5. Generate transportation options
+        console.log("🚗 Generating transportation options...");
+        const transportation = generateTransportationOptions(destination, origin, adults);
+        console.log(`✅ Transportation ready: ${transportation.length} options`);
+
+        // 6. Generate day-by-day itinerary with OpenAI
+        console.log("📝 Generating itinerary with OpenAI...");
+        let dayByDayItinerary;
+        if (hasOpenAIKey) {
+            try {
+                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                const budgetDisplay = typeof trip.budget === "number" ? `€${trip.budget}` : trip.budget;
+                const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${destination} from ${departureDate} to ${returnDate}.
+                
+Budget: ${budgetDisplay}
+Travelers: ${adults}
+Interests: ${trip.interests.join(", ")}
+
+IMPORTANT: For each activity, include:
+- Realistic entry prices in EUR
+- Whether "Skip the Line" tickets are available (for museums, attractions)
+- Skip the Line price (usually 5-15€ more than regular)
+- A booking URL (use real booking platforms like GetYourGuide, Viator, or official sites)
+
+Include specific activities, restaurants, and attractions for each day. Format as JSON with structure:
+{
+  "dailyPlan": [
+    {
+      "day": 1,
+      "date": "2024-01-15",
+      "title": "Day 1 in ${destination}",
+      "activities": [
+        {
+          "time": "09:00 AM",
+          "title": "Activity name",
+          "description": "Brief description",
+          "type": "attraction|museum|restaurant|tour|free",
+          "price": 25,
+          "currency": "EUR",
+          "skipTheLine": true,
+          "skipTheLinePrice": 35,
+          "duration": "2-3 hours",
+          "bookingUrl": "https://www.getyourguide.com/...",
+          "tips": "Best to visit early morning"
+        }
+      ]
+    }
+  ]
+}
+
+Make sure prices are realistic for ${destination}. Museums typically cost €10-25, skip-the-line adds €5-15. Tours cost €20-80. Restaurants show average meal cost per person.`;
+            const completion = await openai.chat.completions.create({
+                messages: [
+                    { role: "system", content: "You are a travel itinerary planner. Return only valid JSON. Always include realistic prices and booking information for activities." },
+                    { role: "user", content: itineraryPrompt },
+                ],
+                model: "gpt-4o",
+                response_format: { type: "json_object" },
             });
+
+            const itineraryContent = completion.choices[0].message.content;
+            if (itineraryContent) {
+                const itineraryData = JSON.parse(itineraryContent);
+                dayByDayItinerary = itineraryData.dailyPlan || [];
+                console.log(`✅ OpenAI generated ${dayByDayItinerary.length} days of itinerary`);
+                
+                // Merge TripAdvisor data into restaurant activities
+                dayByDayItinerary = mergeRestaurantDataIntoItinerary(dayByDayItinerary, restaurants);
+            } else {
+                console.warn("⚠️ OpenAI returned empty content, using fallback");
+                dayByDayItinerary = generateBasicItinerary(trip, activities, restaurants);
+            }
+        } else {
+            console.warn("⚠️ OpenAI not configured, using basic itinerary");
+            dayByDayItinerary = generateBasicItinerary(trip, activities, restaurants);
         }
 
-        // Sort by preference match first, then by price
-        flightOptions.sort((a, b) => {
-            if (a.matchesPreference && !b.matchesPreference) return -1;
-            if (!a.matchesPreference && b.matchesPreference) return 1;
-            return a.pricePerPerson - b.pricePerPerson;
-        });
-
-        return {
-            options: flightOptions,
-            bestPrice,
-            preferredTime: preferredFlightTime,
-            dataSource: "amadeus",
+        const result = {
+            flights,
+            hotels,
+            activities,
+            restaurants,
+            transportation,
+            dayByDayItinerary,
+            estimatedDailyExpenses: calculateDailyExpenses(Number(trip.budget)),
         };
+
+        console.log("✅ Trip generation complete!");
+
+        await ctx.runMutation(internal.trips.updateItinerary, {
+            tripId,
+            itinerary: result,
+            status: "completed",
+        });
     } catch (error: any) {
-        console.error("❌ Error searching flights:", error);
-        console.warn("⚠️ Falling back to AI-generated flight data");
-        return generateRealisticFlights(
-            origin,
-            originCode,
-            destination,
-            destCode,
-            departureDate,
-            returnDate,
-            adults,
-            preferredFlightTime
-        );
+        console.error("❌ Error generating itinerary:", error);
+        console.error("Error details:", {
+            message: error.message,
+            stack: error.stack,
+        });
+        
+        await ctx.runMutation(internal.trips.updateItinerary, {
+            tripId,
+            itinerary: null,
+            status: "failed",
+        });
+        
+        throw new Error(`Failed to generate trip: ${error.message || "Unknown error"}`);
     }
 }
 
@@ -2087,10 +2148,6 @@ function generateTransportationOptions(destination: string, origin: string, trav
             pricePerDay: pricing.carRentalEconomy,
             currency: "EUR",
             features: ["Air Conditioning", "Manual", "4 Seats", "2 Bags"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
             bookingUrl: "https://www.europcar.com",
         },
         {
@@ -2101,10 +2158,6 @@ function generateTransportationOptions(destination: string, origin: string, trav
             pricePerDay: pricing.carRentalCompact,
             currency: "EUR",
             features: ["Air Conditioning", "Automatic", "5 Seats", "3 Bags"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
             bookingUrl: "https://www.hertz.com",
         },
         {
@@ -2115,10 +2168,6 @@ function generateTransportationOptions(destination: string, origin: string, trav
             pricePerDay: pricing.carRentalSUV,
             currency: "EUR",
             features: ["Air Conditioning", "Automatic", "5 Seats", "5 Bags", "GPS"],
-            pickupLocation: `${destination} Airport`,
-            dropoffLocation: `${destination} Airport`,
-            insuranceIncluded: true,
-            fuelPolicy: "Full to Full",
             bookingUrl: "https://www.sixt.com",
         },
     ];
