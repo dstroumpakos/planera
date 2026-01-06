@@ -1061,61 +1061,73 @@ export default function TripDetails() {
                     {activeFilter === 'flights' && (
                         <View>
                             <Text style={styles.sectionTitle}>Available Flights</Text>
-                            {trip.itinerary?.flights?.options?.map((flight: any, index: number) => (
-                                <View key={index} style={[styles.card, flight.isBestPrice && styles.bestPriceCard]}>
-                                    {flight.isBestPrice && (
-                                        <View style={styles.bestPriceBadge}>
-                                            <Text style={styles.bestPriceBadgeText}>Best Price</Text>
-                                        </View>
-                                    )}
-                                    <View style={styles.flightHeader}>
-                                        <View>
-                                            <Text style={styles.airlineName}>{flight.outbound.airline}</Text>
-                                            <Text style={styles.flightTime}>{flight.outbound.departure} - {flight.outbound.arrival}</Text>
-                                        </View>
-                                        <Text style={styles.flightPrice}>€{flight.pricePerPerson}</Text>
+                            {trip.skipFlights ? (
+                                <View style={styles.card}>
+                                    <View style={styles.skippedSection}>
+                                        <Ionicons name="airplane" size={32} color="#94A3B8" />
+                                        <Text style={styles.skippedTitle}>Flights Skipped</Text>
+                                        <Text style={styles.skippedText}>You indicated you already have flights booked for this trip.</Text>
                                     </View>
-                                    <View style={styles.flightRoute}>
-                                        <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
-                                        <View style={styles.flightLineContainer}>
-                                            <View style={styles.flightLine} />
-                                            <Ionicons name="airplane" size={16} color="#64748B" style={styles.flightIcon} />
-                                        </View>
-                                        <Text style={styles.airportCode}>{trip.destination ? trip.destination.substring(0, 3).toUpperCase() : 'DST'}</Text>
-                                    </View>
-                                    <Text style={styles.flightDuration}>{flight.outbound.duration} • {flight.outbound.stops === 0 ? 'Direct' : `${flight.outbound.stops} Stop(s)`}</Text>
-                                    
-                                    <View style={styles.divider} />
-                                    
-                                    <View style={styles.flightHeader}>
-                                        <View>
-                                            <Text style={styles.airlineName}>{flight.return.airline}</Text>
-                                            <Text style={styles.flightTime}>{flight.return.departure} - {flight.return.arrival}</Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.flightRoute}>
-                                        <Text style={styles.airportCode}>{trip.destination ? trip.destination.substring(0, 3).toUpperCase() : 'DST'}</Text>
-                                        <View style={styles.flightLineContainer}>
-                                            <View style={styles.flightLine} />
-                                            <Ionicons name="airplane" size={16} color="#64748B" style={[styles.flightIcon, { transform: [{ rotate: '180deg' }] }]} />
-                                        </View>
-                                        <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
-                                    </View>
-                                    <Text style={styles.flightDuration}>{flight.return.duration} • {flight.return.stops === 0 ? 'Direct' : `${flight.return.stops} Stop(s)`}</Text>
-                                    
-                                    {flight.bookingUrl && (
-                                        <TouchableOpacity 
-                                            style={styles.bookFlightButton}
-                                            onPress={() => Linking.openURL(flight.bookingUrl)}
-                                        >
-                                            <Text style={styles.bookFlightButtonText}>Book Flight</Text>
-                                            <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-                                        </TouchableOpacity>
-                                    )}
                                 </View>
-                            ))}
-                            {(!trip.itinerary?.flights?.options || trip.itinerary.flights.options.length === 0) && (
-                                <Text style={styles.emptyText}>No flights found.</Text>
+                            ) : (
+                                <>
+                                    {trip.itinerary?.flights?.options?.map((flight: any, index: number) => (
+                                        <View key={index} style={[styles.card, flight.isBestPrice && styles.bestPriceCard]}>
+                                            {flight.isBestPrice && (
+                                                <View style={styles.bestPriceBadge}>
+                                                    <Text style={styles.bestPriceBadgeText}>Best Price</Text>
+                                                </View>
+                                            )}
+                                            <View style={styles.flightHeader}>
+                                                <View>
+                                                    <Text style={styles.airlineName}>{flight.outbound.airline}</Text>
+                                                    <Text style={styles.flightTime}>{flight.outbound.departure} - {flight.outbound.arrival}</Text>
+                                                </View>
+                                                <Text style={styles.flightPrice}>€{flight.pricePerPerson}</Text>
+                                            </View>
+                                            <View style={styles.flightRoute}>
+                                                <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
+                                                <View style={styles.flightLineContainer}>
+                                                    <View style={styles.flightLine} />
+                                                    <Ionicons name="airplane" size={16} color="#64748B" style={styles.flightIcon} />
+                                                </View>
+                                                <Text style={styles.airportCode}>{trip.destination ? trip.destination.substring(0, 3).toUpperCase() : 'DST'}</Text>
+                                            </View>
+                                            <Text style={styles.flightDuration}>{flight.outbound.duration} • {flight.outbound.stops === 0 ? 'Direct' : `${flight.outbound.stops} Stop(s)`}</Text>
+                                            
+                                            <View style={styles.divider} />
+                                            
+                                            <View style={styles.flightHeader}>
+                                                <View>
+                                                    <Text style={styles.airlineName}>{flight.return.airline}</Text>
+                                                    <Text style={styles.flightTime}>{flight.return.departure} - {flight.return.arrival}</Text>
+                                                </View>
+                                            </View>
+                                            <View style={styles.flightRoute}>
+                                                <Text style={styles.airportCode}>{trip.destination ? trip.destination.substring(0, 3).toUpperCase() : 'DST'}</Text>
+                                                <View style={styles.flightLineContainer}>
+                                                    <View style={styles.flightLine} />
+                                                    <Ionicons name="airplane" size={16} color="#64748B" style={[styles.flightIcon, { transform: [{ rotate: '180deg' }] }]} />
+                                                </View>
+                                                <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
+                                            </View>
+                                            <Text style={styles.flightDuration}>{flight.return.duration} • {flight.return.stops === 0 ? 'Direct' : `${flight.return.stops} Stop(s)`}</Text>
+                                            
+                                            {flight.bookingUrl && (
+                                                <TouchableOpacity 
+                                                    style={styles.bookFlightButton}
+                                                    onPress={() => Linking.openURL(flight.bookingUrl)}
+                                                >
+                                                    <Text style={styles.bookFlightButtonText}>Book Flight</Text>
+                                                    <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    ))}
+                                    {(!trip.itinerary?.flights?.options || trip.itinerary.flights.options.length === 0) && (
+                                        <Text style={styles.emptyText}>No flights found.</Text>
+                                    )}
+                                </>
                             )}
                         </View>
                     )}
@@ -1166,31 +1178,43 @@ export default function TripDetails() {
                     {activeFilter === 'stays' && (
                         <View>
                             <Text style={styles.sectionTitle}>Accommodations</Text>
-                            {trip.itinerary?.hotels?.map((hotel: any, index: number) => (
-                                <View key={index} style={styles.card}>
-                                    <View style={styles.row}>
-                                        <View style={styles.flightInfo}>
-                                            <Text style={styles.cardTitle}>{hotel.name}</Text>
-                                            <Text style={styles.cardSubtitle}>{hotel.address}</Text>
-                                            <View style={styles.ratingContainer}>
-                                                <Ionicons name="star" size={14} color="#F59E0B" />
-                                                <Text style={styles.ratingText}>{hotel.rating} Stars</Text>
-                                            </View>
-                                            <Text style={styles.activityDesc} numberOfLines={3}>{hotel.description}</Text>
-                                            <Text style={styles.price}>€{hotel.price} / night</Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.amenitiesContainer}>
-                                        {hotel.amenities?.map((amenity: string, i: number) => (
-                                            <View key={i} style={styles.amenityBadge}>
-                                                <Text style={styles.amenityText}>{amenity}</Text>
-                                            </View>
-                                        ))}
+                            {trip.skipHotel ? (
+                                <View style={styles.card}>
+                                    <View style={styles.skippedSection}>
+                                        <Ionicons name="bed" size={32} color="#94A3B8" />
+                                        <Text style={styles.skippedTitle}>Hotels Skipped</Text>
+                                        <Text style={styles.skippedText}>You indicated you already have accommodation booked for this trip.</Text>
                                     </View>
                                 </View>
-                            ))}
-                            {(!trip.itinerary?.hotels || trip.itinerary.hotels.length === 0) && (
-                                <Text style={styles.emptyText}>No accommodations found.</Text>
+                            ) : (
+                                <>
+                                    {trip.itinerary?.hotels?.map((hotel: any, index: number) => (
+                                        <View key={index} style={styles.card}>
+                                            <View style={styles.row}>
+                                                <View style={styles.flightInfo}>
+                                                    <Text style={styles.cardTitle}>{hotel.name}</Text>
+                                                    <Text style={styles.cardSubtitle}>{hotel.address}</Text>
+                                                    <View style={styles.ratingContainer}>
+                                                        <Ionicons name="star" size={14} color="#F59E0B" />
+                                                        <Text style={styles.ratingText}>{hotel.rating} Stars</Text>
+                                                    </View>
+                                                    <Text style={styles.activityDesc} numberOfLines={3}>{hotel.description}</Text>
+                                                    <Text style={styles.price}>€{hotel.price} / night</Text>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenitiesContainer}>
+                                                {hotel.amenities?.map((amenity: string, i: number) => (
+                                                    <View key={i} style={styles.amenityBadge}>
+                                                        <Text style={styles.amenityText}>{amenity}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        </View>
+                                    ))}
+                                    {(!trip.itinerary?.hotels || trip.itinerary.hotels.length === 0) && (
+                                        <Text style={styles.emptyText}>No accommodations found.</Text>
+                                    )}
+                                </>
                             )}
                         </View>
                     )}
@@ -2363,5 +2387,23 @@ const styles = StyleSheet.create({
         backgroundColor: "#E2E8F0",
         alignItems: "center",
         justifyContent: "center",
+    },
+    skippedSection: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 32,
+        paddingHorizontal: 16,
+    },
+    skippedTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1A1A1A',
+        marginTop: 12,
+    },
+    skippedText: {
+        fontSize: 14,
+        color: '#64748B',
+        textAlign: 'center',
+        marginTop: 8,
     },
 });
