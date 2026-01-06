@@ -255,8 +255,8 @@ export const updateTravelPreferences = authMutation({
     args: {
         // New fields
         homeAirport: v.optional(v.string()),
-        defaultBudget: v.optional(v.number()),
-        defaultTravelers: v.optional(v.number()),
+        defaultBudget: v.optional(v.float64()),
+        defaultTravelers: v.optional(v.float64()),
         defaultInterests: v.optional(v.array(v.string())),
         defaultSkipFlights: v.optional(v.boolean()),
         defaultSkipHotel: v.optional(v.boolean()),
@@ -266,7 +266,7 @@ export const updateTravelPreferences = authMutation({
         preferredAirlines: v.optional(v.array(v.string())),
         seatPreference: v.optional(v.string()),
         mealPreference: v.optional(v.string()),
-        hotelStarRating: v.optional(v.number()),
+        hotelStarRating: v.optional(v.float64()),
         budgetRange: v.optional(v.string()),
         travelStyle: v.optional(v.string()),
     },
