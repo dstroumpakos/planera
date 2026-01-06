@@ -157,12 +157,13 @@ export default function InsightsScreen() {
       <Modal
         visible={isModalVisible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        transparent={false}
         onRequestClose={() => setModalVisible(false)}
       >
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalContainer}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Share Insight</Text>

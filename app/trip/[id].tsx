@@ -1124,7 +1124,7 @@ export default function TripDetails() {
                                             )}
                                         </View>
                                     ))}
-                                    {(!trip.itinerary?.flights?.options || trip.itinerary.flights.options.length === 0) && (
+                                    {(!trip.itinerary?.flights || trip.itinerary.flights.length === 0) && (
                                         <Text style={styles.emptyText}>No flights found.</Text>
                                     )}
                                 </>
@@ -1303,12 +1303,13 @@ export default function TripDetails() {
             <Modal 
                 visible={isEditing} 
                 animationType="slide" 
-                presentationStyle="pageSheet"
+                transparent={false}
                 onRequestClose={() => setIsEditing(false)}
             >
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === "ios" ? "padding" : "height"}
                     style={styles.modalContainer}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
                 >
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Edit Trip Details</Text>
