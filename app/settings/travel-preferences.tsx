@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { INTERESTS } from "@/lib/data";
+import { AIRPORTS } from "@/lib/airports";
 
 export default function TravelPreferences() {
     const router = useRouter();
@@ -20,6 +21,9 @@ export default function TravelPreferences() {
     const [defaultSkipHotel, setDefaultSkipHotel] = useState(false);
     const [defaultPreferredFlightTime, setDefaultPreferredFlightTime] = useState("any");
 
+    const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
+    const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
+
     useEffect(() => {
         if (settings) {
             setHomeAirport(settings.homeAirport || "");
@@ -31,6 +35,31 @@ export default function TravelPreferences() {
             setDefaultPreferredFlightTime(settings.defaultPreferredFlightTime || "any");
         }
     }, [settings]);
+
+    const searchAirports = (query: string) => {
+        if (!query || query.length < 2) {
+            setAirportSuggestions([]);
+            setShowAirportSuggestions(false);
+            return;
+        }
+        
+        const lowerQuery = query.toLowerCase();
+        const results = AIRPORTS.filter(airport => 
+            airport.city.toLowerCase().includes(lowerQuery) ||
+            airport.country.toLowerCase().includes(lowerQuery) ||
+            airport.code.toLowerCase().includes(lowerQuery) ||
+            airport.name.toLowerCase().includes(lowerQuery)
+        ).slice(0, 10);
+        
+        setAirportSuggestions(results);
+        setShowAirportSuggestions(results.length > 0);
+    };
+
+    const selectAirport = (airport: typeof AIRPORTS[0]) => {
+        setHomeAirport(`${airport.city}, ${airport.code}`);
+        setShowAirportSuggestions(false);
+        setAirportSuggestions([]);
+    };
 
     const handleSave = async () => {
         try {
@@ -89,13 +118,13 @@ export default function TravelPreferences() {
                 <View style={{ width: 24 }} />
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <Text style={styles.description}>
                     These preferences will be automatically applied when you create a new trip.
                 </Text>
 
                 {/* Home Airport */}
-                <View style={styles.section}>
+                <View style={[styles.section, { zIndex: 10 }]}>
                     <Text style={styles.sectionTitle}>Home Airport</Text>
                     <View style={styles.inputContainer}>
                         <Ionicons name="airplane-outline" size={20} color="#1A1A1A" style={styles.inputIcon} />
@@ -103,10 +132,37 @@ export default function TravelPreferences() {
                             style={styles.input}
                             placeholder="e.g. San Francisco, CA"
                             value={homeAirport}
-                            onChangeText={setHomeAirport}
+                            onChangeText={(text) => {
+                                setHomeAirport(text);
+                                searchAirports(text);
+                            }}
+                            onFocus={() => {
+                                if (homeAirport.length >= 2) {
+                                    searchAirports(homeAirport);
+                                }
+                            }}
                             placeholderTextColor="#9B9B9B"
                         />
                     </View>
+                    {showAirportSuggestions && airportSuggestions.length > 0 && (
+                        <View style={styles.suggestionsContainer}>
+                            <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled" style={{ maxHeight: 200 }}>
+                                {airportSuggestions.map((airport, index) => (
+                                    <TouchableOpacity
+                                        key={`${airport.city}-${airport.country}-${index}`}
+                                        style={styles.suggestionItem}
+                                        onPress={() => selectAirport(airport)}
+                                    >
+                                        <Ionicons name="airplane" size={20} color="#FFE500" style={{ marginRight: 12 }} />
+                                        <View>
+                                            <Text style={styles.suggestionCity}>{airport.city} ({airport.code})</Text>
+                                            <Text style={styles.suggestionDetails}>{airport.name}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
                 </View>
 
                 {/* Default Budget & Travelers */}
@@ -394,5 +450,39 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "700",
         color: "#FFFFFF",
+    },
+    suggestionsContainer: {
+        position: 'absolute',
+        top: 80,
+        left: 0,
+        right: 0,
+        backgroundColor: "#FFF8E1",
+        borderRadius: 12,
+        zIndex: 1000,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
+        borderWidth: 1,
+        borderColor: "#FFE500",
+    },
+    suggestionItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "#F5F5F3",
+    },
+    suggestionCity: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#1A1A1A",
+    },
+    suggestionDetails: {
+        fontSize: 12,
+        color: "#9B9B9B",
+        marginTop: 2,
     },
 });
