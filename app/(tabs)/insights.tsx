@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
   shareContainer: {
     flex: 1,
     backgroundColor: "#FFF",
-    paddingTop: 20,
+    paddingTop: 60,
   },
   shareContent: {
     paddingHorizontal: 20,
