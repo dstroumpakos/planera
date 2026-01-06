@@ -2,6 +2,69 @@ import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
 import { paginationOptsValidator } from "convex/server";
 
+// Get user's completed trips (trips where endDate has passed)
+export const getCompletedTrips = authQuery({
+    args: {},
+    returns: v.array(v.object({
+        _id: v.id("trips"),
+        destination: v.string(),
+        startDate: v.float64(),
+        endDate: v.float64(),
+    })),
+    handler: async (ctx, args) => {
+        if (!ctx.user) {
+            return [];
+        }
+
+        const now = Date.now();
+        const trips = await ctx.db
+            .query("trips")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .collect();
+
+        // Filter to only completed trips (endDate has passed)
+        const completedTrips = trips
+            .filter((trip) => trip.endDate < now && trip.status === "completed")
+            .map((trip) => ({
+                _id: trip._id,
+                destination: trip.destination,
+                startDate: trip.startDate,
+                endDate: trip.endDate,
+            }));
+
+        return completedTrips;
+    },
+});
+
+// Check if user has a completed trip to a specific destination
+export const hasCompletedTripTo = authQuery({
+    args: {
+        destination: v.string(),
+    },
+    returns: v.boolean(),
+    handler: async (ctx, args) => {
+        if (!ctx.user) {
+            return false;
+        }
+
+        const now = Date.now();
+        const trips = await ctx.db
+            .query("trips")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .collect();
+
+        // Check if any completed trip matches the destination
+        const hasTrip = trips.some(
+            (trip) => 
+                trip.endDate < now && 
+                trip.status === "completed" &&
+                trip.destination.toLowerCase().includes(args.destination.toLowerCase())
+        );
+
+        return hasTrip;
+    },
+});
+
 // Traveler insights functions
 export const list = authQuery({
     args: {
