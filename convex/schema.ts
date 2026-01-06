@@ -16,6 +16,7 @@ export default defineSchema({
         preferredFlightTime: v.optional(v.string()), // "morning", "afternoon", "evening", "night", "any"
         status: v.string(),
         itinerary: v.optional(v.any()),
+        isMultiCity: v.optional(v.boolean()), // Legacy field for backward compatibility
     }).index("by_user", ["userId"]),
     userPlans: defineTable({
         userId: v.string(),
