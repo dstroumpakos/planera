@@ -1,40 +1,47 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Switch, Platform, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
+import { INTERESTS } from "@/lib/data";
 
 export default function TravelPreferences() {
     const router = useRouter();
     const settings = useQuery(api.users.getSettings);
     const updatePreferences = useMutation(api.users.updateTravelPreferences);
 
-    const [seatPreference, setSeatPreference] = useState("window");
-    const [mealPreference, setMealPreference] = useState("none");
-    const [hotelStarRating, setHotelStarRating] = useState(4);
-    const [budgetRange, setBudgetRange] = useState("mid-range");
-    const [travelStyle, setTravelStyle] = useState("relaxation");
+    const [homeAirport, setHomeAirport] = useState("");
+    const [defaultBudget, setDefaultBudget] = useState("2000");
+    const [defaultTravelers, setDefaultTravelers] = useState("1");
+    const [defaultInterests, setDefaultInterests] = useState<string[]>([]);
+    const [defaultSkipFlights, setDefaultSkipFlights] = useState(false);
+    const [defaultSkipHotel, setDefaultSkipHotel] = useState(false);
+    const [defaultPreferredFlightTime, setDefaultPreferredFlightTime] = useState("any");
 
     useEffect(() => {
         if (settings) {
-            setSeatPreference(settings.seatPreference || "window");
-            setMealPreference(settings.mealPreference || "none");
-            setHotelStarRating(settings.hotelStarRating || 4);
-            setBudgetRange(settings.budgetRange || "mid-range");
-            setTravelStyle(settings.travelStyle || "relaxation");
+            setHomeAirport(settings.homeAirport || "");
+            setDefaultBudget(settings.defaultBudget?.toString() || "2000");
+            setDefaultTravelers(settings.defaultTravelers?.toString() || "1");
+            setDefaultInterests(settings.defaultInterests || []);
+            setDefaultSkipFlights(settings.defaultSkipFlights || false);
+            setDefaultSkipHotel(settings.defaultSkipHotel || false);
+            setDefaultPreferredFlightTime(settings.defaultPreferredFlightTime || "any");
         }
     }, [settings]);
 
     const handleSave = async () => {
         try {
             await updatePreferences({
-                seatPreference,
-                mealPreference,
-                hotelStarRating,
-                budgetRange,
-                travelStyle,
+                homeAirport,
+                defaultBudget: parseFloat(defaultBudget) || 2000,
+                defaultTravelers: parseInt(defaultTravelers) || 1,
+                defaultInterests,
+                defaultSkipFlights,
+                defaultSkipHotel,
+                defaultPreferredFlightTime,
             });
             Alert.alert("Success", "Travel preferences updated successfully!");
             router.back();
@@ -44,40 +51,32 @@ export default function TravelPreferences() {
         }
     };
 
+    const toggleInterest = (interest: string) => {
+        if (defaultInterests.includes(interest)) {
+            setDefaultInterests(defaultInterests.filter(i => i !== interest));
+        } else {
+            if (defaultInterests.length < 5) {
+                setDefaultInterests([...defaultInterests, interest]);
+            } else {
+                Alert.alert("Limit Reached", "You can select up to 5 interests");
+            }
+        }
+    };
+
     if (settings === undefined) {
         return (
             <SafeAreaView style={styles.container}>
-                <Text>Loading...</Text>
+                <ActivityIndicator size="large" color="#1B3F92" />
             </SafeAreaView>
         );
     }
 
-    const seatOptions = [
-        { value: "window", label: "Window", icon: "airplane-outline" },
-        { value: "aisle", label: "Aisle", icon: "walk-outline" },
-        { value: "middle", label: "Middle", icon: "people-outline" },
-    ];
-
-    const mealOptions = [
-        { value: "none", label: "No Preference" },
-        { value: "vegetarian", label: "Vegetarian" },
-        { value: "vegan", label: "Vegan" },
-        { value: "halal", label: "Halal" },
-        { value: "kosher", label: "Kosher" },
-    ];
-
-    const budgetOptions = [
-        { value: "budget", label: "Budget", icon: "cash-outline" },
-        { value: "mid-range", label: "Mid-Range", icon: "card-outline" },
-        { value: "luxury", label: "Luxury", icon: "diamond-outline" },
-    ];
-
-    const styleOptions = [
-        { value: "adventure", label: "Adventure", icon: "bicycle-outline" },
-        { value: "relaxation", label: "Relaxation", icon: "sunny-outline" },
-        { value: "culture", label: "Culture", icon: "library-outline" },
-        { value: "family", label: "Family", icon: "people-outline" },
-        { value: "sports", label: "Sports", icon: "football-outline" },
+    const flightTimeOptions = [
+        { value: "any", label: "Any Time", icon: "time-outline" },
+        { value: "morning", label: "Morning", icon: "sunny-outline" },
+        { value: "afternoon", label: "Afternoon", icon: "partly-sunny-outline" },
+        { value: "evening", label: "Evening", icon: "moon-outline" },
+        { value: "night", label: "Night", icon: "moon" },
     ];
 
     return (
@@ -90,156 +89,151 @@ export default function TravelPreferences() {
                 <View style={{ width: 24 }} />
             </View>
 
-            <ScrollView style={styles.content}>
-                {/* Seat Preference */}
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                <Text style={styles.description}>
+                    These preferences will be automatically applied when you create a new trip.
+                </Text>
+
+                {/* Home Airport */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Seat Preference</Text>
-                    <View style={styles.optionsRow}>
-                        {seatOptions.map((option) => (
+                    <Text style={styles.sectionTitle}>Home Airport</Text>
+                    <View style={styles.inputContainer}>
+                        <Ionicons name="airplane-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="e.g. San Francisco, CA"
+                            value={homeAirport}
+                            onChangeText={setHomeAirport}
+                            placeholderTextColor="#94A3B8"
+                        />
+                    </View>
+                </View>
+
+                {/* Default Budget & Travelers */}
+                <View style={styles.row}>
+                    <View style={[styles.section, { flex: 1, marginRight: 8 }]}>
+                        <Text style={styles.sectionTitle}>Default Budget ($)</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="cash-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="2000"
+                                value={defaultBudget}
+                                onChangeText={setDefaultBudget}
+                                keyboardType="numeric"
+                                placeholderTextColor="#94A3B8"
+                            />
+                        </View>
+                    </View>
+                    <View style={[styles.section, { flex: 1, marginLeft: 8 }]}>
+                        <Text style={styles.sectionTitle}>Travelers</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="people-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="1"
+                                value={defaultTravelers}
+                                onChangeText={setDefaultTravelers}
+                                keyboardType="numeric"
+                                placeholderTextColor="#94A3B8"
+                            />
+                        </View>
+                    </View>
+                </View>
+
+                {/* Default Interests */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Default Interests (Max 5)</Text>
+                    <View style={styles.interestsContainer}>
+                        {INTERESTS.map((interest) => (
                             <TouchableOpacity
-                                key={option.value}
+                                key={interest}
                                 style={[
-                                    styles.optionCard,
-                                    seatPreference === option.value && styles.optionCardActive,
+                                    styles.interestChip,
+                                    defaultInterests.includes(interest) && styles.interestChipActive
                                 ]}
-                                onPress={() => setSeatPreference(option.value)}
+                                onPress={() => toggleInterest(interest)}
                             >
-                                <Ionicons
-                                    name={option.icon as any}
-                                    size={24}
-                                    color={seatPreference === option.value ? "#1B3F92" : "#78909C"}
-                                />
-                                <Text
-                                    style={[
-                                        styles.optionText,
-                                        seatPreference === option.value && styles.optionTextActive,
-                                    ]}
-                                >
-                                    {option.label}
+                                <Text style={[
+                                    styles.interestText,
+                                    defaultInterests.includes(interest) && styles.interestTextActive
+                                ]}>
+                                    {interest}
                                 </Text>
                             </TouchableOpacity>
                         ))}
                     </View>
                 </View>
 
-                {/* Meal Preference */}
+                {/* Flight Preferences */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Meal Preference</Text>
-                    {mealOptions.map((option) => (
-                        <TouchableOpacity
-                            key={option.value}
-                            style={styles.listItem}
-                            onPress={() => setMealPreference(option.value)}
-                        >
-                            <Text style={styles.listItemText}>{option.label}</Text>
-                            {mealPreference === option.value && (
-                                <Ionicons name="checkmark-circle" size={24} color="#1B3F92" />
-                            )}
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Hotel Star Rating */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Hotel Star Rating</Text>
-                    <View style={styles.optionsRow}>
-                        {[3, 4, 5].map((stars) => (
-                            <TouchableOpacity
-                                key={stars}
-                                style={[
-                                    styles.optionCard,
-                                    hotelStarRating === stars && styles.optionCardActive,
-                                ]}
-                                onPress={() => setHotelStarRating(stars)}
-                            >
-                                <View style={styles.starsContainer}>
-                                    {Array.from({ length: stars }).map((_, i) => (
-                                        <Ionicons
-                                            key={i}
-                                            name="star"
-                                            size={16}
-                                            color={hotelStarRating === stars ? "#1B3F92" : "#78909C"}
-                                        />
-                                    ))}
-                                </View>
-                                <Text
-                                    style={[
-                                        styles.optionText,
-                                        hotelStarRating === stars && styles.optionTextActive,
-                                    ]}
-                                >
-                                    {stars} Stars
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-
-                {/* Budget Range */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Budget Range</Text>
-                    <View style={styles.optionsRow}>
-                        {budgetOptions.map((option) => (
+                    <Text style={styles.sectionTitle}>Preferred Flight Time</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionsRow}>
+                        {flightTimeOptions.map((option) => (
                             <TouchableOpacity
                                 key={option.value}
                                 style={[
                                     styles.optionCard,
-                                    budgetRange === option.value && styles.optionCardActive,
+                                    defaultPreferredFlightTime === option.value && styles.optionCardActive,
                                 ]}
-                                onPress={() => setBudgetRange(option.value)}
+                                onPress={() => setDefaultPreferredFlightTime(option.value)}
                             >
                                 <Ionicons
                                     name={option.icon as any}
                                     size={24}
-                                    color={budgetRange === option.value ? "#1B3F92" : "#78909C"}
+                                    color={defaultPreferredFlightTime === option.value ? "#1B3F92" : "#78909C"}
                                 />
                                 <Text
                                     style={[
                                         styles.optionText,
-                                        budgetRange === option.value && styles.optionTextActive,
+                                        defaultPreferredFlightTime === option.value && styles.optionTextActive,
                                     ]}
                                 >
                                     {option.label}
                                 </Text>
                             </TouchableOpacity>
                         ))}
-                    </View>
+                    </ScrollView>
                 </View>
 
-                {/* Travel Style */}
+                {/* Toggles */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Travel Style</Text>
-                    <View style={styles.optionsGrid}>
-                        {styleOptions.map((option) => (
-                            <TouchableOpacity
-                                key={option.value}
-                                style={[
-                                    styles.optionCard,
-                                    travelStyle === option.value && styles.optionCardActive,
-                                ]}
-                                onPress={() => setTravelStyle(option.value)}
-                            >
-                                <Ionicons
-                                    name={option.icon as any}
-                                    size={24}
-                                    color={travelStyle === option.value ? "#1B3F92" : "#78909C"}
-                                />
-                                <Text
-                                    style={[
-                                        styles.optionText,
-                                        travelStyle === option.value && styles.optionTextActive,
-                                    ]}
-                                >
-                                    {option.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                    <Text style={styles.sectionTitle}>Default Settings</Text>
+                    
+                    <View style={styles.toggleRow}>
+                        <View style={styles.toggleInfo}>
+                            <Text style={styles.toggleLabel}>Skip Flights</Text>
+                            <Text style={styles.toggleDescription}>Don't search for flights by default</Text>
+                        </View>
+                        <Switch
+                            value={defaultSkipFlights}
+                            onValueChange={setDefaultSkipFlights}
+                            trackColor={{ false: "#E2E8F0", true: "#1B3F92" }}
+                            thumbColor={Platform.OS === "ios" ? "#FFFFFF" : defaultSkipFlights ? "#FFFFFF" : "#F1F5F9"}
+                        />
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.toggleRow}>
+                        <View style={styles.toggleInfo}>
+                            <Text style={styles.toggleLabel}>Skip Hotels</Text>
+                            <Text style={styles.toggleDescription}>Don't search for hotels by default</Text>
+                        </View>
+                        <Switch
+                            value={defaultSkipHotel}
+                            onValueChange={setDefaultSkipHotel}
+                            trackColor={{ false: "#E2E8F0", true: "#1B3F92" }}
+                            thumbColor={Platform.OS === "ios" ? "#FFFFFF" : defaultSkipHotel ? "#FFFFFF" : "#F1F5F9"}
+                        />
                     </View>
                 </View>
 
                 <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                     <Text style={styles.saveButtonText}>Save Preferences</Text>
                 </TouchableOpacity>
+                
+                <View style={{ height: 40 }} />
             </ScrollView>
         </SafeAreaView>
     );
@@ -248,99 +242,154 @@ export default function TravelPreferences() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F4F6F8',
+        backgroundColor: "#F8FAFC",
     },
     header: {
-        backgroundColor: '#FFFFFF',
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
         paddingHorizontal: 20,
         paddingVertical: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        backgroundColor: "#FFFFFF",
         borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
+        borderBottomColor: "#E2E8F0",
     },
     backButton: {
         padding: 4,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
-        color: '#1B3F92',
+        fontWeight: "700",
+        color: "#0F172A",
     },
     content: {
         flex: 1,
         padding: 20,
     },
+    description: {
+        fontSize: 14,
+        color: "#64748B",
+        marginBottom: 24,
+        lineHeight: 20,
+    },
     section: {
-        marginBottom: 32,
+        marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#37474F',
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#0F172A",
         marginBottom: 12,
     },
-    optionsRow: {
-        flexDirection: 'row',
-        gap: 12,
+    row: {
+        flexDirection: "row",
+        marginBottom: 24,
     },
-    optionsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 48,
+    },
+    inputIcon: {
+        marginRight: 8,
+    },
+    input: {
+        flex: 1,
+        fontSize: 16,
+        color: "#0F172A",
+    },
+    interestsContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    interestChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    interestChipActive: {
+        backgroundColor: "#1B3F92",
+        borderColor: "#1B3F92",
+    },
+    interestText: {
+        fontSize: 14,
+        color: "#64748B",
+        fontWeight: "500",
+    },
+    interestTextActive: {
+        color: "#FFFFFF",
+    },
+    optionsRow: {
+        flexDirection: "row",
         gap: 12,
     },
     optionCard: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 8,
         padding: 16,
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#E0E0E0',
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        alignItems: "center",
+        minWidth: 100,
+        marginRight: 12,
     },
     optionCardActive: {
-        borderColor: '#1B3F92',
-        backgroundColor: '#E3F2FD',
+        borderColor: "#1B3F92",
+        backgroundColor: "#F0F9FF",
     },
     optionText: {
-        fontSize: 12,
-        color: '#78909C',
         marginTop: 8,
-        textAlign: 'center',
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#64748B",
     },
     optionTextActive: {
-        color: '#1B3F92',
-        fontWeight: '600',
+        color: "#1B3F92",
     },
-    starsContainer: {
-        flexDirection: 'row',
-        gap: 2,
+    toggleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 8,
     },
-    listItem: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        padding: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
+    toggleInfo: {
+        flex: 1,
+        marginRight: 16,
     },
-    listItemText: {
+    toggleLabel: {
         fontSize: 16,
-        color: '#37474F',
+        fontWeight: "600",
+        color: "#0F172A",
+        marginBottom: 4,
+    },
+    toggleDescription: {
+        fontSize: 13,
+        color: "#64748B",
+    },
+    divider: {
+        height: 1,
+        backgroundColor: "#E2E8F0",
+        marginVertical: 12,
     },
     saveButton: {
-        backgroundColor: '#1B3F92',
-        borderRadius: 8,
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 40,
+        backgroundColor: "#1B3F92",
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: "center",
+        marginTop: 8,
     },
     saveButtonText: {
-        color: '#FFFFFF',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: "700",
+        color: "#FFFFFF",
     },
 });

@@ -253,6 +253,16 @@ export const updatePersonalInfo = authMutation({
 
 export const updateTravelPreferences = authMutation({
     args: {
+        // New fields
+        homeAirport: v.optional(v.string()),
+        defaultBudget: v.optional(v.number()),
+        defaultTravelers: v.optional(v.number()),
+        defaultInterests: v.optional(v.array(v.string())),
+        defaultSkipFlights: v.optional(v.boolean()),
+        defaultSkipHotel: v.optional(v.boolean()),
+        defaultPreferredFlightTime: v.optional(v.string()),
+
+        // Legacy fields
         preferredAirlines: v.optional(v.array(v.string())),
         seatPreference: v.optional(v.string()),
         mealPreference: v.optional(v.string()),

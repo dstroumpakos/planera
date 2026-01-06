@@ -65,6 +65,15 @@ export default defineSchema({
         phone: v.optional(v.string()),
         dateOfBirth: v.optional(v.string()),
         // Travel Preferences
+        homeAirport: v.optional(v.string()),
+        defaultBudget: v.optional(v.float64()),
+        defaultTravelers: v.optional(v.float64()),
+        defaultInterests: v.optional(v.array(v.string())),
+        defaultSkipFlights: v.optional(v.boolean()),
+        defaultSkipHotel: v.optional(v.boolean()),
+        defaultPreferredFlightTime: v.optional(v.string()),
+        
+        // Legacy fields (keeping for now)
         preferredAirlines: v.optional(v.array(v.string())),
         seatPreference: v.optional(v.string()),
         mealPreference: v.optional(v.string()),

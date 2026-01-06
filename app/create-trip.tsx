@@ -12,259 +12,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import logoImage from "@/assets/images/appicon-1024x1024-01-1vb1vx.png";
 
-// Airport database with country/region groupings
-const AIRPORTS = [
-    // Australia
-    { code: "SYD", name: "Sydney Kingsford Smith", city: "Sydney", country: "Australia" },
-    { code: "MEL", name: "Melbourne Tullamarine", city: "Melbourne", country: "Australia" },
-    { code: "BNE", name: "Brisbane Airport", city: "Brisbane", country: "Australia" },
-    { code: "PER", name: "Perth Airport", city: "Perth", country: "Australia" },
-    { code: "ADL", name: "Adelaide Airport", city: "Adelaide", country: "Australia" },
-    { code: "OOL", name: "Gold Coast Airport", city: "Gold Coast", country: "Australia" },
-    { code: "CNS", name: "Cairns Airport", city: "Cairns", country: "Australia" },
-    // Greece
-    { code: "ATH", name: "Athens International", city: "Athens", country: "Greece" },
-    { code: "SKG", name: "Thessaloniki Airport", city: "Thessaloniki", country: "Greece" },
-    { code: "HER", name: "Heraklion Airport", city: "Heraklion", country: "Greece" },
-    { code: "RHO", name: "Rhodes Airport", city: "Rhodes", country: "Greece" },
-    { code: "CFU", name: "Corfu Airport", city: "Corfu", country: "Greece" },
-    { code: "CHQ", name: "Chania Airport", city: "Chania", country: "Greece" },
-    { code: "JMK", name: "Mykonos Airport", city: "Mykonos", country: "Greece" },
-    { code: "JTR", name: "Santorini Airport", city: "Santorini", country: "Greece" },
-    { code: "KGS", name: "Kos Airport", city: "Kos", country: "Greece" },
-    { code: "ZTH", name: "Zakynthos Airport", city: "Zakynthos", country: "Greece" },
-    // UK
-    { code: "LHR", name: "London Heathrow", city: "London", country: "United Kingdom" },
-    { code: "LGW", name: "London Gatwick", city: "London", country: "United Kingdom" },
-    { code: "STN", name: "London Stansted", city: "London", country: "United Kingdom" },
-    { code: "LTN", name: "London Luton", city: "London", country: "United Kingdom" },
-    { code: "MAN", name: "Manchester Airport", city: "Manchester", country: "United Kingdom" },
-    { code: "BHX", name: "Birmingham Airport", city: "Birmingham", country: "United Kingdom" },
-    { code: "EDI", name: "Edinburgh Airport", city: "Edinburgh", country: "United Kingdom" },
-    { code: "GLA", name: "Glasgow Airport", city: "Glasgow", country: "United Kingdom" },
-    { code: "BRS", name: "Bristol Airport", city: "Bristol", country: "United Kingdom" },
-    // France
-    { code: "CDG", name: "Paris Charles de Gaulle", city: "Paris", country: "France" },
-    { code: "ORY", name: "Paris Orly", city: "Paris", country: "France" },
-    { code: "NCE", name: "Nice Côte d'Azur", city: "Nice", country: "France" },
-    { code: "LYS", name: "Lyon Airport", city: "Lyon", country: "France" },
-    { code: "MRS", name: "Marseille Provence", city: "Marseille", country: "France" },
-    { code: "TLS", name: "Toulouse Airport", city: "Toulouse", country: "France" },
-    // Germany
-    { code: "FRA", name: "Frankfurt Airport", city: "Frankfurt", country: "Germany" },
-    { code: "MUC", name: "Munich Airport", city: "Munich", country: "Germany" },
-    { code: "BER", name: "Berlin Brandenburg", city: "Berlin", country: "Germany" },
-    { code: "DUS", name: "Düsseldorf Airport", city: "Düsseldorf", country: "Germany" },
-    { code: "HAM", name: "Hamburg Airport", city: "Hamburg", country: "Germany" },
-    { code: "CGN", name: "Cologne Bonn", city: "Cologne", country: "Germany" },
-    { code: "STR", name: "Stuttgart Airport", city: "Stuttgart", country: "Germany" },
-    // Italy
-    { code: "FCO", name: "Rome Fiumicino", city: "Rome", country: "Italy" },
-    { code: "MXP", name: "Milan Malpensa", city: "Milan", country: "Italy" },
-    { code: "VCE", name: "Venice Marco Polo", city: "Venice", country: "Italy" },
-    { code: "NAP", name: "Naples Airport", city: "Naples", country: "Italy" },
-    { code: "BGY", name: "Milan Bergamo", city: "Milan", country: "Italy" },
-    { code: "FLR", name: "Florence Airport", city: "Florence", country: "Italy" },
-    { code: "BLQ", name: "Bologna Airport", city: "Bologna", country: "Italy" },
-    // Spain
-    { code: "MAD", name: "Madrid Barajas", city: "Madrid", country: "Spain" },
-    { code: "BCN", name: "Barcelona El Prat", city: "Barcelona", country: "Spain" },
-    { code: "PMI", name: "Palma de Mallorca", city: "Palma", country: "Spain" },
-    { code: "AGP", name: "Málaga Airport", city: "Málaga", country: "Spain" },
-    { code: "ALC", name: "Alicante Airport", city: "Alicante", country: "Spain" },
-    { code: "IBZ", name: "Ibiza Airport", city: "Ibiza", country: "Spain" },
-    { code: "VLC", name: "Valencia Airport", city: "Valencia", country: "Spain" },
-    { code: "SVQ", name: "Seville Airport", city: "Seville", country: "Spain" },
-    // Netherlands
-    { code: "AMS", name: "Amsterdam Schiphol", city: "Amsterdam", country: "Netherlands" },
-    { code: "EIN", name: "Eindhoven Airport", city: "Eindhoven", country: "Netherlands" },
-    // Belgium
-    { code: "BRU", name: "Brussels Airport", city: "Brussels", country: "Belgium" },
-    { code: "CRL", name: "Brussels South Charleroi", city: "Charleroi", country: "Belgium" },
-    // Portugal
-    { code: "LIS", name: "Lisbon Airport", city: "Lisbon", country: "Portugal" },
-    { code: "OPO", name: "Porto Airport", city: "Porto", country: "Portugal" },
-    { code: "FAO", name: "Faro Airport", city: "Faro", country: "Portugal" },
-    // Turkey
-    { code: "IST", name: "Istanbul Airport", city: "Istanbul", country: "Turkey" },
-    { code: "SAW", name: "Istanbul Sabiha Gökçen", city: "Istanbul", country: "Turkey" },
-    { code: "AYT", name: "Antalya Airport", city: "Antalya", country: "Turkey" },
-    { code: "ADB", name: "Izmir Airport", city: "Izmir", country: "Turkey" },
-    // UAE
-    { code: "DXB", name: "Dubai International", city: "Dubai", country: "UAE" },
-    { code: "AUH", name: "Abu Dhabi Airport", city: "Abu Dhabi", country: "UAE" },
-    { code: "SHJ", name: "Sharjah Airport", city: "Sharjah", country: "UAE" },
-    // USA
-    { code: "JFK", name: "New York JFK", city: "New York", country: "USA" },
-    { code: "LAX", name: "Los Angeles LAX", city: "Los Angeles", country: "USA" },
-    { code: "ORD", name: "Chicago O'Hare", city: "Chicago", country: "USA" },
-    { code: "MIA", name: "Miami International", city: "Miami", country: "USA" },
-    { code: "SFO", name: "San Francisco", city: "San Francisco", country: "USA" },
-    { code: "ATL", name: "Atlanta Hartsfield", city: "Atlanta", country: "USA" },
-    { code: "DFW", name: "Dallas Fort Worth", city: "Dallas", country: "USA" },
-    { code: "DEN", name: "Denver International", city: "Denver", country: "USA" },
-    { code: "SEA", name: "Seattle-Tacoma", city: "Seattle", country: "USA" },
-    { code: "LAS", name: "Las Vegas McCarran", city: "Las Vegas", country: "USA" },
-    { code: "BOS", name: "Boston Logan", city: "Boston", country: "USA" },
-    { code: "EWR", name: "Newark Liberty", city: "Newark", country: "USA" },
-    // Canada
-    { code: "YYZ", name: "Toronto Pearson", city: "Toronto", country: "Canada" },
-    { code: "YVR", name: "Vancouver Airport", city: "Vancouver", country: "Canada" },
-    { code: "YUL", name: "Montreal Trudeau", city: "Montreal", country: "Canada" },
-    { code: "YYC", name: "Calgary Airport", city: "Calgary", country: "Canada" },
-    // Other Europe
-    { code: "DUB", name: "Dublin Airport", city: "Dublin", country: "Ireland" },
-    { code: "ZRH", name: "Zurich Airport", city: "Zurich", country: "Switzerland" },
-    { code: "GVA", name: "Geneva Airport", city: "Geneva", country: "Switzerland" },
-    { code: "VIE", name: "Vienna Airport", city: "Vienna", country: "Austria" },
-    { code: "PRG", name: "Prague Airport", city: "Prague", country: "Czech Republic" },
-    { code: "BUD", name: "Budapest Airport", city: "Budapest", country: "Hungary" },
-    { code: "WAW", name: "Warsaw Chopin", city: "Warsaw", country: "Poland" },
-    { code: "KRK", name: "Krakow Airport", city: "Krakow", country: "Poland" },
-    { code: "CPH", name: "Copenhagen Airport", city: "Copenhagen", country: "Denmark" },
-    { code: "ARN", name: "Stockholm Arlanda", city: "Stockholm", country: "Sweden" },
-    { code: "OSL", name: "Oslo Gardermoen", city: "Oslo", country: "Norway" },
-    { code: "HEL", name: "Helsinki Airport", city: "Helsinki", country: "Finland" },
-    // Asia
-    { code: "SIN", name: "Singapore Changi", city: "Singapore", country: "Singapore" },
-    { code: "HKG", name: "Hong Kong International", city: "Hong Kong", country: "Hong Kong" },
-    { code: "NRT", name: "Tokyo Narita", city: "Tokyo", country: "Japan" },
-    { code: "HND", name: "Tokyo Haneda", city: "Tokyo", country: "Japan" },
-    { code: "KIX", name: "Osaka Kansai", city: "Osaka", country: "Japan" },
-    { code: "ICN", name: "Seoul Incheon", city: "Seoul", country: "South Korea" },
-    { code: "BKK", name: "Bangkok Suvarnabhumi", city: "Bangkok", country: "Thailand" },
-    { code: "KUL", name: "Kuala Lumpur", city: "Kuala Lumpur", country: "Malaysia" },
-    { code: "CGK", name: "Jakarta Soekarno-Hatta", city: "Jakarta", country: "Indonesia" },
-    { code: "DPS", name: "Bali Ngurah Rai", city: "Bali", country: "Indonesia" },
-    { code: "MNL", name: "Manila Ninoy Aquino", city: "Manila", country: "Philippines" },
-    { code: "DEL", name: "Delhi Indira Gandhi", city: "Delhi", country: "India" },
-    { code: "BOM", name: "Mumbai Airport", city: "Mumbai", country: "India" },
-    { code: "PEK", name: "Beijing Capital", city: "Beijing", country: "China" },
-    { code: "PVG", name: "Shanghai Pudong", city: "Shanghai", country: "China" },
-    // Middle East
-    { code: "DOH", name: "Doha Hamad", city: "Doha", country: "Qatar" },
-    { code: "RUH", name: "Riyadh Airport", city: "Riyadh", country: "Saudi Arabia" },
-    { code: "JED", name: "Jeddah Airport", city: "Jeddah", country: "Saudi Arabia" },
-    { code: "TLV", name: "Tel Aviv Ben Gurion", city: "Tel Aviv", country: "Israel" },
-    { code: "AMM", name: "Amman Queen Alia", city: "Amman", country: "Jordan" },
-    { code: "CAI", name: "Cairo International", city: "Cairo", country: "Egypt" },
-    // Africa
-    { code: "JNB", name: "Johannesburg OR Tambo", city: "Johannesburg", country: "South Africa" },
-    { code: "CPT", name: "Cape Town Airport", city: "Cape Town", country: "South Africa" },
-    { code: "NBO", name: "Nairobi Jomo Kenyatta", city: "Nairobi", country: "Kenya" },
-    { code: "CMN", name: "Casablanca Mohammed V", city: "Casablanca", country: "Morocco" },
-    // South America
-    { code: "GRU", name: "São Paulo Guarulhos", city: "São Paulo", country: "Brazil" },
-    { code: "GIG", name: "Rio de Janeiro Galeão", city: "Rio de Janeiro", country: "Brazil" },
-    { code: "EZE", name: "Buenos Aires Ezeiza", city: "Buenos Aires", country: "Argentina" },
-    { code: "SCL", name: "Santiago Airport", city: "Santiago", country: "Chile" },
-    { code: "BOG", name: "Bogotá El Dorado", city: "Bogotá", country: "Colombia" },
-    { code: "LIM", name: "Lima Jorge Chávez", city: "Lima", country: "Peru" },
-    // New Zealand
-    { code: "AKL", name: "Auckland Airport", city: "Auckland", country: "New Zealand" },
-    { code: "WLG", name: "Wellington Airport", city: "Wellington", country: "New Zealand" },
-    { code: "CHC", name: "Christchurch Airport", city: "Christchurch", country: "New Zealand" },
-    { code: "ZQN", name: "Queenstown Airport", city: "Queenstown", country: "New Zealand" },
-    // Cyprus
-    { code: "LCA", name: "Larnaca Airport", city: "Larnaca", country: "Cyprus" },
-    { code: "PFO", name: "Paphos Airport", city: "Paphos", country: "Cyprus" },
-];
-
 // Popular destinations list
 const DESTINATIONS = [
-    // Europe
-    { city: "Paris", country: "France", emoji: "🇫🇷" },
-    { city: "London", country: "United Kingdom", emoji: "🇬🇧" },
-    { city: "Rome", country: "Italy", emoji: "🇮🇹" },
-    { city: "Barcelona", country: "Spain", emoji: "🇪🇸" },
-    { city: "Amsterdam", country: "Netherlands", emoji: "🇳🇱" },
-    { city: "Berlin", country: "Germany", emoji: "🇩🇪" },
-    { city: "Prague", country: "Czech Republic", emoji: "🇨🇿" },
-    { city: "Vienna", country: "Austria", emoji: "🇦🇹" },
-    { city: "Lisbon", country: "Portugal", emoji: "🇵🇹" },
-    { city: "Athens", country: "Greece", emoji: "🇬🇷" },
-    { city: "Santorini", country: "Greece", emoji: "🇬🇷" },
-    { city: "Mykonos", country: "Greece", emoji: "🇬🇷" },
-    { city: "Dublin", country: "Ireland", emoji: "🇮🇪" },
-    { city: "Edinburgh", country: "Scotland", emoji: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
-    { city: "Zurich", country: "Switzerland", emoji: "🇨🇭" },
-    { city: "Copenhagen", country: "Denmark", emoji: "🇩🇰" },
-    { city: "Stockholm", country: "Sweden", emoji: "🇸🇪" },
-    { city: "Oslo", country: "Norway", emoji: "🇳🇴" },
-    { city: "Helsinki", country: "Finland", emoji: "🇫🇮" },
-    { city: "Budapest", country: "Hungary", emoji: "🇭🇺" },
-    { city: "Warsaw", country: "Poland", emoji: "🇵🇱" },
-    { city: "Krakow", country: "Poland", emoji: "🇵🇱" },
-    { city: "Brussels", country: "Belgium", emoji: "🇧🇪" },
-    { city: "Milan", country: "Italy", emoji: "🇮🇹" },
-    { city: "Venice", country: "Italy", emoji: "🇮🇹" },
-    { city: "Florence", country: "Italy", emoji: "🇮🇹" },
-    { city: "Madrid", country: "Spain", emoji: "🇪🇸" },
-    { city: "Seville", country: "Spain", emoji: "🇪🇸" },
-    { city: "Nice", country: "France", emoji: "🇫🇷" },
-    { city: "Monaco", country: "Monaco", emoji: "🇲🇨" },
-    // Asia
-    { city: "Tokyo", country: "Japan", emoji: "🇯🇵" },
-    { city: "Kyoto", country: "Japan", emoji: "🇯🇵" },
-    { city: "Osaka", country: "Japan", emoji: "🇯🇵" },
-    { city: "Seoul", country: "South Korea", emoji: "🇰🇷" },
-    { city: "Bangkok", country: "Thailand", emoji: "🇹🇭" },
-    { city: "Phuket", country: "Thailand", emoji: "🇹🇭" },
-    { city: "Singapore", country: "Singapore", emoji: "🇸🇬" },
-    { city: "Hong Kong", country: "China", emoji: "🇭🇰" },
-    { city: "Bali", country: "Indonesia", emoji: "🇮🇩" },
-    { city: "Hanoi", country: "Vietnam", emoji: "🇻🇳" },
-    { city: "Ho Chi Minh City", country: "Vietnam", emoji: "🇻🇳" },
-    { city: "Kuala Lumpur", country: "Malaysia", emoji: "🇲🇾" },
-    { city: "Mumbai", country: "India", emoji: "🇮🇳" },
-    { city: "Delhi", country: "India", emoji: "🇮🇳" },
-    { city: "Dubai", country: "UAE", emoji: "🇦🇪" },
-    { city: "Abu Dhabi", country: "UAE", emoji: "🇦🇪" },
-    { city: "Maldives", country: "Maldives", emoji: "🇲🇻" },
-    // Americas
-    { city: "New York", country: "USA", emoji: "🇺🇸" },
-    { city: "Los Angeles", country: "USA", emoji: "🇺🇸" },
-    { city: "Miami", country: "USA", emoji: "🇺🇸" },
-    { city: "San Francisco", country: "USA", emoji: "🇺🇸" },
-    { city: "Las Vegas", country: "USA", emoji: "🇺🇸" },
-    { city: "Chicago", country: "USA", emoji: "🇺🇸" },
-    { city: "Hawaii", country: "USA", emoji: "🇺🇸" },
-    { city: "Cancun", country: "Mexico", emoji: "🇲🇽" },
-    { city: "Mexico City", country: "Mexico", emoji: "🇲🇽" },
-    { city: "Rio de Janeiro", country: "Brazil", emoji: "🇧🇷" },
-    { city: "Buenos Aires", country: "Argentina", emoji: "🇦🇷" },
-    { city: "Toronto", country: "Canada", emoji: "🇨🇦" },
-    { city: "Vancouver", country: "Canada", emoji: "🇨🇦" },
-    // Africa & Middle East
-    { city: "Cape Town", country: "South Africa", emoji: "🇿🇦" },
-    { city: "Marrakech", country: "Morocco", emoji: "🇲🇦" },
-    { city: "Cairo", country: "Egypt", emoji: "🇪🇬" },
-    { city: "Tel Aviv", country: "Israel", emoji: "🇮🇱" },
-    // Oceania
-    { city: "Sydney", country: "Australia", emoji: "🇦🇺" },
-    { city: "Melbourne", country: "Australia", emoji: "🇦🇺" },
-    { city: "Auckland", country: "New Zealand", emoji: "🇳🇿" },
-    { city: "Queenstown", country: "New Zealand", emoji: "🇳🇿" },
-    { city: "Fiji", country: "Fiji", emoji: "🇫🇯" },
-];
-
-const INTERESTS = [
-    "Adventure", 
-    "Culinary", 
-    "Culture", 
-    "Relaxation", 
-    "Nightlife", 
-    "Nature", 
-    "History", 
-    "Shopping", 
-    "Luxury", 
-    "Family"
+    { city: "Paris", country: "France", image: "🇫🇷" },
+    { city: "Tokyo", country: "Japan", image: "🇯🇵" },
+    { city: "New York", country: "USA", image: "🇺🇸" },
+    { city: "London", country: "UK", image: "🇬🇧" },
+    { city: "Rome", country: "Italy", image: "🇮🇹" },
+    { city: "Barcelona", country: "Spain", image: "🇪🇸" },
+    { city: "Dubai", country: "UAE", image: "🇦🇪" },
+    { city: "Sydney", country: "Australia", image: "🇦🇺" },
 ];
 
 export default function CreateTripScreen() {
     const router = useRouter();
     const createTrip = useMutation(api.trips.create);
     const userPlan = useQuery(api.users.getPlan);
+    const userSettings = useQuery(api.users.getSettings);
     const [loading, setLoading] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
@@ -287,6 +51,22 @@ export default function CreateTripScreen() {
         skipHotel: false,
         preferredFlightTime: "any" as "any" | "morning" | "afternoon" | "evening" | "night",
     });
+
+    // Apply user preferences when loaded
+    React.useEffect(() => {
+        if (userSettings) {
+            setFormData(prev => ({
+                ...prev,
+                origin: userSettings.homeAirport || prev.origin,
+                budget: userSettings.defaultBudget || prev.budget,
+                travelers: userSettings.defaultTravelers || prev.travelers,
+                interests: userSettings.defaultInterests && userSettings.defaultInterests.length > 0 ? userSettings.defaultInterests : prev.interests,
+                skipFlights: userSettings.defaultSkipFlights ?? prev.skipFlights,
+                skipHotel: userSettings.defaultSkipHotel ?? prev.skipHotel,
+                preferredFlightTime: (userSettings.defaultPreferredFlightTime as any) || prev.preferredFlightTime,
+            }));
+        }
+    }, [userSettings]);
 
     // Detect device location on mount
     React.useEffect(() => {
@@ -614,7 +394,7 @@ export default function CreateTripScreen() {
                                                 style={styles.suggestionItem}
                                                 onPress={() => selectDestination(dest)}
                                             >
-                                                <Text style={{ fontSize: 18, marginRight: 12 }}>{dest.emoji}</Text>
+                                                <Text style={{ fontSize: 18, marginRight: 12 }}>{dest.image}</Text>
                                                 <View>
                                                     <Text style={styles.suggestionCity}>{dest.city}</Text>
                                                     <Text style={styles.suggestionDetails}>{dest.country}</Text>
@@ -1049,7 +829,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
+        borderTopColor: '#E8E6E1',
     },
     checkbox: {
         width: 20,

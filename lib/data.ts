@@ -1,4 +1,3 @@
-
 export const DEALS = [
     {
         id: "1",
@@ -244,4 +243,17 @@ export const DEALS = [
             }
         ]
     }
+];
+
+export const INTERESTS = [
+    "Adventure", 
+    "Culinary", 
+    "Culture", 
+    "Relaxation", 
+    "Nightlife", 
+    "Nature", 
+    "History", 
+    "Shopping", 
+    "Luxury", 
+    "Family"
 ];
