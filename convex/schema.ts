@@ -80,4 +80,11 @@ export default defineSchema({
         dealAlerts: v.optional(v.boolean()),
         tripReminders: v.optional(v.boolean()),
     }).index("by_user", ["userId"]),
+    feedback: defineTable({
+        type: v.string(),
+        title: v.string(),
+        message: v.string(),
+        email: v.optional(v.string()),
+        createdAt: v.float64(),
+    }),
 });
