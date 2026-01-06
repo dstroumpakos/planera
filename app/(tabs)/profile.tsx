@@ -28,6 +28,7 @@ export default function Profile() {
     const handleLogout = async () => {
         try {
             await authClient.signOut();
+            await new Promise(resolve => setTimeout(resolve, 500)); // Add a small delay
             router.replace("/");
         } catch (error) {
             console.error("Logout failed:", error);
