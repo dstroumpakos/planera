@@ -13,7 +13,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,6 +30,7 @@ const CATEGORIES = [
 ];
 
 export default function InsightsScreen() {
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"browse" | "share">("browse");
@@ -44,17 +45,47 @@ export default function InsightsScreen() {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("other");
 
-  // Get user's completed trips
-  const completedTrips = useQuery(api.insights.getCompletedTrips);
+  // Get user's completed trips - only when authenticated
+  const completedTrips = useQuery(
+    api.insights.getCompletedTrips,
+    isAuthenticated ? {} : "skip"
+  );
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.insights.list,
-    { destination: searchQuery || undefined },
+    isAuthenticated ? { destination: searchQuery || undefined } : "skip",
     { initialNumItems: 10 }
   );
 
   const createInsight = useMutation(api.insights.create);
   const likeInsight = useMutation(api.insights.like);
+
+  // Show loading state while auth is initializing
+  if (isAuthLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F5A623" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.authContainer}>
+          <Ionicons name="bulb-outline" size={64} color="#F5A623" />
+          <Text style={styles.authTitle}>Traveler Insights</Text>
+          <Text style={styles.authSubtitle}>
+            Sign in to browse and share travel tips with other travelers
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const handleSubmit = async () => {
     if (!selectedTrip || !content) {
@@ -753,5 +784,34 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#666",
+  },
+  authContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  authTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 24,
+  },
+  authSubtitle: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginTop: 12,
+    lineHeight: 24,
   },
 });
