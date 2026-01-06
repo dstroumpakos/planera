@@ -34,7 +34,7 @@ export default function AIAssistant() {
     const router = useRouter();
 
     const userPlan = useQuery(api.users.getPlan);
-    const askAssistant = useAction(api.assistant.askAssistant);
+    const askAssistant = useAction(api.aiAssistant.askAssistant);
 
     const isSubscriber = userPlan?.isSubscriptionActive;
 
