@@ -258,6 +258,14 @@ export default function InsightsScreen() {
         </>
       ) : (
         <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => setActiveTab("browse")}
+          >
+            <Ionicons name="chevron-back" size={24} color="#F5A623" />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+
           <View style={styles.shareHeader}>
             <Ionicons name="airplane" size={32} color="#F5A623" />
             <Text style={styles.shareTitle}>Share Your Travel Wisdom</Text>
@@ -813,5 +821,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
     lineHeight: 24,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    paddingVertical: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#F5A623",
+    marginLeft: 4,
   },
 });
