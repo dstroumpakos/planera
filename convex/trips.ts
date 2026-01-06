@@ -257,5 +257,6 @@ export const deleteTrip = authMutation({
     args: { tripId: v.id("trips") },
     handler: async (ctx, args) => {
         await ctx.db.delete(args.tripId);
+
     },
 });
