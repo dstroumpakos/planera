@@ -608,27 +608,29 @@ const styles = StyleSheet.create({
   },
   shareContainer: {
     flex: 1,
+    backgroundColor: "#FFF",
+    paddingTop: 20,
   },
   shareContent: {
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
   shareHeader: {
     alignItems: "center",
     marginBottom: 32,
-    paddingTop: 20,
   },
   shareTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
     color: "#333",
-    marginTop: 16,
+    marginTop: 12,
+    textAlign: "center",
   },
   shareSubtitle: {
     fontSize: 14,
     color: "#666",
-    textAlign: "center",
     marginTop: 8,
+    textAlign: "center",
   },
   sectionTitle: {
     fontSize: 16,
