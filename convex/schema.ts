@@ -17,6 +17,12 @@ export default defineSchema({
         status: v.string(),
         itinerary: v.optional(v.any()),
         isMultiCity: v.optional(v.boolean()), // Legacy field for backward compatibility
+        destinations: v.optional(v.array(v.object({
+            city: v.string(),
+            country: v.string(),
+            days: v.float64(),
+            order: v.float64(),
+        }))), // For multi-city trips
         optimizedRoute: v.optional(v.any()), // For multi-city trips with optimized routing
     }).index("by_user", ["userId"]),
     userPlans: defineTable({
