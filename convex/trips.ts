@@ -277,18 +277,16 @@ export const getTrendingDestinations = authQuery({
         interests: v.array(v.string()),
     })),
     handler: async (ctx) => {
-        // Get all completed trips from the last 30 days
-        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-        
-        const completedTrips = await ctx.db
+        // Get all completed trips
+        const allTrips = await ctx.db
             .query("trips")
-            .filter((q) => 
-                q.and(
-                    q.eq(q.field("status"), "completed"),
-                    q.gte(q.field("_creationTime"), thirtyDaysAgo)
-                )
-            )
             .collect();
+
+        // Filter for completed trips from the last 30 days
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        const completedTrips = allTrips.filter((trip) => 
+            trip.status === "completed" && trip._creationTime >= thirtyDaysAgo
+        );
 
         // Group by destination and aggregate data
         const destinationMap: Record<string, {
