@@ -66,7 +66,7 @@ export default function TravelPreferences() {
     if (settings === undefined) {
         return (
             <SafeAreaView style={styles.container}>
-                <ActivityIndicator size="large" color="#1B3F92" />
+                <ActivityIndicator size="large" color="#1A1A1A" />
             </SafeAreaView>
         );
     }
@@ -83,7 +83,7 @@ export default function TravelPreferences() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1B3F92" />
+                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Travel Preferences</Text>
                 <View style={{ width: 24 }} />
@@ -98,13 +98,13 @@ export default function TravelPreferences() {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Home Airport</Text>
                     <View style={styles.inputContainer}>
-                        <Ionicons name="airplane-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                        <Ionicons name="airplane-outline" size={20} color="#1A1A1A" style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
                             placeholder="e.g. San Francisco, CA"
                             value={homeAirport}
                             onChangeText={setHomeAirport}
-                            placeholderTextColor="#94A3B8"
+                            placeholderTextColor="#9B9B9B"
                         />
                     </View>
                 </View>
@@ -114,28 +114,28 @@ export default function TravelPreferences() {
                     <View style={[styles.section, { flex: 1, marginRight: 8 }]}>
                         <Text style={styles.sectionTitle}>Default Budget ($)</Text>
                         <View style={styles.inputContainer}>
-                            <Ionicons name="cash-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                            <Ionicons name="cash-outline" size={20} color="#1A1A1A" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="2000"
                                 value={defaultBudget}
                                 onChangeText={setDefaultBudget}
                                 keyboardType="numeric"
-                                placeholderTextColor="#94A3B8"
+                                placeholderTextColor="#9B9B9B"
                             />
                         </View>
                     </View>
                     <View style={[styles.section, { flex: 1, marginLeft: 8 }]}>
                         <Text style={styles.sectionTitle}>Travelers</Text>
                         <View style={styles.inputContainer}>
-                            <Ionicons name="people-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                            <Ionicons name="people-outline" size={20} color="#1A1A1A" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="1"
                                 value={defaultTravelers}
                                 onChangeText={setDefaultTravelers}
                                 keyboardType="numeric"
-                                placeholderTextColor="#94A3B8"
+                                placeholderTextColor="#9B9B9B"
                             />
                         </View>
                     </View>
@@ -181,7 +181,7 @@ export default function TravelPreferences() {
                                 <Ionicons
                                     name={option.icon as any}
                                     size={24}
-                                    color={defaultPreferredFlightTime === option.value ? "#1B3F92" : "#78909C"}
+                                    color={defaultPreferredFlightTime === option.value ? "#1A1A1A" : "#9B9B9B"}
                                 />
                                 <Text
                                     style={[
@@ -208,7 +208,7 @@ export default function TravelPreferences() {
                         <Switch
                             value={defaultSkipFlights}
                             onValueChange={setDefaultSkipFlights}
-                            trackColor={{ false: "#E2E8F0", true: "#1B3F92" }}
+                            trackColor={{ false: "#E2E8F0", true: "#FFE500" }}
                             thumbColor={Platform.OS === "ios" ? "#FFFFFF" : defaultSkipFlights ? "#FFFFFF" : "#F1F5F9"}
                         />
                     </View>
@@ -223,7 +223,7 @@ export default function TravelPreferences() {
                         <Switch
                             value={defaultSkipHotel}
                             onValueChange={setDefaultSkipHotel}
-                            trackColor={{ false: "#E2E8F0", true: "#1B3F92" }}
+                            trackColor={{ false: "#E2E8F0", true: "#FFE500" }}
                             thumbColor={Platform.OS === "ios" ? "#FFFFFF" : defaultSkipHotel ? "#FFFFFF" : "#F1F5F9"}
                         />
                     </View>
@@ -242,7 +242,7 @@ export default function TravelPreferences() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: "#FAF9F6",
     },
     header: {
         flexDirection: "row",
@@ -250,9 +250,9 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         paddingHorizontal: 20,
         paddingVertical: 16,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#FAF9F6",
         borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
+        borderBottomColor: "#E8E6E1",
     },
     backButton: {
         padding: 4,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#0F172A",
+        color: "#1A1A1A",
     },
     content: {
         flex: 1,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     },
     description: {
         fontSize: 14,
-        color: "#64748B",
+        color: "#9B9B9B",
         marginBottom: 24,
         lineHeight: 20,
     },
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#0F172A",
+        color: "#1A1A1A",
         marginBottom: 12,
     },
     row: {
@@ -288,10 +288,8 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        borderRadius: 12,
+        backgroundColor: "#FFF8E1",
+        borderRadius: 14,
         paddingHorizontal: 12,
         height: 48,
     },
@@ -301,7 +299,7 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: 16,
-        color: "#0F172A",
+        color: "#1A1A1A",
     },
     interestsContainer: {
         flexDirection: "row",
@@ -312,21 +310,21 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
+        backgroundColor: "#FFF8E1",
+        borderWidth: 2,
+        borderColor: "#FFE500",
     },
     interestChipActive: {
-        backgroundColor: "#1B3F92",
-        borderColor: "#1B3F92",
+        backgroundColor: "#FFE500",
+        borderColor: "#FFE500",
     },
     interestText: {
         fontSize: 14,
-        color: "#64748B",
-        fontWeight: "500",
+        color: "#1A1A1A",
+        fontWeight: "600",
     },
     interestTextActive: {
-        color: "#FFFFFF",
+        color: "#1A1A1A",
     },
     optionsRow: {
         flexDirection: "row",
@@ -334,26 +332,26 @@ const styles = StyleSheet.create({
     },
     optionCard: {
         padding: 16,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#FFF8E1",
         borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
+        borderWidth: 2,
+        borderColor: "#FFE500",
         alignItems: "center",
         minWidth: 100,
         marginRight: 12,
     },
     optionCardActive: {
-        borderColor: "#1B3F92",
-        backgroundColor: "#F0F9FF",
+        borderColor: "#FFE500",
+        backgroundColor: "#FFE500",
     },
     optionText: {
         marginTop: 8,
         fontSize: 14,
-        fontWeight: "500",
-        color: "#64748B",
+        fontWeight: "600",
+        color: "#1A1A1A",
     },
     optionTextActive: {
-        color: "#1B3F92",
+        color: "#1A1A1A",
     },
     toggleRow: {
         flexDirection: "row",
@@ -368,24 +366,29 @@ const styles = StyleSheet.create({
     toggleLabel: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#0F172A",
+        color: "#1A1A1A",
         marginBottom: 4,
     },
     toggleDescription: {
         fontSize: 13,
-        color: "#64748B",
+        color: "#9B9B9B",
     },
     divider: {
         height: 1,
-        backgroundColor: "#E2E8F0",
+        backgroundColor: "#E8E6E1",
         marginVertical: 12,
     },
     saveButton: {
-        backgroundColor: "#1B3F92",
+        backgroundColor: "#1A1A1A",
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: "center",
         marginTop: 8,
+        shadowColor: "#FFE500",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     saveButtonText: {
         fontSize: 16,
