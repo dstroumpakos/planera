@@ -24,7 +24,7 @@ export default defineSchema({
             order: v.float64(),
         }))), // For multi-city trips
         optimizedRoute: v.optional(v.any()), // For multi-city trips with optimized routing
-    }).index("by_user", ["userId"]),
+    }).index("by_user", ["userId"]).index("by_status", ["status"]),
     userPlans: defineTable({
         userId: v.string(),
         plan: v.union(v.literal("free"), v.literal("premium")),

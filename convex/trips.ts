@@ -277,16 +277,22 @@ export const getTrendingDestinations = authQuery({
         interests: v.array(v.string()),
     })),
     handler: async (ctx) => {
-        // Get all completed trips
-        const allTrips = await ctx.db
+        // Get completed trips only (using status index)
+        const completedTrips = await ctx.db
             .query("trips")
+            .withIndex("by_status", (q) => q.eq("status", "completed"))
             .collect();
 
-        // Filter for completed trips from the last 30 days
+        // Filter for trips from the last 30 days
         const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-        const completedTrips = allTrips.filter((trip) => 
-            trip.status === "completed" && trip._creationTime >= thirtyDaysAgo
+        const recentTrips = completedTrips.filter((trip) => 
+            trip._creationTime >= thirtyDaysAgo
         );
+
+        // If no recent trips, return empty array
+        if (recentTrips.length === 0) {
+            return [];
+        }
 
         // Group by destination and aggregate data
         const destinationMap: Record<string, {
@@ -296,7 +302,7 @@ export const getTrendingDestinations = authQuery({
             ratings: number[];
         }> = {};
 
-        completedTrips.forEach((trip) => {
+        recentTrips.forEach((trip) => {
             if (!destinationMap[trip.destination]) {
                 destinationMap[trip.destination] = {
                     count: 0,
