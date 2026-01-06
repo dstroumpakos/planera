@@ -53,8 +53,8 @@ export default function TabLayout() {
                 options={{
                     title: "Home",
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={focused ? styles.activeIconContainer : undefined}>
-                            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
+                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={focused ? COLORS.background : color} />
                         </View>
                     ),
                 }}
@@ -64,7 +64,9 @@ export default function TabLayout() {
                 options={{
                     title: "Trips",
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "map" : "map-outline"} size={24} color={color} />
+                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                            <Ionicons name={focused ? "map" : "map-outline"} size={24} color={focused ? COLORS.background : color} />
+                        </View>
                     ),
                 }}
             />
@@ -90,7 +92,9 @@ export default function TabLayout() {
                 options={{
                     title: "Insights",
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "bulb" : "bulb-outline"} size={24} color={color} />
+                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                            <Ionicons name={focused ? "bulb" : "bulb-outline"} size={24} color={focused ? COLORS.background : color} />
+                        </View>
                     ),
                 }}
             />
@@ -99,7 +103,9 @@ export default function TabLayout() {
                 options={{
                     title: "Profile",
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
+                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+                            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={focused ? COLORS.background : color} />
+                        </View>
                     ),
                 }}
             />
@@ -108,11 +114,15 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+    iconContainer: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 20,
+    },
     activeIconContainer: {
         backgroundColor: COLORS.primary,
-        borderRadius: 12,
-        padding: 8,
-        marginBottom: -4,
     },
     createButton: {
         backgroundColor: COLORS.primary,
