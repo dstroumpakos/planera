@@ -22,18 +22,12 @@ const COLORS = {
     cardBg: "#FFFFFF",
 };
 
-const FEATURED_TRIPS = [
-    { id: "1", name: "Tokyo", country: "Japan", price: "€1,250", rating: 4.9, image: "🗼" },
-    { id: "2", name: "Paris", country: "France", price: "€980", rating: 4.8, image: "🗼" },
-    { id: "3", name: "Bali", country: "Indonesia", price: "€750", rating: 4.7, image: "🏝️" },
-    { id: "4", name: "New York", country: "USA", price: "€1,100", rating: 4.6, image: "🗽" },
-];
-
 export default function HomeScreen() {
     const router = useRouter();
     const { isAuthenticated } = useConvexAuth();
     const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
+    const trendingDestinations = useQuery(api.trips.getTrendingDestinations, isAuthenticated ? {} : "skip");
 
     const user = session?.user;
     const userName = user?.name?.split(" ")[0] || "Traveler";
@@ -130,40 +124,48 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                 </View>
 
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.trendingContainer}
-                >
-                    {FEATURED_TRIPS.map((trip) => (
-                        <TouchableOpacity 
-                            key={trip.id}
-                            style={styles.trendingCard}
-                            onPress={() => router.push("/create-trip")}
-                        >
-                            <View style={styles.trendingImageContainer}>
-                                <View style={styles.trendingImagePlaceholder}>
-                                    <Text style={styles.trendingEmoji}>{trip.image}</Text>
+                {trendingDestinations === undefined ? (
+                    <ActivityIndicator size="large" color={COLORS.primary} style={{ marginVertical: 20 }} />
+                ) : trendingDestinations.length === 0 ? (
+                    <View style={styles.emptyTrendingContainer}>
+                        <Text style={styles.emptyTrendingText}>No trending destinations yet</Text>
+                    </View>
+                ) : (
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.trendingContainer}
+                    >
+                        {trendingDestinations.map((destination, index) => (
+                            <TouchableOpacity 
+                                key={index}
+                                style={styles.trendingCard}
+                                onPress={() => router.push("/create-trip")}
+                            >
+                                <View style={styles.trendingImageContainer}>
+                                    <View style={styles.trendingImagePlaceholder}>
+                                        <Text style={styles.trendingEmoji}>✈️</Text>
+                                    </View>
+                                    <View style={styles.ratingBadge}>
+                                        <Ionicons name="star" size={12} color={COLORS.primary} />
+                                        <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
+                                    </View>
+                                    <TouchableOpacity style={styles.arrowButton}>
+                                        <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                                    </TouchableOpacity>
                                 </View>
-                                <View style={styles.ratingBadge}>
-                                    <Ionicons name="star" size={12} color={COLORS.primary} />
-                                    <Text style={styles.ratingText}>{trip.rating}</Text>
+                                <View style={styles.trendingInfo}>
+                                    <Text style={styles.trendingName}>{destination.destination}</Text>
+                                    <View style={styles.trendingLocation}>
+                                        <Ionicons name="people" size={12} color={COLORS.textMuted} />
+                                        <Text style={styles.trendingCountry}>{destination.count} trips</Text>
+                                    </View>
+                                    <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
                                 </View>
-                                <TouchableOpacity style={styles.arrowButton}>
-                                    <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
-                                </TouchableOpacity>
-                            </View>
-                            <View style={styles.trendingInfo}>
-                                <Text style={styles.trendingName}>{trip.name}</Text>
-                                <View style={styles.trendingLocation}>
-                                    <Ionicons name="location" size={12} color={COLORS.textMuted} />
-                                    <Text style={styles.trendingCountry}>{trip.country}</Text>
-                                </View>
-                                <Text style={styles.trendingPrice}>{trip.price}</Text>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                )}
 
                 {/* My Trips Section */}
                 {trips && trips.length > 0 && (
@@ -552,5 +554,14 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "700",
         color: COLORS.text,
+    },
+    emptyTrendingContainer: {
+        paddingVertical: 20,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    emptyTrendingText: {
+        fontSize: 14,
+        color: COLORS.textMuted,
     },
 });

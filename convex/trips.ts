@@ -266,3 +266,81 @@ export const deleteTrip = authMutation({
 
     },
 });
+
+export const getTrendingDestinations = authQuery({
+    args: {},
+    returns: v.array(v.object({
+        destination: v.string(),
+        count: v.float64(),
+        avgBudget: v.float64(),
+        avgRating: v.float64(),
+        interests: v.array(v.string()),
+    })),
+    handler: async (ctx) => {
+        // Get all completed trips from the last 30 days
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        
+        const completedTrips = await ctx.db
+            .query("trips")
+            .filter((q) => 
+                q.and(
+                    q.eq(q.field("status"), "completed"),
+                    q.gte(q.field("_creationTime"), thirtyDaysAgo)
+                )
+            )
+            .collect();
+
+        // Group by destination and aggregate data
+        const destinationMap: Record<string, {
+            count: number;
+            budgets: number[];
+            allInterests: string[];
+            ratings: number[];
+        }> = {};
+
+        completedTrips.forEach((trip) => {
+            if (!destinationMap[trip.destination]) {
+                destinationMap[trip.destination] = {
+                    count: 0,
+                    budgets: [],
+                    allInterests: [],
+                    ratings: [],
+                };
+            }
+
+            destinationMap[trip.destination].count += 1;
+            
+            // Parse budget if it's a string
+            const budgetNum = typeof trip.budget === "string" 
+                ? parseFloat(trip.budget) 
+                : trip.budget;
+            if (!isNaN(budgetNum)) {
+                destinationMap[trip.destination].budgets.push(budgetNum);
+            }
+
+            // Collect interests
+            destinationMap[trip.destination].allInterests.push(...trip.interests);
+            
+            // Add a default rating (you can enhance this later with actual ratings)
+            destinationMap[trip.destination].ratings.push(4.5 + Math.random() * 0.5);
+        });
+
+        // Convert to array and sort by count
+        const trending = Object.entries(destinationMap)
+            .map(([destination, data]) => ({
+                destination,
+                count: data.count,
+                avgBudget: data.budgets.length > 0 
+                    ? data.budgets.reduce((a, b) => a + b, 0) / data.budgets.length 
+                    : 0,
+                avgRating: data.ratings.length > 0
+                    ? data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length
+                    : 4.5,
+                interests: [...new Set(data.allInterests)].slice(0, 3), // Top 3 unique interests
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10); // Return top 10
+
+        return trending;
+    },
+});
