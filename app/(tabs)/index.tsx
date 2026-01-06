@@ -448,10 +448,8 @@ const styles = StyleSheet.create({
     trendingName: {
         fontSize: 18,
         fontWeight: "700",
-        color: COLORS.white,
-        position: "absolute",
-        bottom: 60,
-        left: 16,
+        color: COLORS.text,
+        marginBottom: 8,
     },
     trendingLocation: {
         flexDirection: "row",
