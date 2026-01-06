@@ -140,7 +140,15 @@ export default function HomeScreen() {
                             <TouchableOpacity 
                                 key={index}
                                 style={styles.trendingCard}
-                                onPress={() => router.push("/create-trip")}
+                                onPress={() => router.push({
+                                    pathname: "/destination-preview",
+                                    params: {
+                                        destination: destination.destination,
+                                        avgBudget: destination.avgBudget.toString(),
+                                        avgRating: destination.avgRating.toString(),
+                                        count: destination.count.toString(),
+                                    }
+                                })}
                             >
                                 <View style={styles.trendingImageContainer}>
                                     <View style={styles.trendingImagePlaceholder}>

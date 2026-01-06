@@ -1,7 +1,7 @@
 import { useState } from "react";
 import React from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Modal, Image, Switch, FlatList } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +28,9 @@ const DESTINATIONS = [
 
 export default function CreateTripScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
+    const prefilledDestination = params.prefilledDestination as string | undefined;
+    
     const createTrip = useMutation(api.trips.create);
     const userPlan = useQuery(api.users.getPlan);
     const userSettings = useQuery(api.users.getSettings) as any;
@@ -42,7 +45,7 @@ export default function CreateTripScreen() {
     const [showOriginInput, setShowOriginInput] = useState(false);
 
     const [formData, setFormData] = useState({
-        destination: "",
+        destination: prefilledDestination || "",
         origin: "San Francisco, CA",
         startDate: new Date().getTime(),
         endDate: new Date().getTime() + 7 * 24 * 60 * 60 * 1000,
