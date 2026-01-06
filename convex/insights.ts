@@ -16,21 +16,31 @@ export const getCompletedTrips = authQuery({
             return [];
         }
 
+        const userId = ctx.user._id;
         const now = Date.now();
         const trips = await ctx.db
             .query("trips")
-            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect();
 
         // Filter to only completed trips (endDate has passed)
-        const completedTrips = trips
-            .filter((trip) => trip.endDate < now && trip.status === "completed")
-            .map((trip) => ({
-                _id: trip._id,
-                destination: trip.destination,
-                startDate: trip.startDate,
-                endDate: trip.endDate,
-            }));
+        const completedTrips: Array<{
+            _id: typeof trips[0]["_id"];
+            destination: string;
+            startDate: number;
+            endDate: number;
+        }> = [];
+
+        for (const trip of trips) {
+            if (trip.endDate < now && trip.status === "completed") {
+                completedTrips.push({
+                    _id: trip._id,
+                    destination: trip.destination,
+                    startDate: trip.startDate,
+                    endDate: trip.endDate,
+                });
+            }
+        }
 
         return completedTrips;
     },
@@ -47,21 +57,25 @@ export const hasCompletedTripTo = authQuery({
             return false;
         }
 
+        const userId = ctx.user._id;
         const now = Date.now();
         const trips = await ctx.db
             .query("trips")
-            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect();
 
         // Check if any completed trip matches the destination
-        const hasTrip = trips.some(
-            (trip) => 
+        for (const trip of trips) {
+            if (
                 trip.endDate < now && 
                 trip.status === "completed" &&
                 trip.destination.toLowerCase().includes(args.destination.toLowerCase())
-        );
+            ) {
+                return true;
+            }
+        }
 
-        return hasTrip;
+        return false;
     },
 });
 
