@@ -1,5 +1,5 @@
 import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Image, ScrollView, TextInput } from "react-native";
-import { useQuery, useMutation, useConvexAuth } from "convex/react";
+import { useQuery, useMutation, useConvexAuth, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +7,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth-client";
 import TripCounter from "@/components/TripCounter";
+import { useEffect, useState } from "react";
 
 // Planera Colors
 const COLORS = {
@@ -28,10 +29,42 @@ export default function HomeScreen() {
     const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
     const trendingDestinations = useQuery(api.trips.getTrendingDestinations, isAuthenticated ? {} : "skip");
+    const searchImages = useAction(api.images.searchDestinationImages);
+    
+    const [destinationImages, setDestinationImages] = useState<Record<string, string>>({});
+    const [loadingImages, setLoadingImages] = useState(false);
 
     const user = session?.user;
     const userName = user?.name?.split(" ")[0] || "Traveler";
     
+    // Fetch images for trending destinations
+    useEffect(() => {
+        if (trendingDestinations && trendingDestinations.length > 0) {
+            setLoadingImages(true);
+            const fetchImages = async () => {
+                const images: Record<string, string> = {};
+                for (const destination of trendingDestinations) {
+                    try {
+                        const result = await searchImages({
+                            query: destination.destination,
+                            page: 1,
+                            perPage: 1,
+                            orientation: "landscape",
+                        });
+                        if (result.results.length > 0) {
+                            images[destination.destination] = result.results[0].url;
+                        }
+                    } catch (error) {
+                        console.error(`Failed to fetch image for ${destination.destination}:`, error);
+                    }
+                }
+                setDestinationImages(images);
+                setLoadingImages(false);
+            };
+            fetchImages();
+        }
+    }, [trendingDestinations, searchImages]);
+
     // Get greeting based on time
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -136,7 +169,7 @@ export default function HomeScreen() {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.trendingContainer}
                     >
-                        {trendingDestinations.map((destination, index) => (
+                        {trendingDestinations.map((destination: any, index: number) => (
                             <TouchableOpacity 
                                 key={index}
                                 style={styles.trendingCard}
@@ -151,9 +184,17 @@ export default function HomeScreen() {
                                 })}
                             >
                                 <View style={styles.trendingImageContainer}>
-                                    <View style={styles.trendingImagePlaceholder}>
-                                        <Text style={styles.trendingEmoji}>✈️</Text>
-                                    </View>
+                                    {destinationImages[destination.destination] ? (
+                                        <Image
+                                            source={{ uri: destinationImages[destination.destination] }}
+                                            style={styles.trendingImage}
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <View style={styles.trendingImagePlaceholder}>
+                                            <Text style={styles.trendingEmoji}>✈️</Text>
+                                        </View>
+                                    )}
                                     <View style={styles.ratingBadge}>
                                         <Ionicons name="star" size={12} color={COLORS.primary} />
                                         <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
@@ -185,7 +226,7 @@ export default function HomeScreen() {
                             </TouchableOpacity>
                         </View>
 
-                        {trips.slice(0, 2).map((trip) => (
+                        {trips.slice(0, 2).map((trip: any) => (
                             <TouchableOpacity 
                                 key={trip._id}
                                 style={styles.tripCard}
@@ -412,6 +453,10 @@ const styles = StyleSheet.create({
     trendingImageContainer: {
         height: 180,
         position: "relative",
+    },
+    trendingImage: {
+        width: "100%",
+        height: "100%",
     },
     trendingImagePlaceholder: {
         flex: 1,

@@ -38,7 +38,7 @@ export default function Profile() {
 
     const user = session?.user;
     const tripCount = trips?.length || 0;
-    const completedTrips = trips?.filter(t => t.status === "completed").length || 0;
+    const completedTrips = trips?.filter((t: any) => t.status === "completed").length || 0;
     const isPremium = userPlan?.plan === "premium";
 
     const menuItems = [
