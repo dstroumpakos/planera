@@ -6,7 +6,7 @@ export default defineSchema({
         userId: v.string(),
         destination: v.string(),
         origin: v.optional(v.string()),
-        startDate: v.float64(), // Keep as float64 for now
+        startDate: v.float64(),
         endDate: v.float64(),
         budget: v.union(v.float64(), v.string()),
         travelers: v.float64(),
@@ -21,6 +21,12 @@ export default defineSchema({
             v.literal("failed"),
             v.literal("archived")
         ),
+        // Image fields
+        destinationImage: v.optional(v.object({
+            url: v.string(),
+            photographer: v.string(),
+            attribution: v.string(),
+        })),
         // Backward compatibility: keep raw itinerary
         itinerary: v.optional(v.any()),
         // New structured itinerary items (optional, for future use)
@@ -41,6 +47,11 @@ export default defineSchema({
             price: v.optional(v.float64()),
             currency: v.optional(v.string()),
             bookingUrl: v.optional(v.string()),
+            image: v.optional(v.object({
+                url: v.string(),
+                photographer: v.string(),
+                attribution: v.string(),
+            })),
             metadata: v.optional(v.any()),
         }))),
         isMultiCity: v.optional(v.boolean()),
@@ -105,9 +116,9 @@ export default defineSchema({
 
     insights: defineTable({
         userId: v.string(),
-        destination: v.optional(v.string()), // Keep for backward compatibility
-        destinationId: v.optional(v.string()), // New: normalized destination ID
-        tripId: v.optional(v.id("trips")), // Link to trip
+        destination: v.optional(v.string()),
+        destinationId: v.optional(v.string()),
+        tripId: v.optional(v.id("trips")),
         content: v.string(),
         category: v.union(
             v.literal("food"),
@@ -140,6 +151,23 @@ export default defineSchema({
     })
         .index("by_user", ["userId"])
         .index("by_user_and_trip", ["userId", "tripId"]),
+
+    // New: Image cache table for storing Unsplash images
+    imageCache: defineTable({
+        query: v.string(),
+        type: v.union(
+            v.literal("destination"),
+            v.literal("activity"),
+            v.literal("restaurant"),
+            v.literal("cuisine")
+        ),
+        url: v.string(),
+        photographer: v.string(),
+        attribution: v.string(),
+        unsplashId: v.string(),
+        cachedAt: v.float64(),
+    })
+        .index("by_query_and_type", ["query", "type"]),
 
     events: defineTable({
         userId: v.string(),
