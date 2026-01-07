@@ -362,7 +362,7 @@ export default function InsightsScreen() {
       {/* Trip Verification Modal */}
       <Modal
         visible={!!tripToVerify}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setTripToVerify(null)}
       >
