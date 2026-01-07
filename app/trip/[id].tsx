@@ -938,8 +938,6 @@ export default function TripDetails() {
                                                     </View>
                                                 </View>
                                             </View>
-                                            {/* Placeholder image if no image available */}
-                                            <View style={styles.activityImagePlaceholder} />
                                         </View>
                                     </TouchableOpacity>
                                 </View>
@@ -1599,12 +1597,6 @@ const styles = StyleSheet.create({
     metaDurationText: {
         fontSize: 12,
         color: "#94A3B8",
-    },
-    activityImagePlaceholder: {
-        width: 64,
-        height: 64,
-        borderRadius: 8,
-        backgroundColor: "#E2E8F0",
     },
     fabContainer: {
         position: "absolute",
