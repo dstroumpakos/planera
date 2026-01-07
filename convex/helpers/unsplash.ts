@@ -2,7 +2,15 @@
 
 /**
  * Fetch images from Unsplash API
- * Requires UNSPLASH_ACCESS_KEY environment variable
+ * Requires UNSPLASH_ACCESS_KEY and UNSPLASH_SECRET_KEY environment variables
+ * 
+ * To get these keys:
+ * 1. Go to https://unsplash.com/oauth/applications
+ * 2. Create a new application
+ * 3. Copy the Access Key and Secret Key
+ * 4. Add them to your Convex dashboard environment variables:
+ *    - UNSPLASH_ACCESS_KEY: Your application's access key
+ *    - UNSPLASH_SECRET_KEY: Your application's secret key
  */
 
 interface UnsplashImage {
@@ -14,15 +22,35 @@ interface UnsplashImage {
   attribution: string;
 }
 
+function validateUnsplashKeys(): { accessKey: string; secretKey: string } {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  const secretKey = process.env.UNSPLASH_SECRET_KEY;
+
+  if (!accessKey) {
+    throw new Error(
+      "UNSPLASH_ACCESS_KEY environment variable is required but not set. " +
+      "Please configure it in your Convex dashboard. " +
+      "Get it from: https://unsplash.com/oauth/applications"
+    );
+  }
+
+  if (!secretKey) {
+    throw new Error(
+      "UNSPLASH_SECRET_KEY environment variable is required but not set. " +
+      "Please configure it in your Convex dashboard. " +
+      "Get it from: https://unsplash.com/oauth/applications"
+    );
+  }
+
+  return { accessKey, secretKey };
+}
+
 export async function fetchUnsplashImage(query: string): Promise<UnsplashImage | null> {
   try {
-    const apiKey = process.env.UNSPLASH_ACCESS_KEY;
-    if (!apiKey) {
-      throw new Error("UNSPLASH_ACCESS_KEY environment variable is required but not set. Please configure it in your Convex dashboard.");
-    }
+    const { accessKey } = validateUnsplashKeys();
 
     const response = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&client_id=${apiKey}&orientation=landscape`
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&client_id=${accessKey}&orientation=landscape`
     );
 
     if (!response.ok) {
@@ -48,13 +76,10 @@ export async function fetchUnsplashImage(query: string): Promise<UnsplashImage |
 
 export async function fetchUnsplashImages(query: string, count: number = 5): Promise<UnsplashImage[]> {
   try {
-    const apiKey = process.env.UNSPLASH_ACCESS_KEY;
-    if (!apiKey) {
-      throw new Error("UNSPLASH_ACCESS_KEY environment variable is required but not set. Please configure it in your Convex dashboard.");
-    }
+    const { accessKey } = validateUnsplashKeys();
 
     const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&client_id=${apiKey}&per_page=${count}&orientation=landscape`
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&client_id=${accessKey}&per_page=${count}&orientation=landscape`
     );
 
     if (!response.ok) {
