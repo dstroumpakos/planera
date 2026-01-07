@@ -196,7 +196,7 @@ export default function InsightsScreen() {
             </>
           )}
         </ScrollView>
-      ) : (
+      ) : shareView === "form" ? (
         <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
           {selectedTrip && (
             <>
@@ -251,7 +251,7 @@ export default function InsightsScreen() {
             </>
           )}
         </ScrollView>
-      )}
+      ) : null}
 
       {/* Trip Verification Modal */}
       <Modal
