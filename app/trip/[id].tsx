@@ -8,6 +8,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
+import { useDestinationImage, useActivityImage } from "@/lib/useImages";
+import ActivityCard from "@/components/ActivityCard";
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -236,6 +238,7 @@ export default function TripDetails() {
     const regenerateTrip = useMutation(api.trips.regenerate);
     const trackClick = useMutation(api.bookings.trackClick);
     const insights = useQuery(api.insights.getDestinationInsights, trip ? { destination: trip.destination } : "skip");
+    const { image: destinationImage } = useDestinationImage(trip?.destination);
 
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [accommodationType, setAccommodationType] = useState<'all' | 'hotel' | 'airbnb'>('all');
@@ -831,7 +834,7 @@ export default function TripDetails() {
                 {/* Map Preview */}
                 <View style={styles.mapPreviewContainer}>
                     <Image 
-                        source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
+                        source={{ uri: destinationImage?.url || `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
                         style={styles.mapImage} 
                     />
                     <LinearGradient
@@ -1060,38 +1063,7 @@ export default function TripDetails() {
                         <View>
                             <Text style={styles.sectionTitle}>Top Sights & Activities</Text>
                             {trip.itinerary?.activities?.map((activity: any, index: number) => (
-                                <View key={index} style={styles.card}>
-                                    <View style={styles.row}>
-                                        <View style={styles.flightInfo}>
-                                            <Text style={styles.cardTitle}>{activity.title}</Text>
-                                            <Text style={styles.cardSubtitle}>{activity.duration}</Text>
-                                            <Text style={styles.activityDesc} numberOfLines={3}>{activity.description}</Text>
-                                            <View style={styles.priceRow}>
-                                                <Text style={styles.price}>€{activity.price}</Text>
-                                                {activity.skipTheLine && (
-                                                    <View style={styles.skipLineBadge}>
-                                                        <Text style={styles.skipLineText}>Skip the Line</Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                        </View>
-                                        {activity.image ? (
-                                            <Image source={{ uri: activity.image }} style={styles.activityThumbnail} />
-                                        ) : (
-                                            <View style={styles.activityThumbnailPlaceholder}>
-                                                <Ionicons name="image-outline" size={24} color="#94A3B8" />
-                                            </View>
-                                        )}
-                                    </View>
-                                    {activity.bookingUrl && (
-                                        <TouchableOpacity 
-                                            style={styles.bookButton}
-                                            onPress={() => Linking.openURL(activity.bookingUrl)}
-                                        >
-                                            <Text style={styles.bookButtonText}>Book Now</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
+                                <ActivityCard key={index} activity={activity} destination={trip.destination} />
                             ))}
                             {(!trip.itinerary?.activities || trip.itinerary.activities.length === 0) && (
                                 <Text style={styles.emptyText}>No activities found.</Text>

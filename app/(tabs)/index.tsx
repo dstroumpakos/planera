@@ -29,7 +29,7 @@ export default function HomeScreen() {
     const { data: session } = authClient.useSession();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
     const trendingDestinations = useQuery(api.trips.getTrendingDestinations, isAuthenticated ? {} : "skip");
-    const searchImages = useAction(api.images.searchDestinationImages);
+    const getImages = useAction(api.images.getDestinationImages);
     
     const [destinationImages, setDestinationImages] = useState<Record<string, string>>({});
     const [loadingImages, setLoadingImages] = useState(false);
@@ -45,14 +45,12 @@ export default function HomeScreen() {
                 const images: Record<string, string> = {};
                 for (const destination of trendingDestinations) {
                     try {
-                        const result = await searchImages({
-                            query: destination.destination,
-                            page: 1,
-                            perPage: 1,
-                            orientation: "landscape",
+                        const result = await getImages({
+                            destination: destination.destination,
+                            count: 1,
                         });
-                        if (result.results.length > 0) {
-                            images[destination.destination] = result.results[0].url;
+                        if (result.length > 0) {
+                            images[destination.destination] = result[0].url;
                         }
                     } catch (error) {
                         console.error(`Failed to fetch image for ${destination.destination}:`, error);
@@ -63,7 +61,7 @@ export default function HomeScreen() {
             };
             fetchImages();
         }
-    }, [trendingDestinations, searchImages]);
+    }, [trendingDestinations, getImages]);
 
     // Get greeting based on time
     const getGreeting = () => {
