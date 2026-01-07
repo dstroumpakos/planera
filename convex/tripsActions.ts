@@ -5,6 +5,7 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import OpenAI from "openai";
 import { generateStyleSpecificPrompt } from "./helpers/travelStyles";
+import { fetchRestaurantsFromTripAdvisor } from "./helpers/tripadvisor";
 
 export const generate = internalAction({
     args: { 
@@ -150,7 +151,7 @@ export const generate = internalAction({
             // 4. Fetch restaurants
             console.log("🍽️ Fetching restaurants...");
             try {
-                restaurants = await fetchRestaurants(trip.destination);
+                restaurants = await fetchRestaurantsFromTripAdvisor(trip.destination);
                 console.log(`✅ Fetched ${restaurants?.length || 0} restaurants`);
             } catch (error) {
                 console.warn("⚠️ Restaurant fetch failed:", error);
