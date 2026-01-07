@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useDestinationImage } from "@/lib/useImages";
 
 const { width } = Dimensions.get("window");
 
@@ -90,12 +91,12 @@ const DEFAULT_HIGHLIGHTS = {
 
 export default function DestinationPreviewScreen() {
     const router = useRouter();
-    const params = useLocalSearchParams();
+    const { destination } = useLocalSearchParams<{ destination: string }>();
+    const { image, loading } = useDestinationImage(destination);
     
-    const destination = params.destination as string || "Unknown";
-    const avgBudget = parseFloat(params.avgBudget as string) || 0;
-    const avgRating = parseFloat(params.avgRating as string) || 0;
-    const tripCount = parseInt(params.count as string) || 0;
+    const avgBudget = parseFloat((useLocalSearchParams() as any).avgBudget) || 0;
+    const avgRating = parseFloat((useLocalSearchParams() as any).avgRating) || 0;
+    const tripCount = parseInt((useLocalSearchParams() as any).count) || 0;
 
     // Get destination-specific data or defaults
     const destinationKey = Object.keys(DESTINATION_HIGHLIGHTS).find(
@@ -116,9 +117,21 @@ export default function DestinationPreviewScreen() {
         <View style={styles.container}>
             {/* Hero Image Section */}
             <View style={styles.heroSection}>
-                <View style={styles.heroBackground}>
-                    <Text style={styles.heroEmoji}>{destinationData.emoji}</Text>
-                </View>
+                {loading ? (
+                    <View style={styles.heroBackground}>
+                        <ActivityIndicator size="large" color={COLORS.primary} />
+                    </View>
+                ) : image ? (
+                    <Image 
+                        source={{ uri: image.url }} 
+                        style={styles.heroImage}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={styles.heroBackground}>
+                        <Text style={styles.heroEmoji}>{destinationData.emoji}</Text>
+                    </View>
+                )}
                 <LinearGradient
                     colors={["transparent", "rgba(0,0,0,0.7)"]}
                     style={styles.heroGradient}
@@ -252,6 +265,11 @@ const styles = StyleSheet.create({
         backgroundColor: "#1A1A2E",
         justifyContent: "center",
         alignItems: "center",
+    },
+    heroImage: {
+        ...StyleSheet.absoluteFillObject,
+        width: "100%",
+        height: "100%",
     },
     heroEmoji: {
         fontSize: 100,
