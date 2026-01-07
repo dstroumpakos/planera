@@ -37,7 +37,7 @@ export default function InsightsScreen() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"browse" | "share">("browse");
   const [tripToVerify, setTripToVerify] = useState<any>(null);
-  const shareScrollRef = useRef<ScrollView>(null);
+  const [shareView, setShareView] = useState<"trips" | "form">("trips");
   
   // Form State
   const [selectedTrip, setSelectedTrip] = useState<{
@@ -120,6 +120,22 @@ export default function InsightsScreen() {
     setCategory("other");
   };
 
+  const handleVerifyTrip = (confirmed: boolean) => {
+    if (confirmed && tripToVerify) {
+      setSelectedTrip(tripToVerify);
+      setTripToVerify(null);
+      setActiveTab("share");
+      setShareView("form");
+    } else {
+      setTripToVerify(null);
+    }
+  };
+
+  const handleBackFromForm = () => {
+    setShareView("trips");
+    resetForm();
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
       month: "short",
@@ -189,21 +205,6 @@ export default function InsightsScreen() {
         )}
       </TouchableOpacity>
     );
-  };
-
-  const handleVerifyTrip = (confirmed: boolean) => {
-    if (confirmed && tripToVerify) {
-      setSelectedTrip(tripToVerify);
-      setTripToVerify(null);
-      // Switch to share tab and open the form
-      setActiveTab("share");
-      // Scroll to the form after a brief delay to ensure the tab has switched
-      setTimeout(() => {
-        shareScrollRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    } else {
-      setTripToVerify(null);
-    }
   };
 
   return (
@@ -276,8 +277,8 @@ export default function InsightsScreen() {
             }
           />
         </>
-      ) : (
-        <ScrollView ref={shareScrollRef} style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
+      ) : shareView === "trips" ? (
+        <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => setActiveTab("browse")}
@@ -314,53 +315,61 @@ export default function InsightsScreen() {
                 scrollEnabled={false}
                 contentContainerStyle={styles.tripsListContent}
               />
-
-              {selectedTrip && (
-                <View style={styles.insightFormContainer}>
-                  <Text style={styles.sectionTitle}>Write Your Insight</Text>
-                  <Text style={styles.selectedTripLabel}>
-                    Sharing tips for: <Text style={styles.selectedTripName}>{selectedTrip.destination}</Text>
-                  </Text>
-
-                  <Text style={styles.label}>Your Insight</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="What's one thing future travelers should know?"
-                    placeholderTextColor="#999"
-                    multiline
-                    numberOfLines={4}
-                    value={content}
-                    onChangeText={setContent}
-                  />
-
-                  <Text style={styles.label}>What is this about?</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-                    {CATEGORIES.map((cat) => (
-                      <TouchableOpacity
-                        key={cat.id}
-                        style={[styles.categoryChip, category === cat.id && styles.categoryChipSelected]}
-                        onPress={() => setCategory(cat.id)}
-                      >
-                        <Ionicons 
-                          name={cat.icon as any} 
-                          size={14} 
-                          color={category === cat.id ? "#000" : "#666"} 
-                        />
-                        <Text style={[styles.categoryChipText, category === cat.id && styles.categoryChipTextSelected]}>
-                          {cat.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                    <Ionicons name="paper-plane" size={18} color="#000" />
-                    <Text style={styles.submitButtonText}>Submit Insight</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
             </>
           )}
+        </ScrollView>
+      ) : (
+        <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackFromForm}
+          >
+            <Ionicons name="chevron-back" size={24} color="#F5A623" />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+
+          <View style={styles.insightFormContainer}>
+            <Text style={styles.sectionTitle}>Write Your Insight</Text>
+            <Text style={styles.selectedTripLabel}>
+              Sharing tips for: <Text style={styles.selectedTripName}>{selectedTrip?.destination}</Text>
+            </Text>
+
+            <Text style={styles.label}>Your Insight</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="What's one thing future travelers should know?"
+              placeholderTextColor="#999"
+              multiline
+              numberOfLines={4}
+              value={content}
+              onChangeText={setContent}
+            />
+
+            <Text style={styles.label}>What is this about?</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+              {CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.categoryChip, category === cat.id && styles.categoryChipSelected]}
+                  onPress={() => setCategory(cat.id)}
+                >
+                  <Ionicons 
+                    name={cat.icon as any} 
+                    size={14} 
+                    color={category === cat.id ? "#000" : "#666"} 
+                  />
+                  <Text style={[styles.categoryChipText, category === cat.id && styles.categoryChipTextSelected]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <Ionicons name="paper-plane" size={18} color="#000" />
+              <Text style={styles.submitButtonText}>Submit Insight</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       )}
 
@@ -442,94 +451,6 @@ export default function InsightsScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
-
-      {/* Quick Add Modal (Alternative way to add insights) */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalContainer}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-        >
-          <SafeAreaView style={styles.modalSafeArea}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Share Insight</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalContent}>
-              {completedTrips === undefined ? (
-                <ActivityIndicator size="large" color="#F5A623" style={{ marginTop: 40 }} />
-              ) : completedTrips.length === 0 ? (
-                <View style={styles.noTripsContainer}>
-                  <Ionicons name="calendar-outline" size={48} color="#CCC" />
-                  <Text style={styles.noTripsText}>No completed trips yet</Text>
-                  <Text style={styles.noTripsSubtext}>
-                    You can only share insights for trips you've completed
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <Text style={styles.label}>Select a Completed Trip</Text>
-                  <FlatList
-                    data={completedTrips}
-                    renderItem={renderTripItem}
-                    keyExtractor={(item) => item._id}
-                    scrollEnabled={false}
-                    contentContainerStyle={styles.tripsListContent}
-                  />
-
-                  {selectedTrip && (
-                    <>
-                      <Text style={styles.label}>Category</Text>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-                        {CATEGORIES.map((cat) => (
-                          <TouchableOpacity
-                            key={cat.id}
-                            style={[styles.categoryChip, category === cat.id && styles.categoryChipSelected]}
-                            onPress={() => setCategory(cat.id)}
-                          >
-                            <Ionicons 
-                              name={cat.icon as any} 
-                              size={16} 
-                              color={category === cat.id ? "#FFF" : "#666"} 
-                            />
-                            <Text style={[styles.categoryChipText, category === cat.id && styles.categoryChipTextSelected]}>
-                              {cat.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-
-                      <Text style={styles.label}>Your Insight</Text>
-                      <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Share your tips, hidden gems, or advice..."
-                        placeholderTextColor="#999"
-                        multiline
-                        numberOfLines={4}
-                        value={content}
-                        onChangeText={setContent}
-                      />
-
-                      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                        <Ionicons name="paper-plane" size={20} color="#000" />
-                        <Text style={styles.submitButtonText}>Share Insight</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </>
-              )}
-            </ScrollView>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
