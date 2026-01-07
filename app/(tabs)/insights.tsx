@@ -196,7 +196,62 @@ export default function InsightsScreen() {
             </>
           )}
         </ScrollView>
-      ) : null}
+      ) : (
+        <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
+          {selectedTrip && (
+            <>
+              <Text style={styles.selectedTripLabel}>
+                Sharing insights for: <Text style={styles.selectedTripName}>{selectedTrip.destination}</Text>
+              </Text>
+
+              <View style={styles.insightFormContainer}>
+                <Text style={styles.label}>Category</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+                  {CATEGORIES.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[
+                        styles.categoryChip,
+                        category === cat.id && styles.categoryChipSelected,
+                      ]}
+                      onPress={() => setCategory(cat.id)}
+                    >
+                      <Ionicons
+                        name={cat.icon as any}
+                        size={16}
+                        color={category === cat.id ? "#181710" : "#666"}
+                      />
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          category === cat.id && styles.categoryChipTextSelected,
+                        ]}
+                      >
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text style={styles.label}>Your Insight</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Share your experience, tips, or recommendations..."
+                  placeholderTextColor="#999"
+                  value={content}
+                  onChangeText={setContent}
+                  multiline
+                />
+
+                <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                  <Ionicons name="send" size={18} color="#181710" />
+                  <Text style={styles.submitButtonText}>Share Insight</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      )}
 
       {/* Trip Verification Modal */}
       <Modal
