@@ -35,6 +35,7 @@ export default function InsightsScreen() {
   const insets = useSafeAreaInsets();
   const [tripToVerify, setTripToVerify] = useState<any>(null);
   const [shareView, setShareView] = useState<"trips" | "form">("trips");
+  const [sharedTripIds, setSharedTripIds] = useState<Set<string>>(new Set());
   
   // Form State
   const [selectedTrip, setSelectedTrip] = useState<{
@@ -112,6 +113,7 @@ export default function InsightsScreen() {
   const handleVerifyTrip = (confirmed: boolean) => {
     if (confirmed && tripToVerify) {
       setSelectedTrip(tripToVerify);
+      setSharedTripIds(prev => new Set([...prev, tripToVerify._id]));
       setTripToVerify(null);
       setShareView("form");
     } else {
@@ -175,7 +177,7 @@ export default function InsightsScreen() {
         <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
           {completedTrips === undefined ? (
             <ActivityIndicator size="large" color="#F5A623" style={{ marginTop: 40 }} />
-          ) : completedTrips.length === 0 ? (
+          ) : completedTrips.filter(trip => !sharedTripIds.has(trip._id)).length === 0 ? (
             <View style={styles.noTripsContainer}>
               <Ionicons name="calendar-outline" size={48} color="#CCC" />
               <Text style={styles.noTripsText}>No completed trips yet</Text>
@@ -187,7 +189,7 @@ export default function InsightsScreen() {
             <>
               <Text style={styles.sectionTitle}>Your Completed Trips</Text>
               <FlatList
-                data={completedTrips}
+                data={completedTrips.filter(trip => !sharedTripIds.has(trip._id))}
                 renderItem={renderTripItem}
                 keyExtractor={(item) => item._id}
                 scrollEnabled={false}
