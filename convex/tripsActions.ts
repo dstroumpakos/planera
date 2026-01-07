@@ -5,7 +5,7 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import OpenAI from "openai";
 import { generateStyleSpecificPrompt } from "./helpers/travelStyles";
-import { fetchRestaurantsFromTripAdvisor } from "./helpers/tripadvisor";
+import { fetchRestaurantsFromTripAdvisor, Restaurant } from "./helpers/tripadvisor";
 
 export const generate = internalAction({
     args: { 
@@ -84,10 +84,10 @@ export const generate = internalAction({
         console.log("=".repeat(80));
 
         try {
-            let flights = null;
+            let flights: any = [];
             let hotels = null;
-            let activities = null;
-            let restaurants = null;
+            let activities: any[] = [];
+            let restaurants: Restaurant[] = [];
             let transportation = null;
             let dayByDayItinerary: any[] = [];
 
