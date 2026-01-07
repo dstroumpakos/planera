@@ -141,7 +141,7 @@ export default function InsightsScreen() {
         onPress={() => setTripToVerify(item)}
       >
         <View style={styles.tripIconContainer}>
-          <Ionicons name="airplane" size={24} color={isSelected ? "#FFF" : "#F5A623"} />
+          <Ionicons name="airplane" size={24} color={isSelected ? "#181710" : "#F5A623"} />
         </View>
         <View style={styles.tripInfo}>
           <Text style={[styles.tripDestination, isSelected && styles.tripTextSelected]}>
@@ -152,7 +152,7 @@ export default function InsightsScreen() {
           </Text>
         </View>
         {isSelected && (
-          <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+          <Ionicons name="checkmark-circle" size={24} color="#181710" />
         )}
       </TouchableOpacity>
     );
@@ -165,7 +165,7 @@ export default function InsightsScreen() {
           style={styles.backButton}
           onPress={handleBackFromForm}
         >
-          <Ionicons name="chevron-back" size={24} color="#F5A623" />
+          <Ionicons name="chevron-back" size={24} color="#181710" />
         </TouchableOpacity>
         <Text style={styles.title}>Share Your Tips</Text>
         <View style={{ width: 24 }} />
@@ -293,7 +293,7 @@ export default function InsightsScreen() {
                       {formatDate(tripToVerify.startDate)} - {formatDate(tripToVerify.endDate)} • {tripToVerify.travelers} Travelers
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={24} color="#757575" />
+                  <Ionicons name="chevron-forward" size={24} color="#181710" />
                 </View>
               )}
 
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   },
   noTripsSubtext: {
     marginTop: 8,
-    color: "#999",
+    color: "#666",
     fontSize: 14,
     textAlign: "center",
   },
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   },
   tripDates: {
     fontSize: 13,
-    color: "#999",
+    color: "#666",
     marginTop: 4,
   },
   tripDatesSelected: {
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#181710",
+    color: "#666",
   },
   authContainer: {
     flex: 1,
