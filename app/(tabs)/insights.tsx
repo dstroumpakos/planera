@@ -12,11 +12,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { useQuery, useMutation, usePaginatedQuery, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Id } from "@/convex/_generated/dataModel";
 
 const CATEGORIES = [
@@ -31,9 +32,11 @@ const CATEGORIES = [
 
 export default function InsightsScreen() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"browse" | "share">("browse");
+  const [tripToVerify, setTripToVerify] = useState<any>(null);
   
   // Form State
   const [selectedTrip, setSelectedTrip] = useState<{
@@ -41,6 +44,7 @@ export default function InsightsScreen() {
     destination: string;
     startDate: number;
     endDate: number;
+    travelers: number;
   } | null>(null);
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("other");
@@ -166,7 +170,7 @@ export default function InsightsScreen() {
     return (
       <TouchableOpacity 
         style={[styles.tripCard, isSelected && styles.tripCardSelected]}
-        onPress={() => setSelectedTrip(item)}
+        onPress={() => setTripToVerify(item)}
       >
         <View style={styles.tripIconContainer}>
           <Ionicons name="airplane" size={24} color={isSelected ? "#FFF" : "#F5A623"} />
@@ -184,6 +188,17 @@ export default function InsightsScreen() {
         )}
       </TouchableOpacity>
     );
+  };
+
+  const handleVerifyTrip = (confirmed: boolean) => {
+    if (confirmed && tripToVerify) {
+      setSelectedTrip(tripToVerify);
+      setTripToVerify(null);
+      // Open the share modal with the trip pre-selected
+      setModalVisible(true);
+    } else {
+      setTripToVerify(null);
+    }
   };
 
   return (
@@ -343,6 +358,86 @@ export default function InsightsScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* Trip Verification Modal */}
+      <Modal
+        visible={!!tripToVerify}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setTripToVerify(null)}
+      >
+        <View style={styles.verifyModalOverlay}>
+          <View style={styles.verifyModalContent}>
+            {/* Status Bar Placeholder */}
+            <View style={{ height: insets.top }} />
+            
+            {/* Header */}
+            <View style={styles.verifyHeader}>
+              <TouchableOpacity 
+                style={styles.verifyCloseButton}
+                onPress={() => setTripToVerify(null)}
+              >
+                <Ionicons name="close" size={24} color="#181710" />
+              </TouchableOpacity>
+              <Text style={styles.verifyHeaderTitle}>Trip Feedback</Text>
+              <View style={{ width: 48 }} /> 
+            </View>
+
+            <ScrollView contentContainerStyle={styles.verifyScrollContent}>
+              {/* Trip Card */}
+              {tripToVerify && (
+                <View style={styles.verifyTripCard}>
+                  <View style={styles.verifyTripImageContainer}>
+                    {/* Placeholder image since we don't have one yet */}
+                    <View style={[styles.verifyTripImage, { backgroundColor: "#E0E0E0", justifyContent: "center", alignItems: "center" }]}>
+                       <Ionicons name="image-outline" size={32} color="#999" />
+                    </View>
+                  </View>
+                  <View style={styles.verifyTripInfo}>
+                    <Text style={styles.verifyTripDestination}>{tripToVerify.destination}</Text>
+                    <Text style={styles.verifyTripDetails}>
+                      {formatDate(tripToVerify.startDate)} - {formatDate(tripToVerify.endDate)} • {tripToVerify.travelers} Travelers
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={24} color="#757575" />
+                </View>
+              )}
+
+              {/* Main Prompt */}
+              <View style={styles.verifyPromptContainer}>
+                <View style={styles.verifyIconContainer}>
+                  <Ionicons name="sparkles" size={28} color="#F5A623" />
+                </View>
+                <Text style={styles.verifyTitle}>
+                  Have you taken{"\n"}this trip?
+                </Text>
+                <Text style={styles.verifySubtitle}>
+                  Help Planera AI build better itineraries for your future adventures.
+                </Text>
+              </View>
+
+              <View style={{ flex: 1 }} />
+
+              {/* Action Buttons */}
+              <View style={[styles.verifyActions, { paddingBottom: Math.max(insets.bottom, 32) }]}>
+                <TouchableOpacity 
+                  style={styles.verifyYesButton}
+                  onPress={() => handleVerifyTrip(true)}
+                >
+                  <Text style={styles.verifyYesButtonText}>Yes, I have</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.verifyNoButton}
+                  onPress={() => handleVerifyTrip(false)}
+                >
+                  <Text style={styles.verifyNoButtonText}>No, not yet</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Quick Add Modal (Alternative way to add insights) */}
       <Modal
@@ -835,5 +930,156 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#F5A623",
     marginLeft: 4,
+  },
+  // Verification Modal Styles
+  verifyModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  verifyModalContent: {
+    backgroundColor: "#F8F8F5",
+    height: "100%",
+    width: "100%",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    overflow: "hidden",
+  },
+  verifyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  verifyCloseButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  verifyHeaderTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#181710",
+    textAlign: "center",
+  },
+  verifyScrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  verifyTripCard: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 12,
+    paddingRight: 16,
+    marginBottom: 40,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)",
+  },
+  verifyTripImageContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginRight: 16,
+  },
+  verifyTripImage: {
+    width: "100%",
+    height: "100%",
+  },
+  verifyTripInfo: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 4,
+  },
+  verifyTripDestination: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#181710",
+  },
+  verifyTripDetails: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#757575",
+  },
+  verifyPromptContainer: {
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 32,
+  },
+  verifyIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 217, 0, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  verifyTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#181710",
+    textAlign: "center",
+    lineHeight: 38,
+    marginBottom: 12,
+  },
+  verifySubtitle: {
+    fontSize: 15,
+    color: "#757575",
+    textAlign: "center",
+    lineHeight: 24,
+    maxWidth: 260,
+  },
+  verifyActions: {
+    width: "100%",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 12,
+  },
+  verifyYesButton: {
+    width: "100%",
+    height: 56,
+    backgroundColor: "#FFD900",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#FFD900",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  verifyYesButtonText: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: "#181710",
+  },
+  verifyNoButton: {
+    width: "100%",
+    height: 56,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  verifyNoButtonText: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#181710",
   },
 });

@@ -10,6 +10,7 @@ export const getCompletedTrips = authQuery({
         destination: v.string(),
         startDate: v.float64(),
         endDate: v.float64(),
+        travelers: v.float64(),
     })),
     handler: async (ctx, args) => {
         if (!ctx.user) {
@@ -29,6 +30,7 @@ export const getCompletedTrips = authQuery({
             destination: string;
             startDate: number;
             endDate: number;
+            travelers: number;
         }> = [];
 
         for (const trip of trips) {
@@ -38,6 +40,7 @@ export const getCompletedTrips = authQuery({
                     destination: trip.destination,
                     startDate: trip.startDate,
                     endDate: trip.endDate,
+                    travelers: trip.travelers,
                 });
             }
         }
