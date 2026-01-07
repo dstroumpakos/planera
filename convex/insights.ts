@@ -189,3 +189,28 @@ export const dismissTrip = authMutation({
         }
     },
 });
+
+// Get insights for a specific destination (anonymously)
+export const getDestinationInsights = authQuery({
+    args: {
+        destination: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const insights = await ctx.db
+            .query("insights")
+            .withIndex("by_destination", (q) => q.eq("destination", args.destination))
+            .order("desc")
+            .collect();
+
+        // Return insights without userId (anonymously)
+        return insights.map(insight => ({
+            _id: insight._id,
+            destination: insight.destination,
+            content: insight.content,
+            category: insight.category,
+            verified: insight.verified,
+            likes: insight.likes,
+            createdAt: insight.createdAt,
+        }));
+    },
+});

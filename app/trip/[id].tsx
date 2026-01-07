@@ -241,6 +241,9 @@ export default function TripDetails() {
     const removeFromCart = useMutation(api.cart.removeFromCart);
     const cart = useQuery(api.cart.getCart, id ? { tripId: id as Id<"trips"> } : "skip");
     
+    // Get traveler insights for the destination
+    const insights = useQuery(api.insights.getDestinationInsights, trip ? { destination: trip.destination } : "skip");
+
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [accommodationType, setAccommodationType] = useState<'all' | 'hotel' | 'airbnb'>('all');
     const [isEditing, setIsEditing] = useState(false);
@@ -1290,6 +1293,40 @@ export default function TripDetails() {
                     )}
                 </View>
             </ScrollView>
+
+            {/* Traveler Insights Section */}
+            {insights && insights.length > 0 && (
+                <View style={styles.insightsSection}>
+                    <Text style={styles.sectionTitle}>Traveler Insights</Text>
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.insightsScroll}
+                    >
+                        {insights.map((insight: any) => (
+                            <View key={insight._id} style={styles.insightCard}>
+                                <View style={styles.insightHeader}>
+                                    <View style={styles.insightCategory}>
+                                        <Text style={styles.insightCategoryText}>
+                                            {insight.category.replace('_', ' ').toUpperCase()}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.insightLikes}>
+                                        <Ionicons name="heart" size={14} color="#F59E0B" />
+                                        <Text style={styles.insightLikesText}>{insight.likes}</Text>
+                                    </View>
+                                </View>
+                                <Text style={styles.insightContent} numberOfLines={3}>
+                                    {insight.content}
+                                </Text>
+                                <Text style={styles.insightDate}>
+                                    {new Date(insight.createdAt).toLocaleDateString()}
+                                </Text>
+                            </View>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
 
             {/* Floating Action Bar */}
             <View style={styles.fabContainer}>
@@ -2406,5 +2443,58 @@ const styles = StyleSheet.create({
         color: '#64748B',
         textAlign: 'center',
         marginTop: 8,
+    },
+    insightsSection: {
+        marginBottom: 32,
+    },
+    insightsScroll: {
+        marginBottom: 24,
+    },
+    insightCard: {
+        width: 200,
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 12,
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    insightHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    insightCategory: {
+        backgroundColor: '#FEF3C7',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    insightCategoryText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#92400E',
+        textTransform: 'uppercase',
+    },
+    insightLikes: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    insightLikesText: {
+        fontSize: 12,
+        color: '#F59E0B',
+        fontWeight: '600',
+    },
+    insightContent: {
+        fontSize: 13,
+        color: '#1A1A1A',
+        lineHeight: 18,
+        marginBottom: 8,
+    },
+    insightDate: {
+        fontSize: 11,
+        color: '#94A3B8',
     },
 });
