@@ -7,6 +7,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth-client";
 import TripCounter from "@/components/TripCounter";
+import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 import { useEffect, useState } from "react";
 
 // Planera Colors
@@ -31,8 +32,10 @@ export default function HomeScreen() {
     const trendingDestinations = useQuery(api.trips.getTrendingDestinations, isAuthenticated ? {} : "skip");
     const getImages = useAction(api.images.getDestinationImages);
     
-    const [destinationImages, setDestinationImages] = useState<Record<string, string>>({});
+    const [destinationImages, setDestinationImages] = useState<Record<string, { url: string; photographer: string; attribution: string }>>({});
     const [loadingImages, setLoadingImages] = useState(false);
+
+    const [imageData, setImageData] = useState<{ url: string; photographer: string; attribution: string } | null>(null);
 
     const user = session?.user;
     const userName = user?.name?.split(" ")[0] || "Traveler";
@@ -42,7 +45,7 @@ export default function HomeScreen() {
         if (trendingDestinations && trendingDestinations.length > 0) {
             setLoadingImages(true);
             const fetchImages = async () => {
-                const images: Record<string, string> = {};
+                const images: Record<string, { url: string; photographer: string; attribution: string } | null> = {};
                 for (const destination of trendingDestinations) {
                     try {
                         const result = await getImages({
@@ -50,13 +53,17 @@ export default function HomeScreen() {
                             count: 1,
                         });
                         if (result.length > 0) {
-                            images[destination.destination] = result[0].url;
+                            images[destination.destination] = {
+                                url: result[0].url,
+                                photographer: result[0].photographer,
+                                attribution: result[0].attribution,
+                            };
                         }
                     } catch (error) {
                         console.error(`Failed to fetch image for ${destination.destination}:`, error);
                     }
                 }
-                setDestinationImages(images);
+                setDestinationImages(images as Record<string, { url: string; photographer: string; attribution: string }>);
                 setLoadingImages(false);
             };
             fetchImages();
@@ -183,10 +190,12 @@ export default function HomeScreen() {
                             >
                                 <View style={styles.trendingImageContainer}>
                                     {destinationImages[destination.destination] ? (
-                                        <Image
-                                            source={{ uri: destinationImages[destination.destination] }}
-                                            style={styles.trendingImage}
-                                            resizeMode="cover"
+                                        <ImageWithAttribution
+                                            imageUrl={destinationImages[destination.destination].url}
+                                            photographerName={destinationImages[destination.destination].photographer}
+                                            unsplashUrl={destinationImages[destination.destination].attribution}
+                                            style={styles.trendingImageContainer}
+                                            imageStyle={styles.trendingImage}
                                         />
                                     ) : (
                                         <View style={styles.trendingImagePlaceholder}>

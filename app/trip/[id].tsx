@@ -10,6 +10,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDestinationImage, useActivityImage } from "@/lib/useImages";
 import ActivityCard from "@/components/ActivityCard";
+import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -833,10 +834,20 @@ export default function TripDetails() {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Map Preview */}
                 <View style={styles.mapPreviewContainer}>
-                    <Image 
-                        source={{ uri: destinationImage?.url || `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
-                        style={styles.mapImage} 
-                    />
+                    {destinationImage ? (
+                        <ImageWithAttribution
+                            imageUrl={destinationImage.url}
+                            photographerName={destinationImage.photographer}
+                            unsplashUrl={destinationImage.attribution}
+                            style={styles.mapPreviewContainer}
+                            imageStyle={styles.mapImage}
+                        />
+                    ) : (
+                        <Image 
+                            source={{ uri: `https://images.pexels.com/photos/1285625/pexels-photo-1285625.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop&q=80&query=${encodeURIComponent(trip.destination)}` }} 
+                            style={styles.mapImage} 
+                        />
+                    )}
                     <LinearGradient
                         colors={['transparent', 'rgba(248, 248, 245, 1)']}
                         style={styles.mapGradient}

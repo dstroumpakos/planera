@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useDestinationImage } from "@/lib/useImages";
+import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 
 const { width } = Dimensions.get("window");
 
@@ -122,11 +123,15 @@ export default function DestinationPreviewScreen() {
                         <ActivityIndicator size="large" color={COLORS.primary} />
                     </View>
                 ) : image ? (
-                    <Image 
-                        source={{ uri: image.url }} 
-                        style={styles.heroImage}
-                        resizeMode="cover"
-                    />
+                    <View style={styles.heroImageWrapper}>
+                        <ImageWithAttribution
+                            imageUrl={image.url}
+                            photographerName={image.photographer}
+                            unsplashUrl={image.attribution}
+                            style={styles.heroImageContainer}
+                            imageStyle={styles.heroImage}
+                        />
+                    </View>
                 ) : (
                     <View style={styles.heroBackground}>
                         <Text style={styles.heroEmoji}>{destinationData.emoji}</Text>
@@ -259,6 +264,15 @@ const styles = StyleSheet.create({
     heroSection: {
         height: 320,
         position: "relative",
+    },
+    heroImageWrapper: {
+        flex: 1,
+        overflow: "hidden",
+    },
+    heroImageContainer: {
+        flex: 1,
+        width: "100%",
+        height: "100%",
     },
     heroBackground: {
         flex: 1,
