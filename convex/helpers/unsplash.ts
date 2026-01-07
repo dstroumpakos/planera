@@ -18,8 +18,7 @@ export async function fetchUnsplashImage(query: string): Promise<UnsplashImage |
   try {
     const apiKey = process.env.UNSPLASH_ACCESS_KEY;
     if (!apiKey) {
-      console.warn("⚠️ UNSPLASH_ACCESS_KEY not configured");
-      return null;
+      throw new Error("UNSPLASH_ACCESS_KEY environment variable is required but not set. Please configure it in your Convex dashboard.");
     }
 
     const response = await fetch(
@@ -51,8 +50,7 @@ export async function fetchUnsplashImages(query: string, count: number = 5): Pro
   try {
     const apiKey = process.env.UNSPLASH_ACCESS_KEY;
     if (!apiKey) {
-      console.warn("⚠️ UNSPLASH_ACCESS_KEY not configured");
-      return [];
+      throw new Error("UNSPLASH_ACCESS_KEY environment variable is required but not set. Please configure it in your Convex dashboard.");
     }
 
     const response = await fetch(
