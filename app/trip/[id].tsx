@@ -235,13 +235,6 @@ export default function TripDetails() {
     const updateTrip = useMutation(api.trips.update);
     const regenerateTrip = useMutation(api.trips.regenerate);
     const trackClick = useMutation(api.bookings.trackClick);
-    
-    // Cart mutations and query
-    const addToCart = useMutation(api.cart.addToCart);
-    const removeFromCart = useMutation(api.cart.removeFromCart);
-    const cart = useQuery(api.cart.getCart, id ? { tripId: id as Id<"trips"> } : "skip");
-    
-    // Get traveler insights for the destination
     const insights = useQuery(api.insights.getDestinationInsights, trip ? { destination: trip.destination } : "skip");
 
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
@@ -328,78 +321,6 @@ export default function TripDetails() {
                     endDate: selectedDate.getTime()
                 }));
             }
-        }
-    };
-
-    // Cart helper functions
-    const isInCart = (activityName: string, day?: number, skipTheLine?: boolean): boolean => {
-        if (!cart || !cart.items) return false;
-        return cart.items.some(
-            (item) => item.name === activityName && item.day === day && item.skipTheLine === skipTheLine
-        );
-    };
-
-    const getCartItemCount = (): number => {
-        if (!cart || !cart.items) return 0;
-        return cart.items.reduce((sum, item) => sum + item.quantity, 0);
-    };
-
-    const handleAddToCart = async (activity: any, day: number, skipTheLine: boolean = false) => {
-        if (!id) return;
-        
-        const itemKey = `${activity.title}-${day}-${skipTheLine}`;
-        setAddingToCart(itemKey);
-        
-        try {
-            const price = skipTheLine && activity.skipTheLinePrice 
-                ? activity.skipTheLinePrice 
-                : activity.price || 0;
-            
-            await addToCart({
-                tripId: id as Id<"trips">,
-                item: {
-                    type: "activity",
-                    name: activity.title,
-                    price: price,
-                    currency: "EUR",
-                    quantity: 1,
-                    day: day,
-                    bookingUrl: activity.bookingUrl,
-                    productCode: activity.productCode,
-                    skipTheLine: skipTheLine,
-                    details: {
-                        time: activity.time,
-                        duration: activity.duration,
-                        description: activity.description,
-                    },
-                },
-            });
-            
-            if (Platform.OS !== 'web') {
-                Alert.alert("Added to Cart", `${activity.title}${skipTheLine ? " (Skip the Line)" : ""} has been added to your cart.`);
-            }
-        } catch (error) {
-            console.error("Error adding to cart:", error);
-            if (Platform.OS !== 'web') {
-                Alert.alert("Error", "Failed to add item to cart. Please try again.");
-            }
-        } finally {
-            setAddingToCart(null);
-        }
-    };
-
-    const handleRemoveFromCart = async (activityName: string, day?: number, skipTheLine?: boolean) => {
-        if (!id) return;
-        
-        try {
-            await removeFromCart({
-                tripId: id as Id<"trips">,
-                itemName: activityName,
-                day: day,
-                skipTheLine: skipTheLine,
-            });
-        } catch (error) {
-            console.error("Error removing from cart:", error);
         }
     };
 
@@ -2251,7 +2172,6 @@ const styles = StyleSheet.create({
     },
     ratingText: {
         fontSize: 12,
-        fontWeight: "600",
         color: "#1A1A1A",
     },
     addressText: {

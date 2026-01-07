@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
 import { paginationOptsValidator } from "convex/server";
+import { query } from "./_generated/server";
 
 // Get user's completed trips (trips where endDate has passed)
 export const getCompletedTrips = authQuery({
@@ -99,9 +100,10 @@ export const list = authQuery({
     },
     handler: async (ctx, args) => {
         if (args.destination) {
+            const destinationId = args.destination.toLowerCase().replace(/\s+/g, '-');
             return await ctx.db
                 .query("insights")
-                .withIndex("by_destination", (q) => q.eq("destination", args.destination!))
+                .withIndex("by_destination", (q) => q.eq("destinationId", destinationId))
                 .order("desc")
                 .paginate(args.paginationOpts);
         } else {
@@ -133,13 +135,17 @@ export const create = authMutation({
             throw new Error("Unauthorized");
         }
 
+        const destinationId = args.destination.toLowerCase().replace(/\s+/g, '-');
+
         const insightId = await ctx.db.insert("insights", {
             userId: ctx.user._id,
             destination: args.destination,
+            destinationId,
             content: args.content,
             category: args.category,
             verified: args.verified,
             likes: 0,
+            moderationStatus: "pending",
             createdAt: Date.now(),
         });
 
@@ -191,26 +197,54 @@ export const dismissTrip = authMutation({
 });
 
 // Get insights for a specific destination (anonymously)
-export const getDestinationInsights = authQuery({
-    args: {
-        destination: v.string(),
-    },
+export const getDestinationInsights = query({
+    args: { destination: v.string() },
     handler: async (ctx, args) => {
+        // Normalize destination to lowercase slug
+        const destinationId = args.destination.toLowerCase().replace(/\s+/g, '-');
+        
         const insights = await ctx.db
             .query("insights")
-            .withIndex("by_destination", (q) => q.eq("destination", args.destination))
+            .withIndex("by_destination", (q) =>
+                q.eq("destinationId", destinationId)
+            )
+            .filter((q) => q.eq(q.field("moderationStatus"), "approved"))
             .order("desc")
-            .collect();
+            .take(10);
+        
+        return insights;
+    },
+});
 
-        // Return insights without userId (anonymously)
-        return insights.map(insight => ({
-            _id: insight._id,
-            destination: insight.destination,
-            content: insight.content,
-            category: insight.category,
-            verified: insight.verified,
-            likes: insight.likes,
-            createdAt: insight.createdAt,
-        }));
+export const shareInsight = authMutation({
+    args: {
+        destination: v.string(),
+        tripId: v.optional(v.id("trips")),
+        content: v.string(),
+        category: v.union(
+            v.literal("food"),
+            v.literal("transport"),
+            v.literal("neighborhoods"),
+            v.literal("timing"),
+            v.literal("hidden_gem"),
+            v.literal("avoid"),
+            v.literal("other")
+        ),
+    },
+    handler: async (ctx, args) => {
+        const destinationId = args.destination.toLowerCase().replace(/\s+/g, '-');
+        
+        await ctx.db.insert("insights", {
+            userId: ctx.user._id,
+            destination: args.destination,
+            destinationId,
+            tripId: args.tripId,
+            content: args.content,
+            category: args.category,
+            verified: false,
+            likes: 0,
+            moderationStatus: "pending",
+            createdAt: Date.now(),
+        });
     },
 });
