@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -37,6 +37,7 @@ export default function InsightsScreen() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"browse" | "share">("browse");
   const [tripToVerify, setTripToVerify] = useState<any>(null);
+  const shareScrollRef = useRef<ScrollView>(null);
   
   // Form State
   const [selectedTrip, setSelectedTrip] = useState<{
@@ -196,6 +197,10 @@ export default function InsightsScreen() {
       setTripToVerify(null);
       // Switch to share tab and open the form
       setActiveTab("share");
+      // Scroll to the form after a brief delay to ensure the tab has switched
+      setTimeout(() => {
+        shareScrollRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     } else {
       setTripToVerify(null);
     }
@@ -272,7 +277,7 @@ export default function InsightsScreen() {
           />
         </>
       ) : (
-        <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
+        <ScrollView ref={shareScrollRef} style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => setActiveTab("browse")}
