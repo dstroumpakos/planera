@@ -161,19 +161,18 @@ export default function InsightsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={handleBackFromForm}
+        >
+          <Ionicons name="chevron-back" size={24} color="#F5A623" />
+        </TouchableOpacity>
         <Text style={styles.title}>Share Your Tips</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       {shareView === "trips" ? (
         <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackFromForm}
-          >
-            <Ionicons name="chevron-back" size={24} color="#F5A623" />
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-
           {completedTrips === undefined ? (
             <ActivityIndicator size="large" color="#F5A623" style={{ marginTop: 40 }} />
           ) : completedTrips.length === 0 ? (
@@ -456,11 +455,11 @@ const styles = StyleSheet.create({
   shareContainer: {
     flex: 1,
     backgroundColor: "#FFF",
-    paddingTop: 60,
   },
   shareContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+    paddingTop: 20,
   },
   shareHeader: {
     alignItems: "center",
@@ -694,7 +693,6 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
     paddingVertical: 8,
   },
   backButtonText: {
