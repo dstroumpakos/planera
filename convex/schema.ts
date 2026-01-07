@@ -120,12 +120,12 @@ export default defineSchema({
         ),
         verified: v.boolean(),
         likes: v.float64(),
-        moderationStatus: v.union(
+        moderationStatus: v.optional(v.union(
             v.literal("pending"),
             v.literal("approved"),
             v.literal("rejected"),
             v.literal("flagged")
-        ),
+        )),
         createdAt: v.float64(),
         updatedAt: v.optional(v.float64()),
     })
