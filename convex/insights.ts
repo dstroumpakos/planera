@@ -19,12 +19,21 @@ export const getCompletedTrips = authQuery({
 
         const userId = ctx.user._id;
         const now = Date.now();
+        
+        // Get dismissed trips
+        const dismissedTripsData = await ctx.db
+            .query("dismissedTrips")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect();
+        
+        const dismissedTripIds = new Set(dismissedTripsData.map(d => d.tripId));
+        
         const trips = await ctx.db
             .query("trips")
             .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect();
 
-        // Filter to only completed trips (endDate has passed)
+        // Filter to only completed trips (endDate has passed) and not dismissed
         const completedTrips: Array<{
             _id: typeof trips[0]["_id"];
             destination: string;
@@ -34,7 +43,7 @@ export const getCompletedTrips = authQuery({
         }> = [];
 
         for (const trip of trips) {
-            if (trip.endDate < now && trip.status === "completed") {
+            if (trip.endDate < now && trip.status === "completed" && !dismissedTripIds.has(trip._id)) {
                 completedTrips.push({
                     _id: trip._id,
                     destination: trip.destination,
@@ -151,5 +160,32 @@ export const like = authMutation({
         await ctx.db.patch(args.insightId, {
             likes: insight.likes + 1,
         });
+    },
+});
+
+export const dismissTrip = authMutation({
+    args: {
+        tripId: v.id("trips"),
+    },
+    handler: async (ctx, args) => {
+        if (!ctx.user) {
+            throw new Error("Unauthorized");
+        }
+
+        // Check if already dismissed
+        const existing = await ctx.db
+            .query("dismissedTrips")
+            .withIndex("by_user_and_trip", (q) => 
+                q.eq("userId", ctx.user._id).eq("tripId", args.tripId)
+            )
+            .unique();
+
+        if (!existing) {
+            await ctx.db.insert("dismissedTrips", {
+                userId: ctx.user._id,
+                tripId: args.tripId,
+                dismissedAt: Date.now(),
+            });
+        }
     },
 });

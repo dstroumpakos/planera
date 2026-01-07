@@ -35,7 +35,6 @@ export default function InsightsScreen() {
   const insets = useSafeAreaInsets();
   const [tripToVerify, setTripToVerify] = useState<any>(null);
   const [shareView, setShareView] = useState<"trips" | "form">("trips");
-  const [sharedTrips, setSharedTrips] = useState<Set<string>>(new Set());
   
   // Form State
   const [selectedTrip, setSelectedTrip] = useState<{
@@ -55,6 +54,7 @@ export default function InsightsScreen() {
   );
 
   const createInsight = useMutation(api.insights.create);
+  const dismissTrip = useMutation(api.insights.dismissTrip);
 
   // Show loading state while auth is initializing
   if (isAuthLoading) {
@@ -116,8 +116,8 @@ export default function InsightsScreen() {
       setTripToVerify(null);
       setShareView("form");
     } else if (tripToVerify) {
-      // Hide the trip when user clicks "No, not yet"
-      setSharedTrips(prev => new Set([...prev, tripToVerify._id]));
+      // Dismiss the trip when user clicks "No, not yet"
+      dismissTrip({ tripId: tripToVerify._id });
       setTripToVerify(null);
     } else {
       setTripToVerify(null);
@@ -180,7 +180,7 @@ export default function InsightsScreen() {
         <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
           {completedTrips === undefined ? (
             <ActivityIndicator size="large" color="#F5A623" style={{ marginTop: 40 }} />
-          ) : completedTrips.filter(trip => !sharedTrips.has(trip._id)).length === 0 ? (
+          ) : completedTrips.length === 0 ? (
             <View style={styles.noTripsContainer}>
               <Ionicons name="calendar-outline" size={48} color="#CCC" />
               <Text style={styles.noTripsText}>No completed trips yet</Text>
@@ -192,7 +192,7 @@ export default function InsightsScreen() {
             <>
               <Text style={styles.sectionTitle}>Your Completed Trips</Text>
               <FlatList
-                data={completedTrips?.filter(trip => !sharedTrips.has(trip._id))}
+                data={completedTrips}
                 renderItem={renderTripItem}
                 keyExtractor={(item) => item._id}
                 scrollEnabled={false}
@@ -328,10 +328,7 @@ export default function InsightsScreen() {
                 
                 <TouchableOpacity 
                   style={styles.verifyNoButton}
-                  onPress={() => {
-                    handleVerifyTrip(false);
-                    setSharedTrips(prev => new Set([...prev, tripToVerify?._id]));
-                  }}
+                  onPress={() => handleVerifyTrip(false)}
                 >
                   <Text style={styles.verifyNoButtonText}>No, not yet</Text>
                 </TouchableOpacity>

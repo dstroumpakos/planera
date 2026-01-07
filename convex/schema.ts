@@ -114,4 +114,9 @@ export default defineSchema({
         likes: v.float64(),
         createdAt: v.float64(),
     }).index("by_destination", ["destination"]).index("by_user", ["userId"]),
+    dismissedTrips: defineTable({
+        userId: v.string(),
+        tripId: v.id("trips"),
+        dismissedAt: v.float64(),
+    }).index("by_user", ["userId"]).index("by_user_and_trip", ["userId", "tripId"]),
 });
