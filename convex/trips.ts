@@ -346,7 +346,7 @@ export const getTrendingDestinations = authQuery({
                 interests: [...new Set(data.allInterests)].slice(0, 3), // Top 3 unique interests
             }))
             .sort((a, b) => b.count - a.count)
-            .slice(0, 10); // Return top 10
+            .slice(0, 5); // Return top 5
 
         return trending;
     },
