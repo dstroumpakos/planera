@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#333",
+    color: "#181710",
   },
   addButton: {
     backgroundColor: "#F5A623",
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   shareTitle: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#333",
+    color: "#181710",
     marginTop: 12,
     textAlign: "center",
   },
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#333",
+    color: "#181710",
     marginBottom: 16,
   },
   noTripsContainer: {
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   },
   noTripsText: {
     marginTop: 16,
-    color: "#666",
+    color: "#181710",
     fontSize: 18,
     fontWeight: "600",
   },
@@ -516,8 +516,8 @@ const styles = StyleSheet.create({
     borderColor: "#E0E0E0",
   },
   tripCardSelected: {
-    backgroundColor: "#F5A623",
-    borderColor: "#F5A623",
+    backgroundColor: "#FFD900",
+    borderColor: "#FFD900",
   },
   tripIconContainer: {
     width: 48,
@@ -534,18 +534,18 @@ const styles = StyleSheet.create({
   tripDestination: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "#181710",
   },
   tripTextSelected: {
-    color: "#FFF",
+    color: "#181710",
   },
   tripDates: {
     fontSize: 13,
-    color: "#666",
+    color: "#999",
     marginTop: 4,
   },
   tripDatesSelected: {
-    color: "rgba(255,255,255,0.8)",
+    color: "#181710",
   },
   insightFormContainer: {
     marginTop: 32,
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#666",
+    color: "#181710",
   },
   authContainer: {
     flex: 1,
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
   authTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#333",
+    color: "#181710",
     marginTop: 24,
   },
   authSubtitle: {
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#F5A623",
+    color: "#FFD900",
     marginLeft: 4,
   },
   // Verification Modal Styles
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   verifyModalContent: {
-    backgroundColor: "#F8F8F5",
+    backgroundColor: "#FFFBF0",
     height: "100%",
     width: "100%",
     borderTopLeftRadius: 40,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   verifyTripDetails: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#757575",
+    color: "#999",
   },
   verifyPromptContainer: {
     alignItems: "center",
