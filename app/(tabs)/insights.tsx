@@ -194,8 +194,8 @@ export default function InsightsScreen() {
     if (confirmed && tripToVerify) {
       setSelectedTrip(tripToVerify);
       setTripToVerify(null);
-      // Open the share modal with the trip pre-selected
-      setModalVisible(true);
+      // Switch to share tab and open the form
+      setActiveTab("share");
     } else {
       setTripToVerify(null);
     }
