@@ -317,7 +317,18 @@ export default function InsightsScreen() {
                     Sharing tips for: <Text style={styles.selectedTripName}>{selectedTrip.destination}</Text>
                   </Text>
 
-                  <Text style={styles.label}>Category</Text>
+                  <Text style={styles.label}>Your Insight</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="What's one thing future travelers should know?"
+                    placeholderTextColor="#999"
+                    multiline
+                    numberOfLines={4}
+                    value={content}
+                    onChangeText={setContent}
+                  />
+
+                  <Text style={styles.label}>What is this about?</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
                     {CATEGORIES.map((cat) => (
                       <TouchableOpacity
@@ -327,8 +338,8 @@ export default function InsightsScreen() {
                       >
                         <Ionicons 
                           name={cat.icon as any} 
-                          size={16} 
-                          color={category === cat.id ? "#FFF" : "#666"} 
+                          size={14} 
+                          color={category === cat.id ? "#000" : "#666"} 
                         />
                         <Text style={[styles.categoryChipText, category === cat.id && styles.categoryChipTextSelected]}>
                           {cat.label}
@@ -337,20 +348,9 @@ export default function InsightsScreen() {
                     ))}
                   </ScrollView>
 
-                  <Text style={styles.label}>Your Tip</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Share your tips, hidden gems, or advice for other travelers..."
-                    placeholderTextColor="#999"
-                    multiline
-                    numberOfLines={4}
-                    value={content}
-                    onChangeText={setContent}
-                  />
-
                   <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                    <Ionicons name="paper-plane" size={20} color="#000" />
-                    <Text style={styles.submitButtonText}>Share Insight</Text>
+                    <Ionicons name="paper-plane" size={18} color="#000" />
+                    <Text style={styles.submitButtonText}>Submit Insight</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -384,14 +384,14 @@ export default function InsightsScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.verifyScrollContent}>
-              {/* Trip Card */}
+              {/* Trip Card with Image */}
               {tripToVerify && (
                 <View style={styles.verifyTripCard}>
                   <View style={styles.verifyTripImageContainer}>
-                    {/* Placeholder image since we don't have one yet */}
-                    <View style={[styles.verifyTripImage, { backgroundColor: "#E0E0E0", justifyContent: "center", alignItems: "center" }]}>
-                       <Ionicons name="image-outline" size={32} color="#999" />
-                    </View>
+                    <Image
+                      source={{ uri: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=200&h=200&fit=crop" }}
+                      style={styles.verifyTripImage}
+                    />
                   </View>
                   <View style={styles.verifyTripInfo}>
                     <Text style={styles.verifyTripDestination}>{tripToVerify.destination}</Text>
@@ -801,6 +801,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     padding: 20,
     borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#E7E5DA",
   },
   selectedTripLabel: {
     fontSize: 14,
@@ -837,15 +844,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 12,
-    marginTop: 20,
-    color: "#333",
+    marginTop: 16,
+    color: "#181710",
   },
   input: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F5F4F0",
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
     color: "#333",
+    borderWidth: 1,
+    borderColor: "#E7E5DA",
   },
   textArea: {
     height: 120,
@@ -858,35 +867,46 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "#F5F5F5",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#F5F4F0",
     marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E7E5DA",
   },
   categoryChipSelected: {
-    backgroundColor: "#F5A623",
+    backgroundColor: "#FFD900",
+    borderColor: "#FFD900",
   },
   categoryChipText: {
     marginLeft: 6,
     fontWeight: "500",
     color: "#666",
+    fontSize: 13,
   },
   categoryChipTextSelected: {
-    color: "#FFF",
+    color: "#181710",
+    fontWeight: "600",
   },
   submitButton: {
-    backgroundColor: "#F5A623",
+    backgroundColor: "#FFD900",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 18,
+    padding: 16,
     borderRadius: 12,
-    marginTop: 32,
+    marginTop: 24,
     gap: 8,
+    shadowColor: "#FFD900",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
   submitButtonText: {
-    color: "#000",
+    color: "#181710",
     fontSize: 16,
     fontWeight: "bold",
   },
