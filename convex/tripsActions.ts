@@ -1115,6 +1115,75 @@ async function searchActivities(destination: string) {
     }
 }
 
+// Viator API - Search for activities/products
+async function searchViatorActivities(destination: string, apiKey: string): Promise<any[]> {
+    try {
+        const searchUrl = `https://api.viator.com/partner/search/freetext?text=${encodeURIComponent(destination)}&limit=20`;
+        
+        const response = await fetch(searchUrl, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json;version=2.0",
+                "Accept-Language": "en-US",
+                "exp-api-key": apiKey,
+            }
+        });
+
+        if (!response.ok) {
+            console.warn(`⚠️ Viator search failed: ${response.status}`);
+            return [];
+        }
+
+        const data = await response.json();
+        const products = data.products || [];
+
+        if (products.length === 0) {
+            console.warn("⚠️ No products found via Viator freetext search");
+            return [];
+        }
+
+        console.log(`✅ Found ${products.length} products via Viator`);
+
+        // Fetch detailed product info for better images (optional, with fallback)
+        const detailedProducts = await Promise.all(
+            products.slice(0, 20).map(async (product: any) => {
+                try {
+                    const detailedInfo = await getViatorProductDetails(product.productCode, apiKey);
+                    return detailedInfo || product;
+                } catch {
+                    return product;
+                }
+            })
+        );
+
+        return detailedProducts.map((product: any) => ({
+            title: product.title,
+            price: product.pricing?.summary?.fromPrice || 25,
+            currency: product.pricing?.currency || "EUR",
+            duration: product.duration?.fixedDurationInMinutes 
+                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
+                : product.duration?.variableDurationFromMinutes
+                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
+                    : "2-3h",
+            description: product.description?.substring(0, 200) || "Popular activity",
+            rating: product.reviews?.combinedAverageRating || 4.5,
+            reviewCount: product.reviews?.totalReviews || 0,
+            productCode: product.productCode,
+            bookingUrl: `https://www.viator.com/en/tours/${product.productCode}`,
+            image: getViatorProductImage(product),
+            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
+                        product.title?.toLowerCase().includes("skip") ||
+                        product.title?.toLowerCase().includes("priority"),
+            skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
+                ? (product.pricing?.summary?.fromPrice || 25) 
+                : null,
+        }));
+    } catch (error) {
+        console.error("❌ Viator activities error:", error);
+        throw error;
+    }
+}
+
 // Viator API - Get detailed product information by product code
 async function getViatorProductDetails(productCode: string, apiKey: string) {
     try {
@@ -1163,76 +1232,6 @@ function getViatorProductImage(product: any): string | null {
     if (product.primaryImage?.url) return product.primaryImage.url;
     
     return null;
-}
-
-// Viator API - Search products by free text (backup method)
-async function searchViatorProductsByText(searchText: string, apiKey: string) {
-    try {
-        const response = await fetch(
-            "https://api.viator.com/partner/products/search",
-            {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json;version=2.0",
-                    "Accept-Language": "en-US",
-                    "Content-Type": "application/json",
-                    "exp-api-key": apiKey,
-                },
-                body: JSON.stringify({
-                    filtering: {
-                        searchTerm: searchText,
-                    },
-                    sorting: {
-                        sort: "TRAVELER_RATING",
-                        order: "DESC"
-                    },
-                    pagination: {
-                        start: 1,
-                        count: 10
-                    },
-                    currency: "EUR"
-                })
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Viator text search API error:", response.status, errorText);
-            throw new Error(`Viator text search failed: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.products || data.products.length === 0) {
-            return [];
-        }
-
-        return data.products.slice(0, 8).map((product: any) => ({
-            title: product.title,
-            price: product.pricing?.summary?.fromPrice || 25,
-            currency: product.pricing?.currency || "EUR",
-            duration: product.duration?.fixedDurationInMinutes 
-                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)}h`
-                : product.duration?.variableDurationFromMinutes
-                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round((product.duration.variableDurationToMinutes || product.duration.variableDurationFromMinutes * 2) / 60)}h`
-                    : "2-3h",
-            description: product.description?.substring(0, 200) || "Popular activity",
-            rating: product.reviews?.combinedAverageRating || 4.5,
-            reviewCount: product.reviews?.totalReviews || 0,
-            productCode: product.productCode,
-            bookingUrl: `https://www.viator.com/en/tours/${product.productCode}`,
-            image: getViatorProductImage(product),
-            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
-                        product.title?.toLowerCase().includes("skip") ||
-                        product.title?.toLowerCase().includes("priority"),
-            skipTheLinePrice: product.flags?.includes("SKIP_THE_LINE") 
-                ? (product.pricing?.summary?.fromPrice || 25) 
-                : null,
-        }));
-    } catch (error) {
-        console.error("❌ Viator text search error:", error);
-        throw error;
-    }
 }
 
 // Fallback activities - destination-specific
