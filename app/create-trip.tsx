@@ -78,6 +78,8 @@ export default function CreateTripScreen() {
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+    const [showErrorScreen, setShowErrorScreen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
     const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
     const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
     const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
@@ -307,13 +309,14 @@ export default function CreateTripScreen() {
             console.error("Error creating trip:", error);
             
             // Extract error message
-            const errorMessage = error.message || "Failed to create trip. Please try again.";
+            const errorMsg = error.message || "Failed to create trip. Please try again.";
             // Clean up Convex error prefix if present
-            const cleanMessage = errorMessage.replace("Uncaught Error: ", "").replace("Error: ", "");
+            const cleanMessage = errorMsg.replace("Uncaught Error: ", "").replace("Error: ", "");
             
-            Alert.alert("Error", cleanMessage);
+            setErrorMessage(cleanMessage);
             setLoading(false);
             setShowLoadingScreen(false);
+            setShowErrorScreen(true);
         }
     };
 
@@ -328,9 +331,31 @@ export default function CreateTripScreen() {
     if (showLoadingScreen) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 20 }} />
-                <Text style={styles.loadingTitle}>Generating your dream trip...</Text>
+                <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 24 }} />
+                <Text style={styles.loadingTitle}>Generating your trip...</Text>
+                <Text style={styles.loadingDestination}>{formData.destination}</Text>
                 <Text style={styles.loadingSubtitle}>This usually takes a few seconds.</Text>
+            </SafeAreaView>
+        );
+    }
+
+    if (showErrorScreen) {
+        return (
+            <SafeAreaView style={styles.errorContainer}>
+                <View style={styles.errorContent}>
+                    <Ionicons name="alert-circle" size={64} color="#FF4444" style={{ marginBottom: 24 }} />
+                    <Text style={styles.errorTitle}>Trip Generation Failed</Text>
+                    <Text style={styles.errorMessage}>{errorMessage}</Text>
+                    <TouchableOpacity 
+                        style={styles.errorButton}
+                        onPress={() => {
+                            setShowErrorScreen(false);
+                            setErrorMessage("");
+                        }}
+                    >
+                        <Text style={styles.errorButtonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         );
     }
@@ -1120,14 +1145,59 @@ const styles = StyleSheet.create({
     loadingTitle: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#FFE500",
+        color: "#1A1A1A",
         marginBottom: 8,
+        textAlign: "center",
+    },
+    loadingDestination: {
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#FFE500",
+        marginBottom: 16,
         textAlign: "center",
     },
     loadingSubtitle: {
         fontSize: 16,
         color: "#9B9B9B",
         textAlign: "center",
+    },
+    errorContainer: {
+        flex: 1,
+        backgroundColor: "#FAF9F6",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 20,
+    },
+    errorContent: {
+        alignItems: "center",
+        maxWidth: 320,
+    },
+    errorTitle: {
+        fontSize: 24,
+        fontWeight: "700",
+        color: "#1A1A1A",
+        marginBottom: 12,
+        textAlign: "center",
+    },
+    errorMessage: {
+        fontSize: 16,
+        color: "#9B9B9B",
+        textAlign: "center",
+        marginBottom: 32,
+        lineHeight: 24,
+    },
+    errorButton: {
+        paddingVertical: 14,
+        paddingHorizontal: 32,
+        backgroundColor: "#1A1A1A",
+        borderRadius: 12,
+        minWidth: 200,
+        alignItems: "center",
+    },
+    errorButtonText: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "white",
     },
     flightPreferencesContainer: {
         flexDirection: "row",
