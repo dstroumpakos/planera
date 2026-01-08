@@ -97,6 +97,39 @@ export default function TripDetailsScreen() {
     );
   }
 
+  // Show generating screen while trip is being created
+  if (trip.status === "generating") {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingTitle}>Generating your trip...</Text>
+        <Text style={styles.loadingSubtitle}>
+          Planning the perfect itinerary for {trip.destination}
+        </Text>
+        <Text style={styles.loadingHint}>This usually takes 30-60 seconds</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Show failed screen if trip generation failed
+  if (trip.status === "failed") {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
+        <Text style={styles.loadingTitle}>Trip generation failed</Text>
+        <Text style={styles.loadingSubtitle}>
+          We couldn't generate your trip. Please try again.
+        </Text>
+        <TouchableOpacity 
+          style={[styles.backButton, { marginTop: 24 }]} 
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       month: 'short',
@@ -462,7 +495,7 @@ export default function TripDetailsScreen() {
           currentTrip={{
             startDate: trip.startDate,
             endDate: trip.endDate,
-            budget: trip.budget,
+            budget: typeof trip.budget === 'string' ? Number(trip.budget) : trip.budget,
             travelers: trip.travelers,
             interests: trip.interests,
           }}
@@ -488,6 +521,26 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: COLORS.textSecondary,
+  },
+  loadingTitle: {
+    marginTop: 24,
+    fontSize: 22,
+    fontWeight: '600',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  loadingSubtitle: {
+    marginTop: 8,
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  loadingHint: {
+    marginTop: 24,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    opacity: 0.7,
   },
   errorText: {
     fontSize: 18,
