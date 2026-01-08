@@ -1215,6 +1215,18 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
         
         console.log(`🔍 Fetching details for ${restaurantList.length} restaurants...`);
         
+        const restaurants: Array<{
+            name: string;
+            priceRange: string;
+            cuisine: string;
+            rating: number;
+            address: string;
+            reviewCount: number;
+            tripAdvisorUrl: string | null;
+            phone: string | null;
+            description: string | null;
+        }> = [];
+        
         for (const restaurant of restaurantList) {
             try {
                 const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${restaurant.location_id}/details?key=${apiKey}&language=en&currency=EUR`;
@@ -1262,7 +1274,7 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
         }
 
         // Sort by rating (highest first), then by review count as tiebreaker
-        restaurants.sort((a, b) => {
+        restaurants.sort((a: any, b: any) => {
             if (b.rating !== a.rating) {
                 return b.rating - a.rating; // Higher rating first
             }
@@ -1273,7 +1285,7 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
         const topRestaurants = restaurants.slice(0, 20);
 
         console.log(`✅ Returning top ${topRestaurants.length} highest-rated restaurants (4.0+ rating)`);
-        topRestaurants.forEach((r, i) => {
+        topRestaurants.forEach((r: any, i: number) => {
             console.log(`   ${i + 1}. ${r.name} - Rating: ${r.rating} ⭐ (${r.reviewCount} reviews)`);
         });
         
@@ -1391,7 +1403,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         console.log(`🔍 Searching Viator activities for: ${destination}`);
         
         const searchResponse = await fetch(
-            "https://api.viator.com/partner/search/freetext",
+            "https://api.sandbox.viator.com/partner/search/freetext",
             {
                 method: "POST",
                 headers: {
@@ -1452,7 +1464,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
 
         // Use /products/search to get more details
         const productsResponse = await fetch(
-            "https://api.viator.com/partner/products/search",
+            "https://api.sandbox.viator.com/partner/products/search",
             {
                 method: "POST",
                 headers: {
@@ -1508,7 +1520,8 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.primaryImage?.url || product.images?.[0]?.url || null,
+                image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
+                   product.images?.[0]?.variants?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
                         product.title?.toLowerCase().includes("skip") ||
                         product.title?.toLowerCase().includes("priority"),
@@ -1551,7 +1564,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
 async function searchViatorProductsByText(searchText: string, apiKey: string) {
     try {
         const response = await fetch(
-            "https://api.viator.com/partner/products/search",
+            "https://api.sandbox.viator.com/partner/products/search",
             {
                 method: "POST",
                 headers: {
@@ -1642,7 +1655,7 @@ function getFallbackActivities(destination: string) {
             { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
             { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
             { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
-            { title: "Thames River Cruise", price: "€15", duration: "1h", description: "Sightseeing boat tour" },
+            { title: "Thames River Cruise", price: "€115", duration: "1h", description: "Sightseeing boat tour" },
         ],
         "barcelona": [
             { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
