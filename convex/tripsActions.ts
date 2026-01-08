@@ -1115,15 +1115,260 @@ async function searchActivities(destination: string) {
     }
 }
 
+// TripAdvisor Content API - Search for city/destination location ID
+async function searchTripAdvisorLocation(destination: string, apiKey: string): Promise<{ locationId: string; name: string } | null> {
+    try {
+        // Use "geos" category to find cities/destinations, not restaurants
+        const searchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&category=geos&language=en`;
+        
+        console.log(`🔍 TripAdvisor searching for city: ${destination}`);
+        
+        const response = await fetch(searchUrl, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("TripAdvisor location search error:", response.status, errorText);
+            return null;
+        }
+
+        const data = await response.json();
+        
+        if (data.data && data.data.length > 0) {
+            // Find the best match - prefer cities over regions
+            const cityMatch = data.data.find((loc: any) => 
+                loc.name.toLowerCase().includes(destination.toLowerCase()) ||
+                destination.toLowerCase().includes(loc.name.toLowerCase())
+            ) || data.data[0];
+            
+            console.log(`✅ Found TripAdvisor city: ${cityMatch.name} (ID: ${cityMatch.location_id})`);
+            return { locationId: cityMatch.location_id, name: cityMatch.name };
+        }
+        
+        return null;
+    } catch (error) {
+        console.error("❌ TripAdvisor location search error:", error);
+        return null;
+    }
+}
+
+// TripAdvisor Content API - Search for restaurants using location/search with restaurants category
+async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
+    try {
+        // Step 1: Get the city location to find its coordinates
+        const cityLocation = await searchTripAdvisorLocation(destination, apiKey);
+        
+        if (!cityLocation) {
+            console.warn("⚠️ Could not find TripAdvisor city for:", destination);
+            return [];
+        }
+
+        // Step 2: Get city details to get lat/long
+        const cityDetailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${cityLocation.locationId}/details?key=${apiKey}&language=en&currency=EUR`;
+        
+        const cityDetailsResponse = await fetch(cityDetailsUrl, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        let latLong = "";
+        if (cityDetailsResponse.ok) {
+            const cityDetails = await cityDetailsResponse.json();
+            if (cityDetails.latitude && cityDetails.longitude) {
+                latLong = `${cityDetails.latitude},${cityDetails.longitude}`;
+                console.log(`📍 City coordinates: ${latLong}`);
+            }
+        }
+
+        // Step 3: Search for top-rated restaurants - always use search endpoint with "top rated" query
+        // This returns better quality results than nearby_search
+        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=top rated restaurants ${encodeURIComponent(cityLocation.name)}&category=restaurants&language=en`;
+        
+        console.log(`🍽️ Searching top-rated restaurants in: ${cityLocation.name}`);
+        
+        const response = await fetch(restaurantsUrl, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("TripAdvisor restaurants search error:", response.status, errorText);
+            return [];
+        }
+
+        const data = await response.json();
+        
+        if (!data.data || data.data.length === 0) {
+            console.warn("⚠️ No restaurants found via TripAdvisor search");
+            return [];
+        }
+
+        console.log(`✅ Found ${data.data.length} restaurants via TripAdvisor`);
+
+        // Step 4: Get details for more restaurants (up to 30) to find the best rated ones
+        const restaurantList = data.data.slice(0, 30); // Fetch up to 30 to get better selection
+        
+        console.log(`🔍 Fetching details for ${restaurantList.length} restaurants...`);
+        
+        for (const restaurant of restaurantList) {
+            try {
+                const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${restaurant.location_id}/details?key=${apiKey}&language=en&currency=EUR`;
+                
+                const detailsResponse = await fetch(detailsUrl, {
+                    method: "GET",
+                    headers: { "Accept": "application/json" }
+                });
+
+                if (detailsResponse.ok) {
+                    const details = await detailsResponse.json();
+                    
+                    // Map price level to price range
+                    const priceLevel = details.price_level || "$";
+                    const priceRange = priceLevel === "$" ? "€" : 
+                                      priceLevel === "$$" || priceLevel === "$$ - $$$" ? "€€" :
+                                      priceLevel === "$$$" || priceLevel === "$$$ - $$$$" ? "€€€" : "€€€€";
+                    
+                    const rating = parseFloat(details.rating) || 0;
+                    const reviewCount = parseInt(details.num_reviews) || 0;
+                    
+                    console.log(`   📊 ${details.name}: Rating ${rating}, Reviews ${reviewCount}`);
+                    
+                    // Only include restaurants with rating >= 4.0 and at least some reviews
+                    if (rating >= 4.0 && reviewCount >= 10) {
+                        restaurants.push({
+                            name: details.name || restaurant.name,
+                            priceRange: priceRange,
+                            cuisine: details.cuisine?.[0]?.localized_name || details.subcategory?.[0]?.localized_name || "Local Cuisine",
+                            rating: rating,
+                            address: details.address_obj?.street1 || details.address_obj?.address_string || cityLocation.name,
+                            reviewCount: reviewCount,
+                            tripAdvisorUrl: details.web_url || null,
+                            phone: details.phone || null,
+                            description: details.description || null,
+                        });
+                    }
+                }
+                
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (detailError) {
+                console.error("Error fetching restaurant details:", detailError);
+            }
+        }
+
+        // Sort by rating (highest first), then by review count as tiebreaker
+        restaurants.sort((a, b) => {
+            if (b.rating !== a.rating) {
+                return b.rating - a.rating; // Higher rating first
+            }
+            return b.reviewCount - a.reviewCount; // More reviews as tiebreaker
+        });
+        
+        // Return top 20 highest-rated restaurants
+        const topRestaurants = restaurants.slice(0, 20);
+
+        console.log(`✅ Returning top ${topRestaurants.length} highest-rated restaurants (4.0+ rating)`);
+        topRestaurants.forEach((r, i) => {
+            console.log(`   ${i + 1}. ${r.name} - Rating: ${r.rating} ⭐ (${r.reviewCount} reviews)`);
+        });
+        
+        // If we didn't find enough high-rated restaurants, lower the threshold
+        if (topRestaurants.length < 5) {
+            console.log("⚠️ Not enough high-rated restaurants, including lower rated ones...");
+            // Re-fetch without the rating filter
+            return await searchTripAdvisorRestaurantsNoFilter(destination, apiKey, cityLocation);
+        }
+        
+        return topRestaurants;
+    } catch (error) {
+        console.error("❌ TripAdvisor restaurants search error:", error);
+        return [];
+    }
+}
+
+// Fallback search without rating filter
+async function searchTripAdvisorRestaurantsNoFilter(destination: string, apiKey: string, cityLocation: { locationId: string; name: string }) {
+    try {
+        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=popular restaurants ${encodeURIComponent(cityLocation.name)}&category=restaurants&language=en`;
+        
+        const response = await fetch(restaurantsUrl, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        if (!response.ok) return [];
+
+        const data = await response.json();
+        if (!data.data || data.data.length === 0) return [];
+
+        const restaurants: Array<{
+            name: string;
+            priceRange: string;
+            cuisine: string;
+            rating: number;
+            address: string;
+            reviewCount: number;
+            tripAdvisorUrl: string | null;
+            phone: string | null;
+            description: string | null;
+        }> = [];
+        
+        for (const restaurant of data.data.slice(0, 25)) {
+            try {
+                const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${restaurant.location_id}/details?key=${apiKey}&language=en&currency=EUR`;
+                const detailsResponse = await fetch(detailsUrl, {
+                    method: "GET",
+                    headers: { "Accept": "application/json" }
+                });
+
+                if (detailsResponse.ok) {
+                    const details = await detailsResponse.json();
+                    const priceLevel = details.price_level || "$";
+                    const priceRange = priceLevel === "$" ? "€" : 
+                                      priceLevel === "$$" || priceLevel === "$$ - $$$" ? "€€" :
+                                      priceLevel === "$$$" || priceLevel === "$$$ - $$$$" ? "€€€" : "€€€€";
+                    
+                    restaurants.push({
+                        name: details.name || restaurant.name,
+                        priceRange: priceRange,
+                        cuisine: details.cuisine?.[0]?.localized_name || "Local Cuisine",
+                        rating: parseFloat(details.rating) || 4.0,
+                        address: details.address_obj?.street1 || cityLocation.name,
+                        reviewCount: parseInt(details.num_reviews) || 0,
+                        tripAdvisorUrl: details.web_url || null,
+                        phone: details.phone || null,
+                        description: details.description || null,
+                    });
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (e) {
+                console.error("Error in fallback restaurant fetch:", e);
+            }
+        }
+
+        // Still sort by rating
+        restaurants.sort((a, b) => b.rating - a.rating);
+        return restaurants.slice(0, 20);
+    } catch (error) {
+        console.error("❌ Fallback restaurant search error:", error);
+        return [];
+    }
+}
+
 // Helper function to search restaurants
 async function searchRestaurants(destination: string) {
     const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
     
     if (!tripAdvisorKey) {
-        console.warn("⚠️ TripAdvisor API key not configured. Using fallback restaurants.");
+        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback restaurants.");
         return getFallbackRestaurants(destination);
     }
-    
+
     console.log(`🍽️ Searching restaurants in ${destination} via TripAdvisor`);
     try {
         const restaurants = await searchTripAdvisorRestaurants(destination, tripAdvisorKey);
@@ -1146,7 +1391,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         console.log(`🔍 Searching Viator activities for: ${destination}`);
         
         const searchResponse = await fetch(
-            `https://api.viator.com/v2/experiences/search/freetext?text=${encodeURIComponent(destination)}&limit=50`,
+            "https://api.viator.com/partner/search/freetext",
             {
                 method: "POST",
                 headers: {
@@ -1207,7 +1452,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
 
         // Use /products/search to get more details
         const productsResponse = await fetch(
-            `https://api.viator.com/v2/products?ids=${productCodes.join(',')}&currency=USD`,
+            "https://api.viator.com/partner/products/search",
             {
                 method: "POST",
                 headers: {
@@ -1263,8 +1508,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
                 bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
-                image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
-                   product.images?.[0]?.variants?.[0]?.url || null,
+                image: product.primaryImage?.url || product.images?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
                         product.title?.toLowerCase().includes("skip") ||
                         product.title?.toLowerCase().includes("priority"),
@@ -1307,7 +1551,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
 async function searchViatorProductsByText(searchText: string, apiKey: string) {
     try {
         const response = await fetch(
-            "https://api.viator.com/v2/products/search",
+            "https://api.viator.com/partner/products/search",
             {
                 method: "POST",
                 headers: {
@@ -1374,72 +1618,6 @@ async function searchViatorProductsByText(searchText: string, apiKey: string) {
     }
 }
 
-// TripAdvisor API - Search for restaurants
-async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
-    try {
-        console.log(`🔍 Searching TripAdvisor restaurants for: ${destination}`);
-        
-        // First, search for location ID
-        const locationResponse = await fetch(
-            `https://api.content.tripadvisor.com/api/v1/location/search?query=${encodeURIComponent(destination)}&key=${apiKey}`
-        );
-
-        if (!locationResponse.ok) {
-            const errorText = await locationResponse.text();
-            console.error("TripAdvisor location search error:", locationResponse.status, errorText);
-            throw new Error(`TripAdvisor location search failed: ${locationResponse.status}`);
-        }
-
-        const locationData = await locationResponse.json();
-        
-        if (!locationData.data || locationData.data.length === 0) {
-            console.warn("⚠️ No location found on TripAdvisor for:", destination);
-            return [];
-        }
-
-        const locationId = locationData.data[0].location_id;
-        console.log(`✅ Found location ID: ${locationId}`);
-
-        // Search for restaurants in that location
-        const restaurantsResponse = await fetch(
-            `https://api.content.tripadvisor.com/api/v1/location/${locationId}/details?key=${apiKey}&language=en&fields=name,rating,review_count,cuisine,address,phone,website,photo`
-        );
-
-        if (!restaurantsResponse.ok) {
-            const errorText = await restaurantsResponse.text();
-            console.error("TripAdvisor restaurants search error:", restaurantsResponse.status, errorText);
-            throw new Error(`TripAdvisor restaurants search failed: ${restaurantsResponse.status}`);
-        }
-
-        const restaurantsData = await restaurantsResponse.json();
-        
-        if (!restaurantsData.data) {
-            console.warn("⚠️ No restaurants found on TripAdvisor");
-            return [];
-        }
-
-        // Map TripAdvisor data to our restaurant format
-        const restaurants = restaurantsData.data.map((restaurant: any) => ({
-            name: restaurant.name || "Restaurant",
-            cuisine: restaurant.cuisine?.[0]?.name || "International",
-            priceRange: restaurant.price_level || "€€",
-            rating: restaurant.rating || 4.0,
-            reviewCount: restaurant.review_count || 0,
-            address: restaurant.address || "",
-            phone: restaurant.phone || "",
-            website: restaurant.website || "",
-            description: `${restaurant.cuisine?.[0]?.name || "International"} cuisine restaurant`,
-            image: restaurant.photo?.images?.large?.url || null,
-        }));
-
-        console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
-        return restaurants.slice(0, 10);
-    } catch (error) {
-        console.error("❌ TripAdvisor restaurants error:", error);
-        throw error;
-    }
-}
-
 // Fallback activities - destination-specific
 function getFallbackActivities(destination: string) {
     const destLower = destination.toLowerCase();
@@ -1448,23 +1626,23 @@ function getFallbackActivities(destination: string) {
         "paris": [
             { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
             { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
-            { title: "Seine River Cruise", price: "€e15", duration: "1h", description: "Scenic boat tour along the Seine" },
+            { title: "Seine River Cruise", price: "€15", duration: "1h", description: "Scenic boat tour along the Seine" },
             { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
             { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
         ],
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
             { title: "Vatican Museums", price: "€e7", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "St. Peter's Basilica", price: "€e11", duration: "2h", description: "Ancient Roman temple" },
+            { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
             { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
         ],
         "london": [
             { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
             { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
-            { title: "London Eye", price: "€32", duration: "1 hour", description: "Giant observation wheel" },
+            { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
             { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
-            { title: "Thames River Cruise", price: "€115", duration: "1h", description: "Sightseeing boat tour" },
+            { title: "Thames River Cruise", price: "€15", duration: "1h", description: "Sightseeing boat tour" },
         ],
         "barcelona": [
             { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
@@ -1474,17 +1652,17 @@ function getFallbackActivities(destination: string) {
             { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
         ],
         "athens": [
-            { title: "Acropolis & Parthenon", price: "€20", duration: "3 hours", description: "Ancient citadel and temple" },
-            { title: "Acropolis Museum", price: "€15", duration: "2-3 hours", description: "Archaeological museum" },
-            { title: "Ancient Agora", price: "€10", duration: "2 hours", description: "Ancient marketplace" },
-            { title: "National Archaeological Museum", price: "€12", duration: "2-3 hours", description: "Greek art collection" },
-            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2-3 hours", description: "Historic neighborhoods" },
+            { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
+            { title: "Acropolis Museum", price: "€15", duration: "2h", description: "Archaeological museum" },
+            { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
+            { title: "National Archaeological Museum", price: "€12", duration: "2h", description: "Greek art collection" },
+            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2-3h", description: "Historic neighborhoods" },
         ],
         "amsterdam": [
             { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
             { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
             { title: "Rijksmuseum", price: "€22", duration: "3h", description: "Dutch art and history" },
-            { title: "Canal Cruise", price: "€116", duration: "1 hour", description: "Explore Amsterdam's waterways" },
+            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
             { title: "Heineken Experience", price: "€23", duration: "1.5h", description: "Interactive brewery tour" },
         ],
     };
@@ -1695,7 +1873,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             metroTicket: 1.20,
             dayPass: 6,
             airportExpress: 2, // MetroLine 3
-            premiumTransfer: 55,
+            premiumTransfer: 75,
         },
         "berlin": {
             taxiFromAirport: 45, // BER to city center
@@ -1716,9 +1894,9 @@ function generateTransportationOptions(destination: string, origin: string, trav
             uberComfort: { min: 40, max: 55 },
             bolt: { min: 22, max: 35 },
             carRentalEconomy: 28,
-            carRentalCompact: 38,
-            carRentalSUV: 65,
-            metroTicket: 1.30,
+            carRentalCompact: 42,
+            carRentalSUV: 70,
+            metroTicket: 1.50,
             dayPass: 8.40,
             airportExpress: 5, // Metro
             premiumTransfer: 80,
@@ -1797,7 +1975,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             carRentalCompact: 38,
             carRentalSUV: 65,
             metroTicket: 1.30,
-            dayPass: 8.40,
+            dayPass: 5,
             airportExpress: 2.50, // Bus 119 + Metro
             premiumTransfer: 65,
         },

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Linking } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,26 +33,6 @@ export default function Profile() {
         } catch (error) {
             console.error("Logout failed:", error);
             Alert.alert("Error", "Failed to log out");
-        }
-    };
-
-    const handleHelpSupport = async () => {
-        const supportEmail = "support@planeraai.app";
-        const subject = "Help & Support Request";
-        const body = `Hi Planera Support,\n\nI need help with...\n\nUser: ${user?.email || "Unknown"}\n`;
-        
-        const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        
-        try {
-            const canOpen = await Linking.canOpenURL(mailtoUrl);
-            if (canOpen) {
-                await Linking.openURL(mailtoUrl);
-            } else {
-                Alert.alert("Error", "Email client not available on this device");
-            }
-        } catch (error) {
-            console.error("Error opening email:", error);
-            Alert.alert("Error", "Could not open email client");
         }
     };
 
@@ -165,7 +145,7 @@ export default function Profile() {
 
                 {/* Help & Support */}
                 <View style={styles.helpSection}>
-                    <TouchableOpacity style={styles.helpItem} onPress={handleHelpSupport}>
+                    <TouchableOpacity style={styles.helpItem}>
                         <Ionicons name="help-circle-outline" size={20} color={COLORS.textSecondary} />
                         <Text style={styles.helpText}>Help & Support</Text>
                     </TouchableOpacity>
