@@ -1632,7 +1632,7 @@ function getFallbackActivities(destination: string) {
         ],
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
-            { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
+            { title: "Vatican Museums", price: "€e7", duration: "3h", description: "Sistine Chapel and art collections" },
             { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
             { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
@@ -1678,7 +1678,7 @@ function getFallbackActivities(destination: string) {
         { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
         { title: "Walking Tour", price: "€10", duration: "2h", description: "Guided walking tour of historic sites" },
         { title: "Local Market", price: "Free", duration: "1-2h", description: "Experience local life and cuisine" },
-        { title: "Sunset Viewpoint", price: "Free", duration: "1h", description: "Best views of the city" },
+        { title: "Sunset Viewpoint", price: "Free", duration: "1 hour", description: "Best views of the city" },
     ];
 }
 
