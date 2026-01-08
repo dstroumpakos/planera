@@ -1467,7 +1467,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 rating: product.reviews?.combinedAverageRating || 4.5,
                 reviewCount: product.reviews?.totalReviews || 0,
                 productCode: product.productCode,
-                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
+                bookingUrl: product.productCode ? `https://www.viator.com/en/tours/${product.productCode}` : null,
                 image: product.primaryImage?.url || product.images?.[0]?.url || null,
                 skipTheLine: product.title?.toLowerCase().includes("skip") ||
                             product.title?.toLowerCase().includes("priority"),
@@ -1507,7 +1507,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 rating: product.rating || 4.5,
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
-                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
+                bookingUrl: product.productCode ? `https://www.viator.com/en/tours/${product.productCode}` : null,
                 image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
                    product.images?.[0]?.variants?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
@@ -1532,7 +1532,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 rating: product.rating || 4.5,
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
-                bookingUrl: product.productCode ? `https://www.viator.com/tours/${product.productCode}` : null,
+                bookingUrl: product.productCode ? `https://www.viator.com/en/tours/${product.productCode}` : null,
                 image: product.primaryImage?.url || product.images?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
                         product.title?.toLowerCase().includes("skip") ||
@@ -1556,7 +1556,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
             rating: product.reviews?.combinedAverageRating || 4.5,
             reviewCount: product.reviews?.totalReviews || 0,
             productCode: product.productCode,
-            bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
+            bookingUrl: `https://www.viator.com/en/tours/${product.productCode}`,
             image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
                    product.images?.[0]?.variants?.[0]?.url || null,
             skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
@@ -1627,7 +1627,7 @@ async function searchViatorProductsByText(searchText: string, apiKey: string) {
             rating: product.reviews?.combinedAverageRating || 4.5,
             reviewCount: product.reviews?.totalReviews || 0,
             productCode: product.productCode,
-            bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
+            bookingUrl: `https://www.viator.com/en/tours/${product.productCode}`,
             image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
                    product.images?.[0]?.variants?.[0]?.url || null,
             skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
