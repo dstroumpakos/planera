@@ -4,7 +4,7 @@ import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import OpenAI from "openai";
-import { createStyleBasedPromptInstruction, generateStyleContext, TravelStyle } from "./travelStyles";
+import { createStyleBasedPromptInstruction, generateStyleContext, TravelStyle, TRAVEL_STYLES } from "./travelStyles";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -137,7 +137,12 @@ Format the response as a JSON object with this structure:
                     const styleHighlights: any[] = [];
                     
                     travelStyles.forEach((style) => {
-                        const styleConfig = require("./travelStyles").TRAVEL_STYLES[style];
+                        const styleConfig = TRAVEL_STYLES[style];
+                        if (!styleConfig) {
+                            console.warn(`Unknown travel style: ${style}`);
+                            return;
+                        }
+                        
                         const keywords = styleConfig.keywords.map((k: string) => k.toLowerCase());
                         
                         const matchingActivities = allActivities.filter((activity: any) => {

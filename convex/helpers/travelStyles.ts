@@ -84,10 +84,20 @@ export function generateStyleContext(styles: TravelStyle[]): string {
         return "No specific travel styles selected. Provide a balanced mix of activities.";
     }
 
-    const styleDescriptions = styles.map((style) => {
-        const config = TRAVEL_STYLES[style];
-        return `- ${config.label}: ${config.description}`;
-    });
+    const styleDescriptions = styles
+        .map((style) => {
+            const config = TRAVEL_STYLES[style];
+            if (!config) {
+                console.warn(`Unknown travel style: ${style}`);
+                return null;
+            }
+            return `- ${config.label}: ${config.description}`;
+        })
+        .filter((desc): desc is string => desc !== null);
+
+    if (styleDescriptions.length === 0) {
+        return "No specific travel styles selected. Provide a balanced mix of activities.";
+    }
 
     return `User's selected travel styles:\n${styleDescriptions.join("\n")}\n\nPrioritize activities and recommendations that match these styles. When multiple styles are selected, create a balanced itinerary that combines them intelligently without duplicates.`;
 }
