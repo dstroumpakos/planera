@@ -258,7 +258,7 @@ export default function TripDetails() {
         endDate: new Date().getTime(),
         budget: 0, // Changed to number
         travelers: 1, // Changed to number
-        interests: "",
+        interests: [] as string[],
     });
 
     useEffect(() => {
@@ -285,7 +285,7 @@ export default function TripDetails() {
                 endDate: trip.endDate,
                 budget: budgetValue,
                 travelers: trip.travelers || 1,
-                interests: (trip.interests || []).join(", "),
+                interests: Array.isArray(trip.interests) ? trip.interests : [],
             });
         }
     }, [trip]);
@@ -301,7 +301,7 @@ export default function TripDetails() {
             endDate: editForm.endDate,
             budget: editForm.budget, // Already a number
             travelers: editForm.travelers, // Already a number
-            interests: editForm.interests.split(",").map(s => s.trim()).filter(s => s.length > 0),
+            interests: editForm.interests, // Already an array
         });
         await regenerateTrip({ tripId: trip._id });
         setIsEditing(false);
@@ -1271,22 +1271,10 @@ export default function TripDetails() {
                     <ScrollView contentContainerStyle={styles.modalContent}>
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Destination</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={editForm.destination}
-                                onChangeText={(text) => setEditForm(prev => ({ ...prev, destination: text }))}
-                                placeholder="e.g. Paris, Tokyo"
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Flying from</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={editForm.origin}
-                                onChangeText={(text) => setEditForm(prev => ({ ...prev, origin: text }))}
-                                placeholder="e.g. New York"
-                            />
+                            <View style={styles.lockedInput}>
+                                <Text style={styles.lockedInputText}>{editForm.destination}</Text>
+                                <Ionicons name="lock-closed" size={16} color="#94A3B8" />
+                            </View>
                         </View>
 
                         <View style={styles.inputGroup}>
@@ -1355,14 +1343,33 @@ export default function TripDetails() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Interests (comma separated)</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
-                                value={editForm.interests}
-                                onChangeText={(text) => setEditForm(prev => ({ ...prev, interests: text }))}
-                                multiline
-                                placeholder="e.g. Food, History, Nature"
-                            />
+                            <Text style={styles.label}>Travel Styles</Text>
+                            <View style={styles.interestsContainer}>
+                                {["Adventure", "Culinary", "Culture", "Relaxation", "Nightlife", "Nature", "History", "Shopping", "Luxury", "Family"].map((interest) => (
+                                    <TouchableOpacity
+                                        key={interest}
+                                        style={[
+                                            styles.interestChip,
+                                            editForm.interests.includes(interest) && styles.interestChipSelected,
+                                        ]}
+                                        onPress={() => {
+                                            setEditForm(prev => ({
+                                                ...prev,
+                                                interests: prev.interests.includes(interest)
+                                                    ? prev.interests.filter(i => i !== interest)
+                                                    : [...prev.interests, interest]
+                                            }));
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.interestChipText,
+                                            editForm.interests.includes(interest) && styles.interestChipTextSelected,
+                                        ]}>
+                                            {interest}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
 
                         <TouchableOpacity 
@@ -1673,7 +1680,7 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
+        backgroundColor: "#F8F8F5",
     },
     modalHeader: {
         flexDirection: "row",
@@ -1682,16 +1689,16 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: "white",
         borderBottomWidth: 0,
-        shadowColor: "#4F6DF5",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 4,
     },
     modalTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
     modalContent: {
         padding: 20,
@@ -1703,7 +1710,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "700",
         marginBottom: 8,
-        color: "#A1AEC6",
+        color: "#64748B",
         textTransform: "uppercase",
         letterSpacing: 0.5,
     },
@@ -1712,13 +1719,25 @@ const styles = StyleSheet.create({
         padding: 14,
         borderRadius: 14,
         fontSize: 16,
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: "#E2E8F0",
-        color: "#1A2433",
+        color: "#1A1A1A",
     },
-    textArea: {
-        height: 100,
-        textAlignVertical: "top",
+    lockedInput: {
+        backgroundColor: "#F1F5F9",
+        padding: 14,
+        borderRadius: 14,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    lockedInputText: {
+        fontSize: 16,
+        color: "#1A1A1A",
+        fontWeight: "500",
     },
     dateRow: {
         flexDirection: "row",
@@ -1730,34 +1749,59 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         padding: 14,
         borderRadius: 14,
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: "#E2E8F0",
     },
     dateLabel: {
         fontSize: 12,
-        color: "#A1AEC6",
+        color: "#64748B",
         marginBottom: 4,
         textTransform: "uppercase",
     },
     dateValue: {
         fontSize: 16,
-        color: "#1A2433",
+        color: "#1A1A1A",
         fontWeight: "500",
     },
+    interestsContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    interestChip: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: "white",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    interestChipSelected: {
+        backgroundColor: "#F9F506",
+        borderColor: "#F9F506",
+    },
+    interestChipText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#64748B",
+    },
+    interestChipTextSelected: {
+        color: "#1A1A1A",
+    },
     saveButton: {
-        backgroundColor: "#4F6DF5",
+        backgroundColor: "#F9F506",
         padding: 16,
         borderRadius: 14,
         alignItems: "center",
         marginTop: 24,
-        shadowColor: "#4F6DF5",
+        shadowColor: "#F9F506",
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.2,
         shadowRadius: 12,
         elevation: 6,
     },
     saveButtonText: {
-        color: "white",
+        color: "#1A1A1A",
         fontSize: 16,
         fontWeight: "700",
         textTransform: "uppercase",
