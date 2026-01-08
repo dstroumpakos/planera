@@ -1117,9 +1117,26 @@ async function searchActivities(destination: string) {
 
 // Helper function to search restaurants
 async function searchRestaurants(destination: string) {
-    console.log(`🍽️ Fetching restaurants for ${destination}`);
-    // Using fallback restaurants for now
-    return getFallbackRestaurants(destination);
+    const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
+    
+    if (!tripAdvisorKey) {
+        console.warn("⚠️ TripAdvisor API key not configured. Using fallback restaurants.");
+        return getFallbackRestaurants(destination);
+    }
+    
+    console.log(`🍽️ Searching restaurants in ${destination} via TripAdvisor`);
+    try {
+        const restaurants = await searchTripAdvisorRestaurants(destination, tripAdvisorKey);
+        if (restaurants.length > 0) {
+            console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
+            return restaurants;
+        }
+        console.warn("⚠️ No restaurants found via TripAdvisor. Using fallback.");
+        return getFallbackRestaurants(destination);
+    } catch (error) {
+        console.error("❌ TripAdvisor restaurants failed:", error);
+        return getFallbackRestaurants(destination);
+    }
 }
 
 // Viator API - Search for activities/experiences
@@ -1353,6 +1370,72 @@ async function searchViatorProductsByText(searchText: string, apiKey: string) {
         }));
     } catch (error) {
         console.error("❌ Viator text search error:", error);
+        throw error;
+    }
+}
+
+// TripAdvisor API - Search for restaurants
+async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
+    try {
+        console.log(`🔍 Searching TripAdvisor restaurants for: ${destination}`);
+        
+        // First, search for location ID
+        const locationResponse = await fetch(
+            `https://api.content.tripadvisor.com/api/v1/location/search?query=${encodeURIComponent(destination)}&key=${apiKey}`
+        );
+
+        if (!locationResponse.ok) {
+            const errorText = await locationResponse.text();
+            console.error("TripAdvisor location search error:", locationResponse.status, errorText);
+            throw new Error(`TripAdvisor location search failed: ${locationResponse.status}`);
+        }
+
+        const locationData = await locationResponse.json();
+        
+        if (!locationData.data || locationData.data.length === 0) {
+            console.warn("⚠️ No location found on TripAdvisor for:", destination);
+            return [];
+        }
+
+        const locationId = locationData.data[0].location_id;
+        console.log(`✅ Found location ID: ${locationId}`);
+
+        // Search for restaurants in that location
+        const restaurantsResponse = await fetch(
+            `https://api.content.tripadvisor.com/api/v1/location/${locationId}/details?key=${apiKey}&language=en&fields=name,rating,review_count,cuisine,address,phone,website,photo`
+        );
+
+        if (!restaurantsResponse.ok) {
+            const errorText = await restaurantsResponse.text();
+            console.error("TripAdvisor restaurants search error:", restaurantsResponse.status, errorText);
+            throw new Error(`TripAdvisor restaurants search failed: ${restaurantsResponse.status}`);
+        }
+
+        const restaurantsData = await restaurantsResponse.json();
+        
+        if (!restaurantsData.data) {
+            console.warn("⚠️ No restaurants found on TripAdvisor");
+            return [];
+        }
+
+        // Map TripAdvisor data to our restaurant format
+        const restaurants = restaurantsData.data.map((restaurant: any) => ({
+            name: restaurant.name || "Restaurant",
+            cuisine: restaurant.cuisine?.[0]?.name || "International",
+            priceRange: restaurant.price_level || "€€",
+            rating: restaurant.rating || 4.0,
+            reviewCount: restaurant.review_count || 0,
+            address: restaurant.address || "",
+            phone: restaurant.phone || "",
+            website: restaurant.website || "",
+            description: `${restaurant.cuisine?.[0]?.name || "International"} cuisine restaurant`,
+            image: restaurant.photo?.images?.large?.url || null,
+        }));
+
+        console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
+        return restaurants.slice(0, 10);
+    } catch (error) {
+        console.error("❌ TripAdvisor restaurants error:", error);
         throw error;
     }
 }
@@ -1633,9 +1716,9 @@ function generateTransportationOptions(destination: string, origin: string, trav
             uberComfort: { min: 40, max: 55 },
             bolt: { min: 22, max: 35 },
             carRentalEconomy: 28,
-            carRentalCompact: 42,
-            carRentalSUV: 70,
-            metroTicket: 1.50,
+            carRentalCompact: 38,
+            carRentalSUV: 65,
+            metroTicket: 1.30,
             dayPass: 8.40,
             airportExpress: 5, // Metro
             premiumTransfer: 80,
@@ -1714,7 +1797,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             carRentalCompact: 38,
             carRentalSUV: 65,
             metroTicket: 1.30,
-            dayPass: 5,
+            dayPass: 8.40,
             airportExpress: 2.50, // Bus 119 + Metro
             premiumTransfer: 65,
         },
