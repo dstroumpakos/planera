@@ -164,7 +164,21 @@ export function createStyleBasedPromptInstruction(styles: TravelStyle[]): string
         return "";
     }
 
-    const styleList = styles.map((s) => TRAVEL_STYLES[s].label).join(", ");
+    const styleList = styles
+        .map((s) => {
+            const config = TRAVEL_STYLES[s];
+            if (!config) {
+                console.warn(`Unknown travel style in createStyleBasedPromptInstruction: ${s}`);
+                return null;
+            }
+            return config.label;
+        })
+        .filter((label): label is string => label !== null)
+        .join(", ");
+
+    if (!styleList) {
+        return "";
+    }
 
     return `\n\nIMPORTANT - Travel Style Personalization:\nThe user has selected these travel styles: ${styleList}\n\nFor each day's itinerary:\n1. Prioritize activities that match these styles\n2. Include at least 1-2 activities per day that directly align with the selected styles\n3. When combining multiple styles, ensure variety and balance\n4. Avoid generic sightseeing if style-specific alternatives exist\n5. Include specific, destination-relevant recommendations for each style\n\nExample: If "Food" is selected, include food tours, cooking classes, or local restaurants. If "Nature" is selected, include parks, hiking, or scenic viewpoints.`;
 }
