@@ -1118,8 +1118,14 @@ async function searchActivities(destination: string) {
 // TripAdvisor Content API - Search for city/destination location ID
 async function searchTripAdvisorLocation(destination: string, apiKey: string): Promise<{ locationId: string; name: string } | null> {
     try {
+        // Validate destination parameter
+        if (!destination || typeof destination !== 'string' || destination.trim().length === 0) {
+            console.warn("⚠️ Invalid destination provided to searchTripAdvisorLocation:", destination);
+            return null;
+        }
+
         // Use "geos" category to find cities/destinations, not restaurants
-        const searchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&category=geos&language=en`;
+        const searchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination.trim())}&category=geos&language=en`;
         
         console.log(`🔍 TripAdvisor searching for city: ${destination}`);
         
@@ -1159,6 +1165,25 @@ async function searchTripAdvisorLocation(destination: string, apiKey: string): P
 // TripAdvisor Content API - Search for restaurants using location/search with restaurants category
 async function searchTripAdvisorRestaurants(destination: string, apiKey: string) {
     try {
+        // Validate destination parameter
+        if (!destination || typeof destination !== 'string' || destination.trim().length === 0) {
+            console.warn("⚠️ Invalid destination provided to searchTripAdvisorRestaurants:", destination);
+            return [];
+        }
+
+        // Initialize restaurants array at the beginning
+        const restaurants: Array<{
+            name: string;
+            priceRange: string;
+            cuisine: string;
+            rating: number;
+            address: string;
+            reviewCount: number;
+            tripAdvisorUrl: string | null;
+            phone: string | null;
+            description: string | null;
+        }> = [];
+
         // Step 1: Get the city location to find its coordinates
         const cityLocation = await searchTripAdvisorLocation(destination, apiKey);
         
@@ -1626,7 +1651,7 @@ function getFallbackActivities(destination: string) {
         "paris": [
             { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
             { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
-            { title: "Seine River Cruise", price: "€15", duration: "1h", description: "Scenic boat tour along the Seine" },
+            { title: "Seine River Cruise", price: "€115", duration: "1h", description: "Scenic boat tour along the Seine" },
             { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
             { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
         ],
