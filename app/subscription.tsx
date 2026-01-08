@@ -200,11 +200,11 @@ export default function SubscriptionScreen() {
                 </Text>
 
                 <View style={styles.linksRow}>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push("/privacy")}>
                         <Text style={styles.linkText}>Privacy Policy</Text>
                     </TouchableOpacity>
                     <Text style={styles.linkDot}>•</Text>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push("/terms")}>
                         <Text style={styles.linkText}>Terms of Service</Text>
                     </TouchableOpacity>
                 </View>
