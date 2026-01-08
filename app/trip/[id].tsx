@@ -999,7 +999,7 @@ export default function TripDetails() {
                                                     'location'
                                                 } 
                                                 size={20} 
-                                                color={editForm.interests.includes(activity.type) ? "#FFE500" : "#1A1A1A"} 
+                                                color={editForm.interests.includes(activity.type) ? "#1A1A1A" : "#1A1A1A"} 
                                             />
                                         </View>
                                         <Text style={styles.timelineTime}>{activity.time}</Text>
@@ -1475,7 +1475,7 @@ export default function TripDetails() {
                                                 "people"
                                             } 
                                             size={20} 
-                                            color={editForm.interests.includes(interest) ? "white" : "#FFE500"}
+                                            color={editForm.interests.includes(interest) ? "#1A1A1A" : "#1A1A1A"}
                                         />
                                         <Text style={[
                                             styles.interestTagText,
@@ -1937,7 +1937,7 @@ const styles = StyleSheet.create({
         color: "#1A1A1A",
     },
     interestTagTextActive: {
-        color: "#FFE500",
+        color: "#1A1A1A",
     },
     input: {
         backgroundColor: "white",
