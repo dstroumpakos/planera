@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 interface ImageData {
   url: string;
   photographer: string;
+  photographerUrl: string;
   attribution: string;
 }
 

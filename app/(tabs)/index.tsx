@@ -32,10 +32,10 @@ export default function HomeScreen() {
     const trendingDestinations = useQuery(api.trips.getTrendingDestinations, isAuthenticated ? {} : "skip");
     const getImages = useAction(api.images.getDestinationImages);
     
-    const [destinationImages, setDestinationImages] = useState<Record<string, { url: string; photographer: string; attribution: string }>>({});
+    const [destinationImages, setDestinationImages] = useState<Record<string, { url: string; photographer: string; photographerUrl: string; attribution: string }>>({});
     const [loadingImages, setLoadingImages] = useState(false);
 
-    const [imageData, setImageData] = useState<{ url: string; photographer: string; attribution: string } | null>(null);
+    const [imageData, setImageData] = useState<{ url: string; photographer: string; photographerUrl: string; attribution: string } | null>(null);
 
     const user = session?.user;
     const userName = user?.name?.split(" ")[0] || "Traveler";
@@ -45,7 +45,7 @@ export default function HomeScreen() {
         if (trendingDestinations && trendingDestinations.length > 0) {
             setLoadingImages(true);
             const fetchImages = async () => {
-                const images: Record<string, { url: string; photographer: string; attribution: string } | null> = {};
+                const images: Record<string, { url: string; photographer: string; photographerUrl: string; attribution: string } | null> = {};
                 for (const destination of trendingDestinations) {
                     try {
                         const result = await getImages({
@@ -56,6 +56,7 @@ export default function HomeScreen() {
                             images[destination.destination] = {
                                 url: result[0].url,
                                 photographer: result[0].photographer,
+                                photographerUrl: result[0].photographerUrl,
                                 attribution: result[0].attribution,
                             };
                         }
@@ -63,7 +64,7 @@ export default function HomeScreen() {
                         console.error(`Failed to fetch image for ${destination.destination}:`, error);
                     }
                 }
-                setDestinationImages(images as Record<string, { url: string; photographer: string; attribution: string }>);
+                setDestinationImages(images as Record<string, { url: string; photographer: string; photographerUrl: string; attribution: string }>);
                 setLoadingImages(false);
             };
             fetchImages();
@@ -194,6 +195,7 @@ export default function HomeScreen() {
                                             imageUrl={destinationImages[destination.destination].url}
                                             photographerName={destinationImages[destination.destination].photographer}
                                             unsplashUrl={destinationImages[destination.destination].attribution}
+                                            photographerUrl={destinationImages[destination.destination].photographerUrl}
                                             style={styles.trendingImageContainer}
                                             imageStyle={styles.trendingImage}
                                         />

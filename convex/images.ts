@@ -6,6 +6,7 @@ import { v } from "convex/values";
 interface UnsplashImage {
   url: string;
   photographer: string;
+  photographerUrl: string;
   attribution: string;
 }
 
@@ -40,6 +41,7 @@ async function fetchUnsplashImage(query: string): Promise<UnsplashImage | null> 
     return {
       url: photo.urls.regular,
       photographer: photo.user.name,
+      photographerUrl: photo.user.links.html,
       attribution: photo.links.html,
     };
   } catch (error) {
@@ -54,6 +56,7 @@ export const getDestinationImage = action({
     v.object({
       url: v.string(),
       photographer: v.string(),
+      photographerUrl: v.string(),
       attribution: v.string(),
     }),
     v.null()
@@ -69,6 +72,7 @@ export const getDestinationImages = action({
     v.object({
       url: v.string(),
       photographer: v.string(),
+      photographerUrl: v.string(),
       attribution: v.string(),
     })
   ),
@@ -103,6 +107,7 @@ export const getDestinationImages = action({
       return data.results.map((photo: any) => ({
         url: photo.urls.regular,
         photographer: photo.user.name,
+        photographerUrl: photo.user.links.html,
         attribution: photo.links.html,
       }));
     } catch (error) {
@@ -118,6 +123,7 @@ export const getActivityImage = action({
     v.object({
       url: v.string(),
       photographer: v.string(),
+      photographerUrl: v.string(),
       attribution: v.string(),
     }),
     v.null()
@@ -134,6 +140,7 @@ export const getRestaurantImage = action({
     v.object({
       url: v.string(),
       photographer: v.string(),
+      photographerUrl: v.string(),
       attribution: v.string(),
     }),
     v.null()

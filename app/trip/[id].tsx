@@ -910,6 +910,7 @@ export default function TripDetails() {
                             imageUrl={destinationImage.url}
                             photographerName={destinationImage.photographer}
                             unsplashUrl={destinationImage.attribution}
+                            photographerUrl={destinationImage.photographerUrl}
                             style={styles.mapPreviewContainer}
                             imageStyle={styles.mapImage}
                         />
