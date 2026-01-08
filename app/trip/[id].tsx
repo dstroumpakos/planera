@@ -348,18 +348,29 @@ export default function TripDetails() {
         return (
             <View style={styles.center}>
                 <ActivityIndicator size="large" color="#FFE500" />
-                <Text style={styles.generatingText}>Generating your dream trip...</Text>
-                <Text style={styles.generatingSubtext}>This usually takes a few seconds.</Text>
+                <Text style={styles.generatingText}>Generating your trip...</Text>
+                <Text style={styles.generatingSubtext}>{trip.destination}</Text>
             </View>
         );
     }
 
     if (trip.status === "failed") {
         return (
-            <View style={styles.center}>
-                <Ionicons name="alert-circle" size={64} color="#FF3B30" />
-                <Text style={styles.errorText}>Failed to generate trip.</Text>
-            </View>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle" size={64} color="#FF3B30" />
+                    <Text style={styles.errorTitle}>Failed to Generate Trip</Text>
+                    <Text style={styles.errorMessage}>
+                        We encountered an error while generating your itinerary. Please try again.
+                    </Text>
+                    <TouchableOpacity 
+                        style={styles.errorButton}
+                        onPress={() => router.back()}
+                    >
+                        <Text style={styles.errorButtonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
         );
     }
 
@@ -1783,6 +1794,39 @@ const styles = StyleSheet.create({
         marginTop: 16,
         fontSize: 18,
         color: "#EF4444",
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 24,
+        backgroundColor: "#F8F8F5",
+    },
+    errorTitle: {
+        marginTop: 24,
+        fontSize: 24,
+        fontWeight: "700",
+        color: "#1A1A1A",
+        textAlign: "center",
+    },
+    errorMessage: {
+        marginTop: 12,
+        fontSize: 16,
+        color: "#64748B",
+        textAlign: "center",
+        lineHeight: 24,
+    },
+    errorButton: {
+        marginTop: 32,
+        paddingHorizontal: 32,
+        paddingVertical: 14,
+        backgroundColor: "#1A1A1A",
+        borderRadius: 12,
+    },
+    errorButtonText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "700",
     },
     card: {
         backgroundColor: "white",
