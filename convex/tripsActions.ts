@@ -5,6 +5,32 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import OpenAI from "openai";
 
+// Helper function to generate travel style guidance for OpenAI prompt
+function generateTravelStyleGuidance(interests: string[]): string {
+    if (!interests || interests.length === 0) {
+        return "Create a balanced itinerary with a mix of attractions, dining, and cultural experiences.";
+    }
+
+    const styleGuidance: Record<string, string> = {
+        "Shopping": "Prioritize shopping experiences throughout the itinerary. Include major shopping districts, malls, boutique areas, and local markets. For each day, suggest at least one shopping activity or visit. Recommend best shopping neighborhoods, flagship stores, and unique local shops. Include shopping tips like best times to visit and local shopping customs.",
+        "Nightlife": "Emphasize evening and nighttime activities. Include rooftop bars, nightclubs, live music venues, late-night dining, and evening entertainment. For each day, suggest evening activities and nightlife spots. Recommend the best neighborhoods for nightlife, popular venues, and what to expect. Include tips on dress codes and reservation requirements.",
+        "Food": "Make food the centerpiece of the itinerary. Include diverse dining experiences from street food to fine dining. For each day, suggest multiple food-related activities: breakfast spots, lunch venues, dinner restaurants, and food tours. Highlight local specialties, food markets, and culinary experiences. Include food tours, cooking classes, and market visits.",
+        "Culture": "Emphasize cultural and historical experiences. Prioritize museums, historical landmarks, galleries, cultural sites, and heritage attractions. For each day, include at least one major cultural attraction. Recommend UNESCO sites, local history museums, art galleries, and cultural events. Include information about local history and cultural significance.",
+        "Nature": "Prioritize outdoor and natural experiences. Include parks, gardens, hiking trails, viewpoints, and outdoor activities. For each day, suggest outdoor experiences and nature-based activities. Recommend scenic viewpoints, nature walks, outdoor adventures, and the best times for outdoor activities. Include information about weather and what to bring.",
+    };
+
+    const guidance = interests
+        .map(interest => styleGuidance[interest])
+        .filter(Boolean)
+        .join(" ");
+
+    if (interests.length > 1) {
+        return `Blend these travel styles naturally throughout the itinerary: ${guidance} Ensure recommendations reflect all selected interests while maintaining a cohesive daily flow. Distribute activities across the day to balance all interests.`;
+    }
+
+    return guidance;
+}
+
 export const generate = internalAction({
     args: { 
         tripId: v.id("trips"), 
@@ -191,10 +217,12 @@ export const generate = internalAction({
                     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
                     const budgetDisplay = typeof trip.budget === "number" ? `€${trip.budget}` : trip.budget;
                     const itineraryPrompt = `Create a detailed day-by-day itinerary for a trip to ${trip.destination} from ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
-                
+
 Budget: ${budgetDisplay}
 Travelers: ${trip.travelers}
 Interests: ${trip.interests.join(", ")}
+
+${generateTravelStyleGuidance(trip.interests)}
 
 IMPORTANT: For each activity, include:
 - Realistic entry prices in EUR
@@ -1183,17 +1211,6 @@ async function searchTripAdvisorRestaurants(destination: string, apiKey: string)
         console.log(`✅ Found ${data.data.length} restaurants via TripAdvisor`);
 
         // Step 4: Get details for more restaurants (up to 30) to find the best rated ones
-        const restaurants: Array<{
-            name: string;
-            priceRange: string;
-            cuisine: string;
-            rating: number;
-            address: string;
-            reviewCount: number;
-            tripAdvisorUrl: string | null;
-            phone: string | null;
-            description: string | null;
-        }> = [];
         const restaurantList = data.data.slice(0, 30); // Fetch up to 30 to get better selection
         
         console.log(`🔍 Fetching details for ${restaurantList.length} restaurants...`);
@@ -1615,7 +1632,7 @@ function getFallbackActivities(destination: string) {
         ],
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
-            { title: "Vatican Museums", price: "€e7", duration: "3h", description: "Sistine Chapel and art collections" },
+            { title: "Vatican Museums", price: "€17", duration: "3h", description: "Sistine Chapel and art collections" },
             { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
             { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
@@ -1953,7 +1970,7 @@ function generateTransportationOptions(destination: string, origin: string, trav
             taxiFromAirport: 25, // PRG to city center
             uberX: { min: 20, max: 35 },
             uberComfort: { min: 35, max: 50 },
-            bolt: { min: 18, max: 30 },
+            bolt: { min: 18, max: 28 },
             carRentalEconomy: 25,
             carRentalCompact: 38,
             carRentalSUV: 65,
