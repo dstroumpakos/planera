@@ -1093,24 +1093,24 @@ async function searchHotels(
 
 // Helper function to search activities
 async function searchActivities(destination: string) {
-    const viatorKey = process.env.VIATOR_API_KEY;
+    const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
     
-    if (!viatorKey) {
-        console.warn("⚠️ Viator API key not configured. Using destination-specific fallback activities.");
+    if (!tripAdvisorKey) {
+        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback activities.");
         return getFallbackActivities(destination);
     }
 
-    console.log(`🎯 Searching activities in ${destination} via Viator`);
+    console.log(`🎯 Searching activities in ${destination} via TripAdvisor`);
     try {
-        const activities = await searchViatorActivities(destination, viatorKey);
+        const activities = await searchTripAdvisorActivities(destination, tripAdvisorKey);
         if (activities.length > 0) {
-            console.log(`✅ Found ${activities.length} activities via Viator`);
+            console.log(`✅ Found ${activities.length} activities via TripAdvisor`);
             return activities;
         }
-        console.warn("⚠️ No activities found via Viator. Using fallback.");
+        console.warn("⚠️ No activities found via TripAdvisor. Using fallback.");
         return getFallbackActivities(destination);
     } catch (error) {
-        console.error("❌ Viator activities failed:", error);
+        console.error("❌ TripAdvisor activities failed:", error);
         return getFallbackActivities(destination);
     }
 }
@@ -1403,7 +1403,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         console.log(`🔍 Searching Viator activities for: ${destination}`);
         
         const searchResponse = await fetch(
-            "https://api.viator.com/v2/experiences/search/freetext?text=${encodeURIComponent(destination)}&limit=50",
+            `https://api.viator.com/v2/experiences/search/freetext?text=${encodeURIComponent(destination)}&limit=50`,
             {
                 method: "POST",
                 headers: {
@@ -1464,7 +1464,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
 
         // Use /products/search to get more details
         const productsResponse = await fetch(
-            "https://api.viator.com/v2/products?ids=${productCodes.join(',')}&currency=USD",
+            `https://api.viator.com/v2/products?ids=${productCodes.join(',')}&currency=USD`,
             {
                 method: "POST",
                 headers: {
@@ -1646,14 +1646,14 @@ function getFallbackActivities(destination: string) {
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
             { title: "Vatican Museums", price: "€e7", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "St. Peter's Basilica", price: "€11", duration: "2h", description: "Ancient Roman temple" },
+            { title: "St. Peter's Basilica", price: "€e11", duration: "2h", description: "Ancient Roman temple" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
             { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
         ],
         "london": [
             { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
             { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
-            { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
+            { title: "London Eye", price: "€32", duration: "1 hour", description: "Giant observation wheel" },
             { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
             { title: "Thames River Cruise", price: "€115", duration: "1h", description: "Sightseeing boat tour" },
         ],
@@ -1665,11 +1665,11 @@ function getFallbackActivities(destination: string) {
             { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
         ],
         "athens": [
-            { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
-            { title: "Acropolis Museum", price: "€15", duration: "2h", description: "Archaeological museum" },
-            { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
-            { title: "National Archaeological Museum", price: "€12", duration: "2h", description: "Greek art collection" },
-            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2-3h", description: "Historic neighborhoods" },
+            { title: "Acropolis & Parthenon", price: "€20", duration: "3 hours", description: "Ancient citadel and temple" },
+            { title: "Acropolis Museum", price: "€15", duration: "2-3 hours", description: "Archaeological museum" },
+            { title: "Ancient Agora", price: "€10", duration: "2 hours", description: "Ancient marketplace" },
+            { title: "National Archaeological Museum", price: "€12", duration: "2-3 hours", description: "Greek art collection" },
+            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2-3 hours", description: "Historic neighborhoods" },
         ],
         "amsterdam": [
             { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
