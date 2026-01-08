@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from 'expo-linear-gradient';
-import { useDestinationImage, useActivityImage } from "@/lib/useImages";
+import { useDestinationImage } from "@/lib/useImages";
 import ActivityCard from "@/components/ActivityCard";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 

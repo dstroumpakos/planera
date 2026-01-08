@@ -137,6 +137,11 @@ export default defineSchema({
             v.literal("rejected"),
             v.literal("flagged")
         )),
+        image: v.optional(v.object({
+            url: v.string(),
+            photographer: v.optional(v.string()),
+            attribution: v.optional(v.string()),
+        })),
         createdAt: v.float64(),
         updatedAt: v.optional(v.float64()),
     })

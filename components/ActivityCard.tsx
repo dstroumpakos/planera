@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useActivityImage } from "@/lib/useImages";
 
 interface ActivityCardProps {
   activity: any;
@@ -8,8 +7,6 @@ interface ActivityCardProps {
 }
 
 export default function ActivityCard({ activity, destination }: ActivityCardProps) {
-  const { image } = useActivityImage(activity.title, destination);
-
   return (
     <View style={styles.card}>
       <View style={styles.row}>
@@ -26,9 +23,7 @@ export default function ActivityCard({ activity, destination }: ActivityCardProp
             )}
           </View>
         </View>
-        {image?.url ? (
-          <Image source={{ uri: image.url }} style={styles.activityThumbnail} />
-        ) : activity.image ? (
+        {activity.image ? (
           <Image source={{ uri: activity.image }} style={styles.activityThumbnail} />
         ) : (
           <View style={styles.activityThumbnailPlaceholder}>

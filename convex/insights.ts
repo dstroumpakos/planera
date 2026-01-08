@@ -230,9 +230,14 @@ export const shareInsight = authMutation({
             v.literal("avoid"),
             v.literal("other")
         ),
+        image: v.optional(v.object({
+            url: v.string(),
+            photographer: v.optional(v.string()),
+            attribution: v.optional(v.string()),
+        })),
     },
     handler: async (ctx, args) => {
-        const destinationId = args.destination.toLowerCase().replace(/\s+/g, '-');
+        const destinationId = args.destination.toLowerCase().replace(/\\s+/g, '-');
         
         await ctx.db.insert("insights", {
             userId: ctx.user._id,
@@ -244,6 +249,7 @@ export const shareInsight = authMutation({
             verified: false,
             likes: 0,
             moderationStatus: "pending",
+            image: args.image,
             createdAt: Date.now(),
         });
     },
