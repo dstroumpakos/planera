@@ -104,7 +104,7 @@ export const create = authMutation({
         Interests: ${args.interests.join(", ")}.`;
 
         // Schedule the generation action from tripsActions.ts
-        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { 
+        await ctx.scheduler.runAfter(0, internal.helpers.tripsActions.generate, { 
             tripId, 
             prompt, 
             skipFlights: args.skipFlights ?? false,
@@ -258,7 +258,7 @@ export const regenerate = authMutation({
         Dates: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
         Interests: ${trip.interests.join(", ")}.`;
 
-        await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId: args.tripId, prompt });
+        await ctx.scheduler.runAfter(0, internal.helpers.tripsActions.generate, { tripId: args.tripId, prompt });
     },
 });
 

@@ -973,6 +973,35 @@ export default function TripDetails() {
                     </TouchableOpacity>
                 </ScrollView>
 
+                {/* Travel Style Highlights Section */}
+                {trip.itinerary?.styleBasedHighlights && trip.itinerary.styleBasedHighlights.length > 0 && (
+                    <View style={styles.styleHighlightsContainer}>
+                        <View style={styles.styleHighlightsHeader}>
+                            <Ionicons name="sparkles" size={20} color="#F59E0B" />
+                            <Text style={styles.styleHighlightsTitle}>Based on Your Travel Style</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.styleHighlightsScroll}>
+                            {trip.itinerary.styleBasedHighlights.map((highlight: any, index: number) => (
+                                <View key={index} style={styles.styleHighlightCard}>
+                                    <View style={styles.styleHighlightBadge}>
+                                        <Text style={styles.styleHighlightLabel}>{highlight.label}</Text>
+                                    </View>
+                                    <View style={styles.styleHighlightContent}>
+                                        {highlight.recommendations?.slice(0, 2).map((rec: string, recIndex: number) => (
+                                            <Text key={recIndex} style={styles.styleHighlightItem}>
+                                                • {rec}
+                                            </Text>
+                                        ))}
+                                    </View>
+                                    {highlight.count && highlight.count > 2 && (
+                                        <Text style={styles.styleHighlightMore}>+{highlight.count - 2} more</Text>
+                                    )}
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
+
                 {/* Content based on active filter */}
                 <View style={styles.itineraryContainer}>
                     {activeFilter === 'all' && trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
@@ -1622,6 +1651,66 @@ const styles = StyleSheet.create({
     },
     filterTextActive: {
         color: "white",
+    },
+    styleHighlightsContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        backgroundColor: "rgba(245, 158, 11, 0.08)",
+        marginHorizontal: 16,
+        marginBottom: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "rgba(245, 158, 11, 0.2)",
+    },
+    styleHighlightsHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+    },
+    styleHighlightsTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#1A1A1A",
+    },
+    styleHighlightsScroll: {
+        gap: 12,
+    },
+    styleHighlightCard: {
+        backgroundColor: "white",
+        borderRadius: 12,
+        padding: 12,
+        minWidth: 200,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    styleHighlightBadge: {
+        backgroundColor: "#F59E0B",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginBottom: 8,
+        alignSelf: "flex-start",
+    },
+    styleHighlightLabel: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: "white",
+    },
+    styleHighlightContent: {
+        gap: 6,
+    },
+    styleHighlightItem: {
+        fontSize: 13,
+        fontWeight: "500",
+        color: "#1A1A1A",
+        lineHeight: 18,
+    },
+    styleHighlightMore: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#F59E0B",
+        marginTop: 8,
     },
     itineraryContainer: {
         paddingHorizontal: 16,
