@@ -13,6 +13,8 @@ import ActivityCard from "@/components/ActivityCard";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar } from 'react-native-calendars';
+import { INTERESTS } from "@/lib/data";
 
 // Cart item type for local state
 interface CartItem {
@@ -244,22 +246,25 @@ export default function TripDetails() {
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [accommodationType, setAccommodationType] = useState<'all' | 'hotel' | 'airbnb'>('all');
     const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({
+        destination: "",
+        origin: "",
+        startDate: 0,
+        endDate: 0,
+        budget: 0,
+        travelers: 1,
+        interests: [] as string[],
+    });
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
+    const [regenerationCount, setRegenerationCount] = useState(0);
+
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
     const [addingToCart, setAddingToCart] = useState<string | null>(null); // Track which item is being added
     const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0);
     const [checkedBaggageSelected, setCheckedBaggageSelected] = useState<boolean>(false);
     const [activeFilter, setActiveFilter] = useState<'all' | 'flights' | 'food' | 'sights' | 'stays' | 'transportation'>('all');
-
-    const [editForm, setEditForm] = useState({
-        destination: "",
-        origin: "",
-        startDate: new Date().getTime(),
-        endDate: new Date().getTime(),
-        budget: 0, // Changed to number
-        travelers: 1, // Changed to number
-        interests: [] as string[],
-    });
 
     useEffect(() => {
         if (trip) {
@@ -293,39 +298,94 @@ export default function TripDetails() {
     const handleSaveAndRegenerate = async () => {
         if (!trip) return;
         
+        if (regenerationCount >= 1) {
+            Alert.alert("Limit Reached", "You can only regenerate your trip once.");
+            return;
+        }
+        
         await updateTrip({
             tripId: trip._id,
             destination: editForm.destination,
             origin: editForm.origin,
             startDate: editForm.startDate,
             endDate: editForm.endDate,
-            budget: editForm.budget, // Already a number
-            travelers: editForm.travelers, // Already a number
-            interests: editForm.interests, // Already an array
+            budget: editForm.budget,
+            travelers: editForm.travelers,
+            interests: editForm.interests,
         });
         await regenerateTrip({ tripId: trip._id });
+        setRegenerationCount(regenerationCount + 1);
         setIsEditing(false);
     };
 
-    const onDateChange = (event: any, selectedDate?: Date) => {
-        setShowDatePicker(false);
-        if (selectedDate) {
-            if (datePickerMode === 'start') {
-                const newStart = selectedDate.getTime();
-                // Maintain duration if possible
-                const duration = editForm.endDate - editForm.startDate;
-                setEditForm(prev => ({
-                    ...prev,
-                    startDate: newStart,
-                    endDate: newStart + duration
-                }));
-            } else {
-                setEditForm(prev => ({
-                    ...prev,
-                    endDate: selectedDate.getTime()
-                }));
-            }
+    const formatDate = (date: number) => {
+        return new Date(date).toLocaleDateString();
+    };
+
+    const formatDateForCalendar = (timestamp: number) => {
+        const date = new Date(timestamp);
+        return date.toISOString().split('T')[0];
+    };
+
+    const toggleInterest = (interest: string) => {
+        if (editForm.interests.includes(interest)) {
+            setEditForm({ ...editForm, interests: editForm.interests.filter((i) => i !== interest) });
+        } else {
+            setEditForm({ ...editForm, interests: [...editForm.interests, interest] });
         }
+    };
+
+    const handleDayPress = (day: any) => {
+        const newDate = new Date(day.dateString);
+        const timestamp = newDate.getTime();
+        
+        if (selectingDate === 'start') {
+            setEditForm(prev => ({
+                ...prev,
+                startDate: timestamp,
+            }));
+        } else {
+            setEditForm(prev => ({
+                ...prev,
+                endDate: timestamp,
+            }));
+        }
+        setShowCalendar(false);
+    };
+
+    const getMarkedDates = () => {
+        const startStr = formatDateForCalendar(editForm.startDate);
+        const endStr = formatDateForCalendar(editForm.endDate);
+        
+        const marked: any = {};
+        
+        marked[startStr] = {
+            startingDay: true,
+            color: '#FFE500',
+            textColor: 'white',
+        };
+        
+        marked[endStr] = {
+            endingDay: true,
+            color: '#FFE500',
+            textColor: 'white',
+        };
+        
+        const start = new Date(editForm.startDate);
+        const end = new Date(editForm.endDate);
+        const current = new Date(start);
+        current.setDate(current.getDate() + 1);
+        
+        while (current < end) {
+            const dateStr = current.toISOString().split('T')[0];
+            marked[dateStr] = {
+                color: '#FFF8E1',
+                textColor: '#9B9B9B',
+            };
+            current.setDate(current.getDate() + 1);
+        }
+        
+        return marked;
     };
 
     if (trip === undefined) {
@@ -1279,39 +1339,86 @@ export default function TripDetails() {
 
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Dates</Text>
-                            <View style={styles.dateRow}>
+                            <View style={styles.datesContainer}>
                                 <TouchableOpacity 
-                                    style={styles.dateInput}
+                                    style={styles.dateInputButton}
                                     onPress={() => {
-                                        setDatePickerMode('start');
-                                        setShowDatePicker(true);
+                                        setSelectingDate('start');
+                                        setShowCalendar(true);
                                     }}
                                 >
-                                    <Text style={styles.dateLabel}>Start</Text>
-                                    <Text style={styles.dateValue}>{new Date(editForm.startDate).toLocaleDateString()}</Text>
+                                    <Text style={styles.dateLabel}>START DATE</Text>
+                                    <View style={styles.dateValueContainer}>
+                                        <Ionicons name="calendar-outline" size={20} color="#1A1A1A" />
+                                        <Text style={styles.dateValueText}>{formatDate(editForm.startDate)}</Text>
+                                    </View>
                                 </TouchableOpacity>
-                                <Ionicons name="arrow-forward" size={20} color="#8E8E93" />
+                                
+                                <View style={styles.dateSeparator} />
+
                                 <TouchableOpacity 
-                                    style={styles.dateInput}
+                                    style={styles.dateInputButton}
                                     onPress={() => {
-                                        setDatePickerMode('end');
-                                        setShowDatePicker(true);
+                                        setSelectingDate('end');
+                                        setShowCalendar(true);
                                     }}
                                 >
-                                    <Text style={styles.dateLabel}>End</Text>
-                                    <Text style={styles.dateValue}>{new Date(editForm.endDate).toLocaleDateString()}</Text>
+                                    <Text style={styles.dateLabel}>END DATE</Text>
+                                    <View style={styles.dateValueContainer}>
+                                        <Ionicons name="calendar-outline" size={20} color="#1A1A1A" />
+                                        <Text style={styles.dateValueText}>{formatDate(editForm.endDate)}</Text>
+                                    </View>
                                 </TouchableOpacity>
                             </View>
                         </View>
 
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={new Date(datePickerMode === 'start' ? editForm.startDate : editForm.endDate)}
-                                mode="date"
-                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                minimumDate={new Date()}
-                                onChange={onDateChange}
-                            />
+                        {showCalendar && (
+                            <Modal
+                                visible={showCalendar}
+                                transparent={true}
+                                animationType="slide"
+                                onRequestClose={() => setShowCalendar(false)}
+                            >
+                                <View style={styles.calendarModalContainer}>
+                                    <View style={styles.calendarModal}>
+                                        <View style={styles.calendarHeader}>
+                                            <TouchableOpacity onPress={() => setShowCalendar(false)}>
+                                                <Text style={styles.calendarHeaderText}>Cancel</Text>
+                                            </TouchableOpacity>
+                                            <Text style={styles.calendarHeaderTitle}>
+                                                {selectingDate === 'start' ? 'Start Date' : 'End Date'}
+                                            </Text>
+                                            <TouchableOpacity onPress={() => setShowCalendar(false)}>
+                                                <Text style={styles.calendarHeaderText}>Done</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <Calendar
+                                            onDayPress={handleDayPress}
+                                            markedDates={getMarkedDates()}
+                                            minDate={new Date().toISOString().split('T')[0]}
+                                            theme={{
+                                                backgroundColor: '#FAF9F6',
+                                                calendarBackground: '#FAF9F6',
+                                                textSectionTitleColor: '#1A1A1A',
+                                                textSectionTitleDisabledColor: '#9B9B9B',
+                                                selectedDayBackgroundColor: '#FFE500',
+                                                selectedDayTextColor: '#1A1A1A',
+                                                todayTextColor: '#FFE500',
+                                                dayTextColor: '#1A1A1A',
+                                                textDisabledColor: '#9B9B9B',
+                                                dotColor: '#FFE500',
+                                                selectedDotColor: '#1A1A1A',
+                                                arrowColor: '#1A1A1A',
+                                                monthTextColor: '#1A1A1A',
+                                                textMonthFontWeight: '700',
+                                                textDayFontSize: 14,
+                                                textMonthFontSize: 16,
+                                                textDayHeaderFontSize: 12,
+                                            }}
+                                        />
+                                    </View>
+                                </View>
+                            </Modal>
                         )}
 
                         <View style={styles.inputGroup}>
@@ -1343,27 +1450,36 @@ export default function TripDetails() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Travel Styles</Text>
+                            <Text style={styles.label}>Travel Style</Text>
                             <View style={styles.interestsContainer}>
-                                {["Adventure", "Culinary", "Culture", "Relaxation", "Nightlife", "Nature", "History", "Shopping", "Luxury", "Family"].map((interest) => (
+                                {INTERESTS.map((interest) => (
                                     <TouchableOpacity
                                         key={interest}
                                         style={[
-                                            styles.interestChip,
-                                            editForm.interests.includes(interest) && styles.interestChipSelected,
+                                            styles.interestTag,
+                                            editForm.interests.includes(interest) && styles.interestTagActive,
                                         ]}
-                                        onPress={() => {
-                                            setEditForm(prev => ({
-                                                ...prev,
-                                                interests: prev.interests.includes(interest)
-                                                    ? prev.interests.filter(i => i !== interest)
-                                                    : [...prev.interests, interest]
-                                            }));
-                                        }}
+                                        onPress={() => toggleInterest(interest)}
                                     >
+                                        <Ionicons 
+                                            name={
+                                                interest === "Adventure" ? "trail-sign" : 
+                                                interest === "Culinary" ? "restaurant" : 
+                                                interest === "Culture" ? "library" :
+                                                interest === "Relaxation" ? "cafe" :
+                                                interest === "Nightlife" ? "wine" :
+                                                interest === "Nature" ? "leaf" :
+                                                interest === "History" ? "book" :
+                                                interest === "Shopping" ? "cart" :
+                                                interest === "Luxury" ? "diamond" :
+                                                "people"
+                                            } 
+                                            size={20} 
+                                            color={editForm.interests.includes(interest) ? "white" : "#FFE500"}
+                                        />
                                         <Text style={[
-                                            styles.interestChipText,
-                                            editForm.interests.includes(interest) && styles.interestChipTextSelected,
+                                            styles.interestTagText,
+                                            editForm.interests.includes(interest) && styles.interestTagTextActive,
                                         ]}>
                                             {interest}
                                         </Text>
@@ -1616,7 +1732,7 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#475569",
+        color: "#64748B",
     },
     metaDuration: {
         flexDirection: "row",
@@ -1680,20 +1796,16 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         flex: 1,
-        backgroundColor: "#F8F8F5",
+        backgroundColor: "#FAF9F6",
     },
     modalHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: 20,
-        backgroundColor: "white",
-        borderBottomWidth: 0,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 4,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E2E8F0",
     },
     modalTitle: {
         fontSize: 18,
@@ -1701,111 +1813,153 @@ const styles = StyleSheet.create({
         color: "#1A1A1A",
     },
     modalContent: {
-        padding: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 24,
     },
     inputGroup: {
         marginBottom: 24,
     },
     label: {
         fontSize: 14,
-        fontWeight: "700",
-        marginBottom: 8,
-        color: "#64748B",
+        fontWeight: "600",
+        color: "#1A1A1A",
+        marginBottom: 12,
         textTransform: "uppercase",
         letterSpacing: 0.5,
     },
-    input: {
-        backgroundColor: "white",
-        padding: 14,
-        borderRadius: 14,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        color: "#1A1A1A",
-    },
     lockedInput: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
         backgroundColor: "#F1F5F9",
-        padding: 14,
-        borderRadius: 14,
-        fontSize: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: "#E2E8F0",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
     },
     lockedInputText: {
         fontSize: 16,
         color: "#1A1A1A",
         fontWeight: "500",
     },
-    dateRow: {
+    datesContainer: {
         flexDirection: "row",
-        alignItems: "center",
         gap: 12,
+        alignItems: "center",
     },
-    dateInput: {
+    dateInputButton: {
         flex: 1,
         backgroundColor: "white",
-        padding: 14,
-        borderRadius: 14,
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         borderWidth: 1,
         borderColor: "#E2E8F0",
     },
     dateLabel: {
         fontSize: 12,
+        fontWeight: "600",
         color: "#64748B",
-        marginBottom: 4,
+        marginBottom: 8,
         textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
-    dateValue: {
+    dateValueContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    dateValueText: {
         fontSize: 16,
+        fontWeight: "600",
         color: "#1A1A1A",
-        fontWeight: "500",
+    },
+    dateSeparator: {
+        width: 1,
+        height: 40,
+        backgroundColor: "#E2E8F0",
+    },
+    calendarModalContainer: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "flex-end",
+    },
+    calendarModal: {
+        backgroundColor: "#FAF9F6",
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingTop: 16,
+        maxHeight: "80%",
+    },
+    calendarHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E2E8F0",
+    },
+    calendarHeaderText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#FFE500",
+    },
+    calendarHeaderTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#1A1A1A",
     },
     interestsContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: 8,
+        gap: 12,
     },
-    interestChip: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
+    interestTag: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 24,
         backgroundColor: "white",
         borderWidth: 1,
-        borderColor: "#E2E8F0",
+        borderColor: "#FFE500",
     },
-    interestChipSelected: {
-        backgroundColor: "#F9F506",
-        borderColor: "#F9F506",
+    interestTagActive: {
+        backgroundColor: "#1A1A1A",
+        borderColor: "#1A1A1A",
     },
-    interestChipText: {
+    interestTagText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#64748B",
+        color: "#FFE500",
     },
-    interestChipTextSelected: {
+    interestTagTextActive: {
+        color: "#1A1A1A",
+    },
+    input: {
+        backgroundColor: "white",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        fontSize: 16,
         color: "#1A1A1A",
     },
     saveButton: {
-        backgroundColor: "#F9F506",
-        padding: 16,
-        borderRadius: 14,
+        backgroundColor: "#FFE500",
+        borderRadius: 12,
+        paddingVertical: 16,
         alignItems: "center",
         marginTop: 24,
-        shadowColor: "#F9F506",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-        elevation: 6,
     },
     saveButtonText: {
-        color: "#1A1A1A",
         fontSize: 16,
         fontWeight: "700",
-        textTransform: "uppercase",
-        letterSpacing: 1,
+        color: "#1A1A1A",
     },
     section: {
         marginBottom: 32,
