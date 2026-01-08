@@ -37,7 +37,7 @@ export default function Profile() {
     };
 
     const handleHelpSupport = async () => {
-        const supportEmail = "support@planera.com";
+        const supportEmail = "support@planeraai.app";
         const subject = "Help & Support Request";
         const body = `Hi Planera Support,\n\nI need help with...\n\nUser: ${user?.email || "Unknown"}\n`;
         
