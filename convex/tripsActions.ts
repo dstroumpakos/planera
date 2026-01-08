@@ -1403,7 +1403,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
         console.log(`🔍 Searching Viator activities for: ${destination}`);
         
         const searchResponse = await fetch(
-            "https://api.sandbox.viator.com/partner/search/freetext",
+            "https://api.viator.com/v2/experiences/search/freetext?text=${encodeURIComponent(destination)}&limit=50",
             {
                 method: "POST",
                 headers: {
@@ -1464,7 +1464,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
 
         // Use /products/search to get more details
         const productsResponse = await fetch(
-            "https://api.sandbox.viator.com/partner/products/search",
+            "https://api.viator.com/v2/products?ids=${productCodes.join(',')}&currency=USD",
             {
                 method: "POST",
                 headers: {
@@ -1564,7 +1564,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
 async function searchViatorProductsByText(searchText: string, apiKey: string) {
     try {
         const response = await fetch(
-            "https://api.sandbox.viator.com/partner/products/search",
+            "https://api.viator.com/v2/products/search",
             {
                 method: "POST",
                 headers: {
@@ -1639,14 +1639,14 @@ function getFallbackActivities(destination: string) {
         "paris": [
             { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
             { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
-            { title: "Seine River Cruise", price: "€15", duration: "1h", description: "Scenic boat tour along the Seine" },
+            { title: "Seine River Cruise", price: "€e15", duration: "1h", description: "Scenic boat tour along the Seine" },
             { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
             { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
         ],
         "rome": [
             { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
             { title: "Vatican Museums", price: "€e7", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
+            { title: "St. Peter's Basilica", price: "€11", duration: "2h", description: "Ancient Roman temple" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
             { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
         ],
@@ -1675,7 +1675,7 @@ function getFallbackActivities(destination: string) {
             { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
             { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
             { title: "Rijksmuseum", price: "€22", duration: "3h", description: "Dutch art and history" },
-            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
+            { title: "Canal Cruise", price: "€16", duration: "1 hour", description: "Explore Amsterdam's waterways" },
             { title: "Heineken Experience", price: "€23", duration: "1.5h", description: "Interactive brewery tour" },
         ],
     };
