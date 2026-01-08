@@ -140,11 +140,26 @@ export default function TripDetailsScreen() {
 
   const tripDuration = Math.ceil((trip.endDate - trip.startDate) / (1000 * 60 * 60 * 24));
 
-  const itinerary = trip.itinerary ? JSON.parse(trip.itinerary) : null;
+  let itinerary = null;
+  try {
+    // The itinerary could be stored as an object or a JSON string
+    if (trip.itinerary) {
+      if (typeof trip.itinerary === 'string') {
+        itinerary = JSON.parse(trip.itinerary);
+      } else {
+        itinerary = trip.itinerary;
+      }
+    }
+  } catch (error) {
+    console.error("Error parsing itinerary:", error);
+    itinerary = null;
+  }
+  
   const flights = itinerary?.flights;
   const hotels = itinerary?.hotels;
   const activities = itinerary?.activities || [];
-  const dayByDay = itinerary?.dayByDay || [];
+  // Backend stores as dayByDayItinerary, also check dayByDay and itinerary for backwards compatibility
+  const dayByDay = itinerary?.dayByDayItinerary || itinerary?.dayByDay || itinerary?.dailyPlan || [];
 
   const flightsSkipped = flights?.skipped === true;
   const hotelsSkipped = hotels?.skipped === true;
