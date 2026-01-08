@@ -246,41 +246,17 @@ export const update = authMutation({
 });
 
 export const regenerate = authMutation({
-    args: { 
-        tripId: v.id("trips"),
-        startDate: v.number(),
-        endDate: v.number(),
-        budget: v.number(),
-        travelers: v.number(),
-        interests: v.array(v.string()),
-        skipFlights: v.boolean(),
-        skipHotel: v.boolean(),
-        preferredFlightTime: v.union(v.literal("any"), v.literal("morning"), v.literal("afternoon"), v.literal("evening"), v.literal("night")),
-    },
+    args: { tripId: v.id("trips") },
     handler: async (ctx, args) => {
         const trip = await ctx.db.get(args.tripId);
         if (!trip) throw new Error("Trip not found");
 
-        // Update trip with new parameters
-        await ctx.db.patch(args.tripId, { 
-            status: "generating",
-            startDate: args.startDate,
-            endDate: args.endDate,
-            budget: args.budget,
-            travelers: args.travelers,
-            interests: args.interests,
-            skipFlights: args.skipFlights,
-            skipHotel: args.skipHotel,
-            preferredFlightTime: args.preferredFlightTime,
-        });
+        await ctx.db.patch(args.tripId, { status: "generating" });
 
-        const prompt = `Plan a trip to ${trip.destination} from ${trip.origin} for ${args.travelers} people.
-        Budget: ${args.budget}.
-        Dates: ${new Date(args.startDate).toDateString()} to ${new Date(args.endDate).toDateString()}.
-        Interests: ${args.interests.join(", ")}.
-        Skip Flights: ${args.skipFlights}.
-        Skip Hotel: ${args.skipHotel}.
-        Preferred Flight Time: ${args.preferredFlightTime}.`;
+        const prompt = `Plan a trip to ${trip.destination} from ${trip.origin} for ${trip.travelers} people.
+        Budget: ${trip.budget}.
+        Dates: ${new Date(trip.startDate).toDateString()} to ${new Date(trip.endDate).toDateString()}.
+        Interests: ${trip.interests.join(", ")}.`;
 
         await ctx.scheduler.runAfter(0, internal.tripsActions.generate, { tripId: args.tripId, prompt });
     },
