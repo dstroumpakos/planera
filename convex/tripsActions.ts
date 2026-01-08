@@ -1234,769 +1234,86 @@ function getViatorProductImage(product: any): string | null {
     return null;
 }
 
-// Fallback activities - destination-specific
-function getFallbackActivities(destination: string) {
-    const destLower = destination.toLowerCase();
+// Helper function to search restaurants
+async function searchRestaurants(destination: string) {
+    const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
     
-    const destinationActivities: Record<string, Array<{title: string, price: string, duration: string, description: string}>> = {
-        "paris": [
-            { title: "Eiffel Tower Visit", price: "€26", duration: "2-3h", description: "Iconic landmark with stunning city views" },
-            { title: "Louvre Museum", price: "€17", duration: "3-4h", description: "World's largest art museum" },
-            { title: "Seine River Cruise", price: "€155", duration: "1h", description: "Scenic boat tour along the Seine" },
-            { title: "Montmartre Walking Tour", price: "€20", duration: "2h", description: "Explore the artistic heart of Paris" },
-            { title: "Versailles Palace", price: "€20", duration: "4-5h", description: "Magnificent royal château" },
-        ],
-        "rome": [
-            { title: "Colosseum Tour", price: "€16", duration: "2h", description: "Ancient Roman amphitheater" },
-            { title: "Vatican Museums", price: "€e7", duration: "3h", description: "Sistine Chapel and art collections" },
-            { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
-            { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
-            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
-        ],
-        "london": [
-            { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
-            { title: "Tower of London", price: "€33", duration: "3h", description: "Historic castle and Crown Jewels" },
-            { title: "London Eye", price: "€32", duration: "1h", description: "Giant observation wheel" },
-            { title: "Westminster Abbey", price: "€27", duration: "2h", description: "Gothic abbey church" },
-            { title: "Thames River Cruise", price: "€15", duration: "1h", description: "Sightseeing boat tour" },
-        ],
-        "barcelona": [
-            { title: "Sagrada Familia", price: "€26", duration: "2h", description: "Gaudí's masterpiece basilica" },
-            { title: "Park Güell", price: "€10", duration: "2h", description: "Colorful mosaic park by Gaudí" },
-            { title: "Casa Batlló", price: "€35", duration: "1.5h", description: "Gaudí's stunning modernist building" },
-            { title: "La Pedrera", price: "€29", duration: "1.5h", description: "Modernist building by Gaudí" },
-            { title: "Gothic Quarter Walk", price: "Free", duration: "2h", description: "Medieval streets and architecture" },
-        ],
-        "athens": [
-            { title: "Acropolis & Parthenon", price: "€20", duration: "3h", description: "Ancient citadel and temple" },
-            { title: "Acropolis Museum", price: "€15", duration: "2h", description: "Archaeological museum" },
-            { title: "Ancient Agora", price: "€10", duration: "2h", description: "Ancient marketplace" },
-            { title: "National Archaeological Museum", price: "€12", duration: "2h", description: "Greek art collection" },
-            { title: "Plaka & Monastiraki Walk", price: "Free", duration: "2-3h", description: "Historic neighborhoods" },
-        ],
-        "amsterdam": [
-            { title: "Anne Frank House", price: "€14", duration: "1.5h", description: "Historic house museum" },
-            { title: "Van Gogh Museum", price: "€20", duration: "2h", description: "Dutch painter's works" },
-            { title: "Rijksmuseum", price: "€22", duration: "2h", description: "Dutch art and history" },
-            { title: "Canal Cruise", price: "€16", duration: "1h", description: "Explore Amsterdam's waterways" },
-            { title: "Heineken Experience", price: "€23", duration: "1.5h", description: "Interactive brewery tour" },
-        ],
-    };
-    
-    for (const [city, activities] of Object.entries(destinationActivities)) {
-        if (destLower.includes(city)) {
-            return activities;
-        }
+    if (!tripAdvisorKey) {
+        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback restaurants.");
+        return getFallbackRestaurants(destination);
     }
-    
-    return [
-        { title: `City Tour of ${destination}`, price: "€25", duration: "3h", description: "Explore the main attractions" },
-        { title: "Museum Visit", price: "€15", duration: "2h", description: "Discover local history and culture" },
-        { title: "Walking Tour", price: "€10", duration: "2h", description: "Guided walking tour of historic sites" },
-        { title: "Local Market", price: "Free", duration: "1-2h", description: "Experience local life and cuisine" },
-        { title: "Sunset Viewpoint", price: "Free", duration: "1 hour", description: "Best views of the city" },
-    ];
-}
 
-// Fallback restaurants - destination-specific
-function getFallbackRestaurants(destination: string) {
-    const destLower = destination.toLowerCase();
-    
-    const destinationRestaurants: Record<string, Array<{name: string, priceRange: string, cuisine: string, rating: number}>> = {
-        "paris": [
-            { name: "Le Comptoir du Relais", priceRange: "€€€", cuisine: "French Bistro", rating: 4.5 },
-            { name: "L'As du Fallafel", priceRange: "€", cuisine: "Middle Eastern", rating: 4.6 },
-            { name: "Breizh Café", priceRange: "€€", cuisine: "Crêperie", rating: 4.4 },
-            { name: "Le Jules Verne", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.7 },
-            { name: "Marché des Enfants Rouges", priceRange: "€", cuisine: "Market Food", rating: 4.3 },
-        ],
-        "rome": [
-            { name: "Trattoria Da Enzo", priceRange: "€€", cuisine: "Traditional Roman", rating: 4.6 },
-            { name: "Pizzarium", priceRange: "€", cuisine: "Pizza al Taglio", rating: 4.5 },
-            { name: "La Pergola", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Roscioli", priceRange: "€€", cuisine: "Italian Deli", rating: 4.7 },
-            { name: "Supplizio", priceRange: "€", cuisine: "Street Food", rating: 4.4 },
-        ],
-        "london": [
-            { name: "Dishoom", priceRange: "€€", cuisine: "Indian", rating: 4.5 },
-            { name: "Borough Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
-            { name: "The Ledbury", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Flat Iron", priceRange: "€€", cuisine: "Steakhouse", rating: 4.4 },
-            { name: "Padella", priceRange: "€€", cuisine: "Italian Pasta", rating: 4.7 },
-        ],
-        "barcelona": [
-            { name: "Cervecería Catalana", priceRange: "€€", cuisine: "Tapas", rating: 4.5 },
-            { name: "La Boqueria Market", priceRange: "€", cuisine: "Market Food", rating: 4.6 },
-            { name: "Tickets Bar", priceRange: "€€€", cuisine: "Modern Tapas", rating: 4.7 },
-            { name: "Can Culleretes", priceRange: "€€", cuisine: "Traditional Catalan", rating: 4.4 },
-            { name: "El Xampanyet", priceRange: "€", cuisine: "Tapas Bar", rating: 4.5 },
-        ],
-        "athens": [
-            { name: "Taverna Tou Psyrri", priceRange: "€€", cuisine: "Traditional Greek", rating: 4.5 },
-            { name: "Kostas Souvlaki", priceRange: "€", cuisine: "Souvlaki", rating: 4.6 },
-            { name: "Spondi", priceRange: "€€€€", cuisine: "Fine Dining", rating: 4.8 },
-            { name: "Karamanlidika", priceRange: "€€", cuisine: "Greek Meze", rating: 4.7 },
-            { name: "Varvakios Agora", priceRange: "€", cuisine: "Market Food", rating: 4.4 },
-        ],
-        "amsterdam": [
-            { name: "De Kas", priceRange: "€€€", cuisine: "Farm-to-Table", rating: 4.6 },
-            { name: "Foodhallen", priceRange: "€€", cuisine: "Food Hall", rating: 4.4 },
-            { name: "The Pantry", priceRange: "€€", cuisine: "Dutch Traditional", rating: 4.5 },
-            { name: "Café de Klos", priceRange: "€€", cuisine: "Grill House", rating: 4.6 },
-            { name: "Albert Cuyp Market", priceRange: "€", cuisine: "Street Food", rating: 4.3 },
-        ],
-    };
-    
-    for (const [city, restaurants] of Object.entries(destinationRestaurants)) {
-        if (destLower.includes(city)) {
+    console.log(`🍽️ Searching restaurants in ${destination} via TripAdvisor`);
+    try {
+        const restaurants = await searchTripAdvisorRestaurants(destination, tripAdvisorKey);
+        if (restaurants.length > 0) {
+            console.log(`✅ Found ${restaurants.length} restaurants via TripAdvisor`);
             return restaurants;
         }
+        console.warn("⚠️ No restaurants found via TripAdvisor. Using fallback.");
+        return getFallbackRestaurants(destination);
+    } catch (error) {
+        console.error("❌ TripAdvisor restaurants failed:", error);
+        return getFallbackRestaurants(destination);
     }
-    
-    return [
-        { name: `Traditional ${destination} Restaurant`, priceRange: "€€", cuisine: "Local", rating: 4.5 },
-        { name: "Mediterranean Bistro", priceRange: "€€€", cuisine: "Mediterranean", rating: 4.3 },
-        { name: "Casual Dining Spot", priceRange: "€", cuisine: "International", rating: 4.0 },
-        { name: "Fine Dining Experience", priceRange: "€€€€", cuisine: "Fusion", rating: 4.7 },
-        { name: "Street Food Market", priceRange: "€", cuisine: "Various", rating: 4.2 },
-    ];
 }
 
-// Fallback hotels - destination-specific
-function getFallbackHotels(destination: string) {
-    return [
-        {
-            name: `Grand Hotel ${destination}`,
-            rating: "5",
-            price: "250",
-            currency: "EUR",
-            amenities: ["WiFi", "Pool", "Spa", "Restaurant", "Gym"],
-            address: `City Center, ${destination}`,
-            description: "Luxury 5-star hotel in the heart of the city with premium amenities.",
-        },
-        {
-            name: `${destination} Boutique Hotel`,
-            rating: "4",
-            price: "150",
-            currency: "EUR",
-            amenities: ["WiFi", "Breakfast", "Bar", "Room Service"],
-            address: `Historic District, ${destination}`,
-            description: "Charming boutique hotel with personalized service and unique character.",
-        },
-        {
-            name: `${destination} City Inn`,
-            rating: "3",
-            price: "80",
-            currency: "EUR",
-            amenities: ["WiFi", "Breakfast", "24h Reception"],
-            address: `Central ${destination}`,
-            description: "Comfortable and affordable accommodation in a convenient location.",
-        },
-    ];
-}
-
-// Generate transportation options (car rental, taxi, Uber) - DESTINATION SPECIFIC PRICING
-function generateTransportationOptions(destination: string, origin: string, travelers: number) {
-    const destLower = destination.toLowerCase();
-    
-    // Destination-specific pricing data (based on real-world costs)
-    const destinationPricing: Record<string, {
-        taxiFromAirport: number;
-        uberX: { min: number; max: number };
-        uberComfort: { min: number; max: number };
-        bolt: { min: number; max: number };
-        carRentalEconomy: number;
-        carRentalCompact: number;
-        carRentalSUV: number;
-        metroTicket: number;
-        dayPass: number;
-        airportExpress: number;
-        premiumTransfer: number;
-    }> = {
-        "paris": {
-            taxiFromAirport: 55, // CDG to city center
-            uberX: { min: 45, max: 65 },
-            uberComfort: { min: 60, max: 85 },
-            bolt: { min: 40, max: 60 },
-            carRentalEconomy: 45,
-            carRentalCompact: 60,
-            carRentalSUV: 95,
-            metroTicket: 2.15,
-            dayPass: 16.60,
-            airportExpress: 11.50, // RER B
-            premiumTransfer: 120,
-        },
-        "london": {
-            taxiFromAirport: 70, // Heathrow to city center (GBP converted to EUR)
-            uberX: { min: 55, max: 80 },
-            uberComfort: { min: 75, max: 110 },
-            bolt: { min: 50, max: 75 },
-            carRentalEconomy: 55,
-            carRentalCompact: 70,
-            carRentalSUV: 120,
-            metroTicket: 6.50, // Tube zone 1-6
-            dayPass: 15.50,
-            airportExpress: 25, // Heathrow Express
-            premiumTransfer: 150,
-        },
-        "rome": {
-            taxiFromAirport: 50, // FCO to city center (fixed fare)
-            uberX: { min: 40, max: 55 },
-            uberComfort: { min: 55, max: 75 },
-            bolt: { min: 35, max: 45 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 85,
-            metroTicket: 1.50,
-            dayPass: 8.40,
-            airportExpress: 14, // Leonardo Express
-            premiumTransfer: 100,
-        },
-        "barcelona": {
-            taxiFromAirport: 42, // BCN to city center
-            uberX: { min: 30, max: 45 },
-            uberComfort: { min: 45, max: 65 },
-            bolt: { min: 25, max: 35 },
-            carRentalEconomy: 30,
-            carRentalCompact: 45,
-            carRentalSUV: 75,
-            metroTicket: 2.40,
-            dayPass: 11.20,
-            airportExpress: 7.75, // Aerobus
-            premiumTransfer: 90,
-        },
-        "amsterdam": {
-            taxiFromAirport: 50, // Schiphol to city center
-            uberX: { min: 40, max: 55 },
-            uberComfort: { min: 55, max: 75 },
-            bolt: { min: 35, max: 45 },
-            carRentalEconomy: 45,
-            carRentalCompact: 60,
-            carRentalSUV: 95,
-            metroTicket: 3.40,
-            dayPass: 9,
-            airportExpress: 5.70, // AirTrain + Subway
-            premiumTransfer: 110,
-        },
-        "athens": {
-            taxiFromAirport: 40, // ATH to city center (fixed fare)
-            uberX: { min: 30, max: 40 },
-            uberComfort: { min: 40, max: 50 },
-            bolt: { min: 25, max: 35 },
-            carRentalEconomy: 25,
-            carRentalCompact: 40,
-            carRentalSUV: 65,
-            metroTicket: 1.20,
-            dayPass: 6,
-            airportExpress: 2, // Metro Line 3
-            premiumTransfer: 75,
-        },
-        "berlin": {
-            taxiFromAirport: 45, // BER to city center
-            uberX: { min: 35, max: 50 },
-            uberComfort: { min: 50, max: 70 },
-            bolt: { min: 30, max: 45 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 80,
-            metroTicket: 3.20,
-            dayPass: 8.50,
-            airportExpress: 4, // S-Bahn
-            premiumTransfer: 95,
-        },
-        "madrid": {
-            taxiFromAirport: 33, // MAD to city center (fixed fare)
-            uberX: { min: 25, max: 40 },
-            uberComfort: { min: 40, max: 55 },
-            bolt: { min: 22, max: 35 },
-            carRentalEconomy: 28,
-            carRentalCompact: 42,
-            carRentalSUV: 70,
-            metroTicket: 1.50,
-            dayPass: 8.40,
-            airportExpress: 5, // Metro
-            premiumTransfer: 80,
-        },
-        "dubai": {
-            taxiFromAirport: 25, // DXB to city center (cheap taxis)
-            uberX: { min: 20, max: 35 },
-            uberComfort: { min: 35, max: 50 },
-            bolt: { min: 18, max: 28 },
-            carRentalEconomy: 60,
-            carRentalCompact: 80,
-            carRentalSUV: 120,
-            metroTicket: 2,
-            dayPass: 12,
-            airportExpress: 2.50, // MRT
-            premiumTransfer: 65,
-        },
-        "new york": {
-            taxiFromAirport: 75, // JFK to Manhattan (flat fare + tolls)
-            uberX: { min: 60, max: 90 },
-            uberComfort: { min: 85, max: 120 },
-            bolt: { min: 55, max: 85 },
-            carRentalEconomy: 65,
-            carRentalCompact: 85,
-            carRentalSUV: 130,
-            metroTicket: 2.90,
-            dayPass: 34, // 7-day unlimited
-            airportExpress: 11, // AirTrain + Subway
-            premiumTransfer: 180,
-        },
-        "tokyo": {
-            taxiFromAirport: 200, // NRT to city center (expensive!)
-            uberX: { min: 150, max: 220 },
-            uberComfort: { min: 200, max: 280 },
-            bolt: { min: 140, max: 200 },
-            carRentalEconomy: 50,
-            carRentalCompact: 70,
-            carRentalSUV: 110,
-            metroTicket: 2,
-            dayPass: 8,
-            airportExpress: 36, // Narita Express
-            premiumTransfer: 250,
-        },
-        "singapore": {
-            taxiFromAirport: 25, // Changi to city center
-            uberX: { min: 20, max: 30 },
-            uberComfort: { min: 30, max: 45 },
-            bolt: { min: 18, max: 28 },
-            carRentalEconomy: 60,
-            carRentalCompact: 80,
-            carRentalSUV: 120,
-            metroTicket: 2,
-            dayPass: 12,
-            airportExpress: 2.50, // MRT
-            premiumTransfer: 65,
-        },
-        "lisbon": {
-            taxiFromAirport: 20, // LIS to city center
-            uberX: { min: 15, max: 25 },
-            uberComfort: { min: 25, max: 40 },
-            bolt: { min: 12, max: 22 },
-            carRentalEconomy: 22,
-            carRentalCompact: 35,
-            carRentalSUV: 60,
-            metroTicket: 1.65,
-            dayPass: 6.80,
-            airportExpress: 2, // Metro
-            premiumTransfer: 55,
-        },
-        "prague": {
-            taxiFromAirport: 25, // PRG to city center
-            uberX: { min: 20, max: 35 },
-            uberComfort: { min: 35, max: 50 },
-            bolt: { min: 18, max: 28 },
-            carRentalEconomy: 25,
-            carRentalCompact: 38,
-            carRentalSUV: 65,
-            metroTicket: 1.30,
-            dayPass: 5,
-            airportExpress: 2.50, // Bus 119 + Metro
-            premiumTransfer: 65,
-        },
-        "vienna": {
-            taxiFromAirport: 40, // VIE to city center
-            uberX: { min: 30, max: 45 },
-            uberComfort: { min: 45, max: 65 },
-            bolt: { min: 28, max: 42 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 85,
-            metroTicket: 2.40,
-            dayPass: 8.60,
-            airportExpress: 13, // CAT train
-            premiumTransfer: 90,
-        },
-    };
-    
-    // Find matching destination pricing or use default
-    let pricing = null;
-    for (const [city, cityPricing] of Object.entries(destinationPricing)) {
-        if (destLower.includes(city)) {
-            pricing = cityPricing;
-            break;
+// TripAdvisor API - Search for restaurants
+async function searchTripAdvisorRestaurants(destination: string, apiKey: string): Promise<any[]> {
+    try {
+        // First, search for the location
+        const locationSearchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?query=${encodeURIComponent(destination)}&key=${apiKey}`;
+        
+        const locationResponse = await fetch(locationSearchUrl);
+        if (!locationResponse.ok) {
+            console.warn(`⚠️ TripAdvisor location search failed: ${locationResponse.status}`);
+            return [];
         }
-    }
-    
-    // Default pricing for unknown destinations
-    if (!pricing) {
-        pricing = {
-            taxiFromAirport: 40,
-            uberX: { min: 30, max: 50 },
-            uberComfort: { min: 45, max: 70 },
-            bolt: { min: 25, max: 45 },
-            carRentalEconomy: 35,
-            carRentalCompact: 50,
-            carRentalSUV: 85,
-            metroTicket: 2,
-            dayPass: 8,
-            airportExpress: 10,
-            premiumTransfer: 90,
-        };
-    }
-    
-    // Car rental options with destination-specific pricing
-    const carRentals = [
-        {
-            type: "car_rental",
-            provider: "Europcar",
-            category: "Economy",
-            vehicle: "Fiat 500 or similar",
-            pricePerDay: pricing.carRentalEconomy,
-            currency: "EUR",
-            features: ["Air Conditioning", "Manual", "4 Seats", "2 Bags"],
-            bookingUrl: "https://www.europcar.com",
-        },
-        {
-            type: "car_rental",
-            provider: "Hertz",
-            category: "Compact",
-            vehicle: "Volkswagen Golf or similar",
-            pricePerDay: pricing.carRentalCompact,
-            currency: "EUR",
-            features: ["Air Conditioning", "Automatic", "5 Seats", "3 Bags"],
-            bookingUrl: "https://www.hertz.com",
-        },
-        {
-            type: "car_rental",
-            provider: "Sixt",
-            category: "SUV",
-            vehicle: "BMW X1 or similar",
-            pricePerDay: pricing.carRentalSUV,
-            currency: "EUR",
-            features: ["Air Conditioning", "Automatic", "5 Seats", "5 Bags", "GPS"],
-            bookingUrl: "https://www.sixt.com",
-        },
-    ];
-    
-    // Taxi/Transfer options with destination-specific pricing
-    const taxiOptions = [
-        {
-            type: "taxi",
-            provider: "Airport Taxi",
-            service: "Standard Taxi",
-            description: `Metered taxi from ${destination} airport to city center`,
-            estimatedPrice: pricing.taxiFromAirport,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "5-15 min at taxi stand",
-            features: ["Metered fare", "Available 24/7", "No booking required"],
-            bookingUrl: null,
-        },
-        {
-            type: "taxi",
-            provider: "Welcome Pickups",
-            service: "Pre-booked Transfer",
-            description: "Private transfer with driver waiting at arrivals",
-            estimatedPrice: Math.round(pricing.taxiFromAirport * 1.3),
-            currency: "EUR",
-            maxPassengers: travelers <= 3 ? 3 : 6,
-            waitingTime: "Driver waiting at arrivals",
-            features: ["Fixed price", "Meet & Greet", "Flight tracking", "Free cancellation"],
-            bookingUrl: "https://www.welcomepickups.com",
-        },
-        {
-            type: "taxi",
-            provider: "Blacklane",
-            service: "Premium Chauffeur",
-            description: "Luxury sedan with professional chauffeur",
-            estimatedPrice: pricing.premiumTransfer,
-            currency: "EUR",
-            maxPassengers: 3,
-            waitingTime: "Driver waiting at arrivals",
-            features: ["Luxury vehicle", "Professional chauffeur", "Complimentary water", "WiFi"],
-            bookingUrl: "https://www.blacklane.com",
-        },
-    ];
-    
-    // Ride-sharing options with destination-specific pricing
-    const rideSharingOptions = [
-        {
-            type: "rideshare",
-            provider: "Uber",
-            service: "UberX",
-            description: "Affordable everyday rides",
-            estimatedPrice: `${pricing.uberX.min}-${pricing.uberX.max}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "3-8 min",
-            features: ["App-based booking", "Cashless payment", "Driver rating", "Trip tracking"],
-            bookingUrl: "https://www.uber.com",
-        },
-        {
-            type: "rideshare",
-            provider: "Uber",
-            service: "Uber Comfort",
-            description: "Newer cars with extra legroom",
-            estimatedPrice: `${pricing.uberComfort.min}-${pricing.uberComfort.max}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "5-10 min",
-            features: ["Newer vehicles", "Extra legroom", "Experienced drivers", "Quiet mode available"],
-            bookingUrl: "https://www.uber.com",
-        },
-        {
-            type: "rideshare",
-            provider: "Bolt",
-            service: "Bolt Standard",
-            description: "Budget-friendly rides",
-            estimatedPrice: `${pricing.bolt.min}-${pricing.bolt.max}`,
-            currency: "EUR",
-            maxPassengers: 4,
-            waitingTime: "3-7 min",
-            features: ["App-based booking", "Often cheaper than Uber", "Cashless payment"],
-            bookingUrl: "https://www.bolt.eu",
-        },
-    ];
-    
-    // Public transport info with destination-specific pricing
-    const publicTransport = {
-        type: "public_transport",
-        provider: "Local Transit",
-        options: [
-            {
-                mode: "Metro/Subway",
-                description: "Fast and affordable way to get around the city",
-                singleTicketPrice: pricing.metroTicket,
-                dayPassPrice: pricing.dayPass,
-                currency: "EUR",
-                features: ["Frequent service", "City-wide coverage", "Air conditioned"],
-            },
-            {
-                mode: "Bus",
-                description: "Extensive network covering all areas",
-                singleTicketPrice: pricing.metroTicket,
-                dayPassPrice: pricing.dayPass,
-                currency: "EUR",
-                features: ["Wide coverage", "Night buses available", "Scenic routes"],
-            },
-            {
-                mode: "Airport Express",
-                description: `Direct connection from ${destination} airport to city center`,
-                price: pricing.airportExpress,
-                currency: "EUR",
-                duration: "30-45 min",
-                features: ["Direct service", "Luggage space", "WiFi"],
-            },
-        ],
-    };
-    
-    return [
-        ...carRentals,
-        ...taxiOptions,
-        ...rideSharingOptions,
-        publicTransport,
-    ];
-}
 
-// Generate Airbnb options based on destination
-function getAirbnbOptions(destination: string) {
-    const destLower = destination.toLowerCase();
-    
-    // Destination-specific Airbnb pricing (average per night)
-    const airbnbPricing: Record<string, {
-        studio: number;
-        apartment: number;
-        villa: number;
-    }> = {
-        "paris": { studio: 85, apartment: 150, villa: 350 },
-        "london": { studio: 95, apartment: 180, villa: 450 },
-        "rome": { studio: 70, apartment: 120, villa: 280 },
-        "barcelona": { studio: 65, apartment: 110, villa: 250 },
-        "amsterdam": { studio: 90, apartment: 160, villa: 380 },
-        "athens": { studio: 50, apartment: 85, villa: 200 },
-        "berlin": { studio: 60, apartment: 100, villa: 220 },
-        "madrid": { studio: 55, apartment: 95, villa: 210 },
-        "lisbon": { studio: 55, apartment: 90, villa: 200 },
-        "prague": { studio: 45, apartment: 75, villa: 180 },
-        "vienna": { studio: 70, apartment: 120, villa: 280 },
-        "dubai": { studio: 80, apartment: 150, villa: 400 },
-        "new york": { studio: 120, apartment: 220, villa: 550 },
-        "tokyo": { studio: 70, apartment: 130, villa: 300 },
-        "singapore": { studio: 90, apartment: 170, villa: 400 },
-        "bali": { studio: 35, apartment: 60, villa: 150 },
-        "santorini": { studio: 100, apartment: 180, villa: 400 },
-    };
-    
-    // Find matching destination pricing or use default
-    let pricing = { studio: 65, apartment: 110, villa: 250 }; // Default
-    for (const [city, cityPricing] of Object.entries(airbnbPricing)) {
-        if (destLower.includes(city)) {
-            pricing = cityPricing;
-            break;
+        const locationData = await locationResponse.json();
+        const locations = locationData.data || [];
+
+        if (locations.length === 0) {
+            console.warn("⚠️ No locations found via TripAdvisor");
+            return [];
         }
-    }
-    
-    return [
-        {
-            type: "airbnb",
-            name: `Cozy Studio in ${destination}`,
-            rating: "4.7",
-            stars: 0, // Airbnb doesn't use stars
-            price: pricing.studio.toString(),
-            pricePerNight: pricing.studio,
-            currency: "EUR",
-            amenities: ["WiFi", "Kitchen", "Washer", "Air Conditioning"],
-            address: `Central ${destination}`,
-            description: "Charming studio apartment perfect for solo travelers or couples. Fully equipped kitchen and great location.",
-            propertyType: "Studio",
-            bedrooms: 0,
-            beds: 1,
-            bathrooms: 1,
-            maxGuests: 2,
-            superhost: true,
-            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
-            image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
-        },
-        {
-            type: "airbnb",
-            name: `Modern Apartment with View`,
-            rating: "4.9",
-            stars: 0,
-            price: pricing.apartment.toString(),
-            pricePerNight: pricing.apartment,
-            currency: "EUR",
-            amenities: ["WiFi", "Kitchen", "Washer", "Balcony", "City View", "Parking"],
-            address: `${destination} City Center`,
-            description: "Spacious 2-bedroom apartment with stunning city views. Perfect for families or groups of friends.",
-            propertyType: "Apartment",
-            bedrooms: 2,
-            beds: 3,
-            bathrooms: 1,
-            maxGuests: 4,
-            superhost: true,
-            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
-            image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400",
-        },
-        {
-            type: "airbnb",
-            name: `Luxury Villa with Pool`,
-            rating: "4.95",
-            stars: 0,
-            price: pricing.villa.toString(),
-            pricePerNight: pricing.villa,
-            currency: "EUR",
-            amenities: ["WiFi", "Kitchen", "Pool", "Garden", "BBQ", "Parking", "Hot Tub"],
-            address: `Exclusive Area, ${destination}`,
-            description: "Stunning private villa with pool and garden. Ideal for luxury getaways and special occasions.",
-            propertyType: "Villa",
-            bedrooms: 4,
-            beds: 5,
-            bathrooms: 3,
-            maxGuests: 8,
-            superhost: true,
-            bookingUrl: `https://www.airbnb.com/s/${encodeURIComponent(destination)}/homes`,
-            image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400",
-        },
-    ];
-}
 
-// Helper function to extract IATA code from city name (simplified)
-function extractIATACode(cityName: string): string {
-    if (!cityName) {
-        console.warn("⚠️ extractIATACode called with empty city name");
-        return "ATH"; // Default fallback
-    }
+        const locationId = locations[0].location_id;
+        console.log(`✅ Found location: ${locations[0].name} (ID: ${locationId})`);
 
-    const cityMap: Record<string, string> = {
-        // Europe
-        "athens": "ATH",
-        "athens international airport": "ATH",
-        "paris": "CDG",
-        "charles de gaulle": "CDG",
-        "london": "LHR",
-        "heathrow": "LHR",
-        "rome": "FCO",
-        "fiumicino": "FCO",
-        "barcelona": "BCN",
-        "madrid": "MAD",
-        "amsterdam": "AMS",
-        "schiphol": "AMS",
-        "berlin": "BER",
-        "munich": "MUC",
-        "frankfurt": "FRA",
-        "vienna": "VIE",
-        "zurich": "ZRH",
-        "brussels": "BRU",
-        "lisbon": "LIS",
-        "dublin": "DUB",
-        "copenhagen": "CPH",
-        "stockholm": "ARN",
-        "oslo": "OSL",
-        "helsinki": "HEL",
-        "milan": "MXP",
-        "malpensa": "MXP",
-        "venice": "VCE",
-        "istanbul": "IST",
-        "prague": "PRG",
-        "budapest": "BUD",
-        "warsaw": "WAW",
+        // Search for restaurants in this location
+        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/details?key=${apiKey}&language=en&currency=EUR`;
         
-        // Americas
-        "new york": "JFK",
-        "jfk": "JFK",
-        "los angeles": "LAX",
-        "chicago": "ORD",
-        "miami": "MIA",
-        "san francisco": "SFO",
-        "boston": "BOS",
-        "washington": "IAD",
-        "toronto": "YYZ",
-        "vancouver": "YVR",
-        "mexico city": "MEX",
-        "sao paulo": "GRU",
-        "buenos aires": "EZE",
-        
-        // Middle East & Africa
-        "dubai": "DXB",
-        "abu dhabi": "AUH",
-        "doha": "DOH",
-        "riyadh": "RUH",
-        "jeddah": "JED",
-        "cairo": "CAI",
-        "tel aviv": "TLV",
-        "johannesburg": "JNB",
-        "cape town": "CPT",
-        
-        // Asia & Pacific
-        "tokyo": "NRT",
-        "narita": "NRT",
-        "singapore": "SIN",
-        "hong kong": "HKG",
-        "beijing": "PEK",
-        "shanghai": "PVG",
-        "seoul": "ICN",
-        "incheon": "ICN",
-        "bangkok": "BKK",
-        "kuala lumpur": "KUL",
-        "jakarta": "CGK",
-        "manila": "MNL",
-        "delhi": "DEL",
-        "mumbai": "BOM",
-        "sydney": "SYD",
-        "melbourne": "MEL",
-        "auckland": "AKL",
-    };
+        const restaurantsResponse = await fetch(restaurantsUrl);
+        if (!restaurantsResponse.ok) {
+            console.warn(`⚠️ TripAdvisor restaurants search failed: ${restaurantsResponse.status}`);
+            return [];
+        }
 
-    // Normalize: lowercase, remove extra spaces, remove "airport" suffix
-    const normalized = cityName
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, ' ')
-        .replace(/ airport$/i, '')
-        .replace(/ international$/i, '')
-        .split(',')[0]
-        .trim();
+        const restaurantsData = await restaurantsResponse.json();
+        const restaurants = restaurantsData.restaurants || [];
 
-    const code = cityMap[normalized];
-    
-    if (!code) {
-        console.warn(`⚠️ Unknown city/airport: "${cityName}" (normalized: "${normalized}"). Using ATH as fallback.`);
-        return "ATH"; // Default fallback
+        if (restaurants.length === 0) {
+            console.warn("⚠️ No restaurants found for this location");
+            return [];
+        }
+
+        console.log(`✅ Found ${restaurants.length} restaurants`);
+
+        return restaurants.slice(0, 15).map((restaurant: any) => ({
+            name: restaurant.name,
+            cuisine: restaurant.cuisine?.[0]?.name || "International",
+            rating: restaurant.rating || 4.0,
+            reviewCount: restaurant.num_reviews || 0,
+            priceRange: restaurant.price_level || "€€",
+            address: restaurant.address || destination,
+            description: restaurant.description?.substring(0, 200) || "Popular restaurant",
+            bookingUrl: restaurant.web_url || `https://www.tripadvisor.com/Restaurant_Review-${locationId}`,
+        }));
+    } catch (error) {
+        console.error("❌ TripAdvisor restaurants error:", error);
+        throw error;
     }
-    
-    return code;
 }
 
 // Helper function to convert airline carrier codes to full names
