@@ -31,14 +31,6 @@ function generateTravelStyleGuidance(interests: string[]): string {
     return guidance;
 }
 
-// Helper function to build Viator booking URL with affiliate ID
-function buildViatorBookingUrl(productCode: string | null | undefined): string | null {
-    if (!productCode) return null;
-    
-    const affiliateId = process.env.VIATOR_AFFILIATE_ID || "123456";
-    return `https://www.viator.com/tours/-/${productCode}?pid=${affiliateId}`;
-}
-
 export const generate = internalAction({
     args: { 
         tripId: v.id("trips"), 
@@ -1101,24 +1093,24 @@ async function searchHotels(
 
 // Helper function to search activities
 async function searchActivities(destination: string) {
-    const tripAdvisorKey = process.env.TRIPADVISOR_API_KEY;
+    const viatorKey = process.env.VIATOR_API_KEY;
     
-    if (!tripAdvisorKey) {
-        console.warn("⚠️ TripAdvisor API key not configured. Using destination-specific fallback activities.");
+    if (!viatorKey) {
+        console.warn("⚠️ Viator API key not configured. Using destination-specific fallback activities.");
         return getFallbackActivities(destination);
     }
 
-    console.log(`🎯 Searching activities in ${destination} via TripAdvisor`);
+    console.log(`🎯 Searching activities in ${destination} via Viator`);
     try {
-        const activities = await searchTripAdvisorActivities(destination, tripAdvisorKey);
+        const activities = await searchViatorActivities(destination, viatorKey);
         if (activities.length > 0) {
-            console.log(`✅ Found ${activities.length} activities via TripAdvisor`);
+            console.log(`✅ Found ${activities.length} activities via Viator`);
             return activities;
         }
-        console.warn("⚠️ No activities found via TripAdvisor. Using fallback.");
+        console.warn("⚠️ No activities found via Viator. Using fallback.");
         return getFallbackActivities(destination);
     } catch (error) {
-        console.error("❌ TripAdvisor activities failed:", error);
+        console.error("❌ Viator activities failed:", error);
         return getFallbackActivities(destination);
     }
 }
@@ -1475,7 +1467,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 rating: product.reviews?.combinedAverageRating || 4.5,
                 reviewCount: product.reviews?.totalReviews || 0,
                 productCode: product.productCode,
-                bookingUrl: buildViatorBookingUrl(product.productCode),
+                bookingUrl: product.productCode ? `https://www.viator.com/en/tours/${product.productCode}` : null,
                 image: product.primaryImage?.url || product.images?.[0]?.url || null,
                 skipTheLine: product.title?.toLowerCase().includes("skip") ||
                             product.title?.toLowerCase().includes("priority"),
@@ -1515,7 +1507,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 rating: product.rating || 4.5,
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
-                bookingUrl: buildViatorBookingUrl(product.productCode),
+                bookingUrl: product.productCode ? `https://www.viator.com/en/tours/${product.productCode}` : null,
                 image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
                    product.images?.[0]?.variants?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
@@ -1540,7 +1532,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
                 rating: product.rating || 4.5,
                 reviewCount: product.reviewCount || 0,
                 productCode: product.productCode,
-                bookingUrl: buildViatorBookingUrl(product.productCode),
+                bookingUrl: product.productCode ? `https://www.viator.com/en/tours/${product.productCode}` : null,
                 image: product.primaryImage?.url || product.images?.[0]?.url || null,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
                         product.title?.toLowerCase().includes("skip") ||
@@ -1564,7 +1556,7 @@ async function searchViatorActivities(destination: string, apiKey: string) {
             rating: product.reviews?.combinedAverageRating || 4.5,
             reviewCount: product.reviews?.totalReviews || 0,
             productCode: product.productCode,
-            bookingUrl: buildViatorBookingUrl(product.productCode),
+            bookingUrl: `https://www.viator.com/en/tours/${product.productCode}`,
             image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || 
                    product.images?.[0]?.variants?.[0]?.url || null,
             skipTheLine: product.flags?.includes("SKIP_THE_LINE") || 
@@ -1668,7 +1660,7 @@ function getFallbackActivities(destination: string) {
             { title: "Vatican Museums", price: "€e7", duration: "3h", description: "Sistine Chapel and art collections" },
             { title: "St. Peter's Basilica", price: "€10", duration: "2h", description: "Ancient Roman temple" },
             { title: "Trevi Fountain", price: "Free", duration: "30min", description: "Baroque fountain masterpiece" },
-            { title: "Pantheon", price: "Free", duration: "1 hour", description: "Ancient Roman temple" },
+            { title: "Pantheon", price: "Free", duration: "1h", description: "Ancient Roman temple" },
         ],
         "london": [
             { title: "British Museum", price: "Free", duration: "3h", description: "World history and culture" },
