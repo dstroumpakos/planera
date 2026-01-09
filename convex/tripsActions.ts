@@ -223,7 +223,18 @@ Format your response as a JSON object with this exact structure:
                 itineraryData = JSON.parse(content);
             } catch (e) {
                 console.error("Failed to parse OpenAI response:", content);
-                itineraryData = await generateBasicItinerary(trip.destination, trip.startDate, trip.endDate);
+                // Try to extract JSON from markdown code fences
+                const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+                if (jsonMatch && jsonMatch[1]) {
+                    try {
+                        itineraryData = JSON.parse(jsonMatch[1].trim());
+                    } catch (e2) {
+                        console.error("Failed to parse extracted JSON:", jsonMatch[1]);
+                        itineraryData = await generateBasicItinerary(trip.destination, trip.startDate, trip.endDate);
+                    }
+                } else {
+                    itineraryData = await generateBasicItinerary(trip.destination, trip.startDate, trip.endDate);
+                }
             }
 
             // 7. Merge restaurant data into itinerary
@@ -666,10 +677,23 @@ async function searchViatorActivities(destination: string): Promise<any[]> {
         return getFallbackActivities(destination);
     }
 
+    // Validate destination
+    if (!destination || typeof destination !== "string" || destination.trim().length === 0) {
+        console.warn("⚠️ Invalid destination provided to Viator search");
+        return getFallbackActivities(destination || "Unknown");
+    }
+
     try {
         console.log(`🎯 Searching activities in ${destination} via Viator`);
         
         const searchQuery = destination.split(",")[0].trim();
+        
+        // Validate searchQuery
+        if (!searchQuery || searchQuery.length === 0) {
+            console.warn("⚠️ Empty search query for Viator");
+            return getFallbackActivities(destination);
+        }
+        
         const url = `https://api.viator.com/partner/search/products?searchQuery=${encodeURIComponent(searchQuery)}&limit=10`;
 
         const response = await fetch(url, {
@@ -761,10 +785,23 @@ async function searchTripAdvisorRestaurants(destination: string): Promise<any[]>
         return getFallbackRestaurants(destination);
     }
 
+    // Validate destination
+    if (!destination || typeof destination !== "string" || destination.trim().length === 0) {
+        console.warn("⚠️ Invalid destination provided to TripAdvisor search");
+        return getFallbackRestaurants(destination || "Unknown");
+    }
+
     try {
         console.log(`🍽️ Searching restaurants in ${destination} via TripAdvisor`);
         
         const searchQuery = destination.split(",")[0].trim();
+        
+        // Validate searchQuery
+        if (!searchQuery || searchQuery.length === 0) {
+            console.warn("⚠️ Empty search query for TripAdvisor");
+            return getFallbackRestaurants(destination);
+        }
+        
         const locationUrl = `https://api.content.tripadvisor.com/api/v1/location/search?query=${encodeURIComponent(searchQuery)}&key=${apiKey}`;
 
         const locationResponse = await fetch(locationUrl);
