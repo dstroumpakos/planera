@@ -54,7 +54,7 @@ export function ImageWithAttribution({
 const styles = StyleSheet.create({
   container: {
     position: "relative",
-    overflow: "hidden",
+    overflow: "visible",
   },
   image: {
     width: "100%",
@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     paddingHorizontal: 12,
     paddingVertical: 8,
+    zIndex: 9999,
   },
   attributionText: {
     fontSize: 11,

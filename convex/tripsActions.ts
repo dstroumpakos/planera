@@ -701,7 +701,7 @@ async function searchViatorActivities(destination: string): Promise<any[]> {
                         type: product.categoryId === 10001 ? "cultural" : "activity",
                         price: product.fromPrice || 0,
                         duration: details?.duration || "2 hours",
-                        bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
+                        bookingUrl: `https://www.viator.com/tours/${product.productCode}?pid=P00278826&mcid=42383&medium=link&medium_version=selector&campaign=Planera`,
                         image: details?.images?.[0]?.imageSource || null,
                     };
                 } catch (e) {
@@ -711,7 +711,7 @@ async function searchViatorActivities(destination: string): Promise<any[]> {
                         type: "activity",
                         price: product.fromPrice || 0,
                         duration: "2 hours",
-                        bookingUrl: `https://www.viator.com/tours/${product.productCode}`,
+                        bookingUrl: `https://www.viator.com/tours/${product.productCode}?pid=P00278826&mcid=42383&medium=link&medium_version=selector&campaign=Planera`,
                         image: null,
                     };
                 }
