@@ -351,3 +351,61 @@ export const getTrendingDestinations = authQuery({
         return trending;
     },
 });
+
+// Internal function to get trip details for generation
+export const getTripForGeneration = internalQuery({
+    args: { tripId: v.id("trips") },
+    returns: v.any(),
+    handler: async (ctx, args) => {
+        const trip = await ctx.db.get(args.tripId);
+        return trip;
+    },
+});
+
+// Internal function to save trip generation results
+export const saveTripGeneration = internalMutation({
+    args: {
+        tripId: v.id("trips"),
+        itinerary: v.any(),
+        flights: v.optional(v.any()),
+        hotels: v.optional(v.any()),
+        activities: v.array(v.any()),
+        restaurants: v.array(v.any()),
+        transportation: v.array(v.any()),
+        dailyExpenses: v.number(),
+        itineraryRaw: v.string(),
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const { tripId, itinerary, flights, hotels, activities, restaurants, transportation, dailyExpenses, itineraryRaw } = args;
+        
+        await ctx.db.patch(tripId, {
+            status: "completed",
+            itinerary,
+            flights,
+            hotels,
+            activities,
+            restaurants,
+            transportation,
+            dailyExpenses,
+            itineraryRaw,
+        });
+    },
+});
+
+// Internal function to set trip error
+export const setTripError = internalMutation({
+    args: {
+        tripId: v.id("trips"),
+        error: v.string(),
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const { tripId, error } = args;
+        
+        await ctx.db.patch(tripId, {
+            status: "error",
+            errorMessage: error,
+        });
+    },
+});
