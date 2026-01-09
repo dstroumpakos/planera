@@ -976,7 +976,7 @@ export default function TripDetails() {
 
                 {/* Content based on active filter */}
                 <View style={styles.itineraryContainer}>
-                    {activeFilter === 'all' && trip.itinerary?.dayByDayItinerary?.map((day: any, index: number) => (
+                    {activeFilter === 'all' && trip.itinerary?.itinerary?.map((day: any, index: number) => (
                         <View key={index} style={styles.daySection}>
                             <View style={styles.dayHeader}>
                                 <View>
