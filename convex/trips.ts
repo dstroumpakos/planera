@@ -381,14 +381,16 @@ export const saveTripGeneration = internalMutation({
         
         await ctx.db.patch(tripId, {
             status: "completed",
-            itinerary,
-            flights,
-            hotels,
-            activities,
-            restaurants,
-            transportation,
-            dailyExpenses,
-            itineraryRaw,
+            itinerary: {
+                ...itinerary,
+                flights,
+                hotels,
+                activities,
+                restaurants,
+                transportation,
+                dailyExpenses,
+                itineraryRaw,
+            },
         });
     },
 });
@@ -404,7 +406,7 @@ export const setTripError = internalMutation({
         const { tripId, error } = args;
         
         await ctx.db.patch(tripId, {
-            status: "error",
+            status: "failed",
             errorMessage: error,
         });
     },
