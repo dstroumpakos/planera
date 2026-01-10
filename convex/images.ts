@@ -1,6 +1,6 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { action, query } from "./_generated/server";
 import { v } from "convex/values";
 
 interface UnsplashImage {
@@ -69,7 +69,7 @@ export const getDestinationImage = action({
   },
 });
 
-export const getDestinationImages = action({
+export const getDestinationImages = query({
   args: { destination: v.string(), count: v.optional(v.number()) },
   returns: v.array(
     v.object({

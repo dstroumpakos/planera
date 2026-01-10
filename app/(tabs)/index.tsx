@@ -33,19 +33,26 @@ export default function HomeScreen() {
 
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
-  const getImages = useQuery(api.images.getDestinationImages, 
-    trendingDestinations ? { destinations: trendingDestinations.map((d: any) => d.destination) } : "skip"
+  const getImages = useQuery(
+    api.images.getDestinationImages,
+    trendingDestinations && trendingDestinations.length > 0
+      ? { destination: trendingDestinations[0].destination }
+      : "skip"
   );
 
   useEffect(() => {
     if (getImages) {
       const imageMap: Record<string, any> = {};
-      getImages.forEach((img: any) => {
-        imageMap[img.destination] = img;
-      });
+      if (Array.isArray(getImages)) {
+        getImages.forEach((img: any, index: number) => {
+          if (trendingDestinations && index < trendingDestinations.length) {
+            imageMap[trendingDestinations[index].destination] = img;
+          }
+        });
+      }
       setDestinationImages(imageMap);
     }
-  }, [getImages]);
+  }, [getImages, trendingDestinations]);
 
   if (authLoading) {
     return (
