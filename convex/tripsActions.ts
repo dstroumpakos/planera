@@ -695,6 +695,8 @@ async function searchViatorActivities(destination: string): Promise<any[]> {
         }
         
         const url = `https://api.viator.com/partner/search/products?searchQuery=${encodeURIComponent(searchQuery)}&limit=10`;
+        console.log(`📍 Viator API URL: ${url}`);
+        console.log(`🔑 API Key present: ${apiKey ? "Yes" : "No"}`);
 
         const response = await fetch(url, {
             headers: {
@@ -703,12 +705,16 @@ async function searchViatorActivities(destination: string): Promise<any[]> {
             }
         });
 
+        console.log(`📊 Viator API Response Status: ${response.status}`);
+        
         if (!response.ok) {
-            console.warn(`⚠️ Viator API error: ${response.status}`);
+            const errorText = await response.text();
+            console.warn(`⚠️ Viator API error: ${response.status} - ${errorText}`);
             return getFallbackActivities(destination);
         }
 
         const data = await response.json();
+        console.log(`📦 Viator API Response:`, JSON.stringify(data).substring(0, 500));
         
         if (!data.products || data.products.length === 0) {
             console.warn("⚠️ No activities found via Viator");
@@ -757,6 +763,8 @@ async function getViatorProductDetails(productCode: string): Promise<any> {
 
     try {
         const url = `https://api.viator.com/partner/products/${productCode}`;
+        console.log(`🔍 Fetching product details for: ${productCode}`);
+        
         const response = await fetch(url, {
             headers: {
                 "Accept": "application/json;version=2.0",
@@ -764,12 +772,16 @@ async function getViatorProductDetails(productCode: string): Promise<any> {
             }
         });
 
+        console.log(`📊 Product details response status: ${response.status}`);
+        
         if (!response.ok) {
-            console.warn(`⚠️ Failed to fetch product details for ${productCode}: ${response.status}`);
+            const errorText = await response.text();
+            console.warn(`⚠️ Failed to fetch product details for ${productCode}: ${response.status} - ${errorText}`);
             return null;
         }
 
         const data = await response.json();
+        console.log(`✅ Product details fetched:`, JSON.stringify(data).substring(0, 300));
         return data;
     } catch (error) {
         console.error(`❌ Error fetching Viator product details: ${error}`);
