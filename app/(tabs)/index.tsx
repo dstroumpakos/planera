@@ -175,9 +175,19 @@ export default function HomeScreen() {
                         contentContainerStyle={styles.trendingContainer}
                     >
                         {trendingDestinations.map((destination: any, index: number) => (
-                            <View 
+                            <TouchableOpacity 
                                 key={index}
                                 style={styles.trendingCard}
+                                onPress={() => router.push({
+                                    pathname: "/destination-preview",
+                                    params: {
+                                        destination: destination.destination,
+                                        avgBudget: destination.avgBudget.toString(),
+                                        avgRating: destination.avgRating.toString(),
+                                        count: destination.count.toString(),
+                                    }
+                                })}
+                                activeOpacity={0.8}
                             >
                                 <View 
                                     style={styles.trendingImageContainer}
@@ -213,7 +223,7 @@ export default function HomeScreen() {
                                     </View>
                                     <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         ))}
                     </ScrollView>
                 )}
