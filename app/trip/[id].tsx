@@ -438,7 +438,7 @@ export default function TripDetails() {
 
     // Calculate duration in days
     const duration = Math.ceil((trip.endDate - trip.startDate) / (1000 * 60 * 60 * 24));
-    const travelers = trip.travelers || 1;
+    const traveler = trip.travelers || 1;
 
     const allAccommodations = trip.itinerary?.hotels || [];
     
@@ -464,23 +464,23 @@ export default function TripDetails() {
     // Calculate flight price based on selected flight
     const flightPricePerPerson = selectedFlight 
         ? selectedFlight.pricePerPerson 
-        : (itinerary?.flights?.pricePerPerson || (itinerary?.flights?.price ? itinerary.flights.price / travelers : 0));
+        : (itinerary?.flights?.pricePerPerson || (itinerary?.flights?.price ? itinerary.flights.price / traveler : 0));
     
     // Get baggage price from selected flight (default €30 per person for checked bag)
     // Only charge if baggage is not already included AND user selected it
     const checkedBaggagePrice = selectedFlight?.checkedBaggagePrice || 30;
     const baggageIncluded = selectedFlight?.checkedBaggageIncluded || false;
-    const totalBaggageCost = (!baggageIncluded && checkedBaggageSelected) ? checkedBaggagePrice * travelers : 0;
+    const totalBaggageCost = (!baggageIncluded && checkedBaggageSelected) ? checkedBaggagePrice * traveler : 0;
     
     const accommodationPricePerNight = selectedAccommodation?.pricePerNight || 0;
     const dailyExpensesPerPerson = itinerary?.estimatedDailyExpenses || 50; // Fallback
 
-    const totalFlightCost = flightPricePerPerson * travelers;
+    const totalFlightCost = flightPricePerPerson * traveler;
     const totalAccommodationCost = accommodationPricePerNight * duration;
-    const totalDailyExpenses = dailyExpensesPerPerson * travelers * duration;
+    const totalDailyExpenses = dailyExpensesPerPerson * traveler * duration;
     
     const grandTotal = totalFlightCost + totalBaggageCost + totalAccommodationCost + totalDailyExpenses;
-    const pricePerPerson = grandTotal / travelers;
+    const pricePerPerson = grandTotal / traveler;
 
     const openMap = (query: string) => {
         const url = Platform.select({
@@ -570,31 +570,31 @@ export default function TripDetails() {
 
     const renderFlights = () => {
         // Check if flights were skipped
-        if (itinerary.flights?.skipped) {
+        if (!itinerary?.flights) {
             return (
                 <View style={styles.card}>
                     <View style={styles.skippedFlightsContainer}>
                         <Ionicons name="airplane" size={32} color="#5EEAD4" />
                         <Text style={styles.skippedFlightsTitle}>Flights Not Included</Text>
                         <Text style={styles.skippedFlightsText}>
-                            {itinerary.flights.message || "You indicated you already have flights booked."}
+                            You indicated you already have flights booked.
                         </Text>
                     </View>
                 </View>
             );
         }
 
-        // Handle new multiple options format
-        if (itinerary.flights?.options && Array.isArray(itinerary.flights.options)) {
-            const flightOptions = itinerary.flights.options;
+        // Handle flights array format
+        if (Array.isArray(itinerary.flights) && itinerary.flights.length > 0) {
+            const flightOptions = itinerary.flights;
             const selectedFlight = flightOptions[selectedFlightIndex] || flightOptions[0];
-            const bestPrice = itinerary.flights.bestPrice;
+            const bestPrice = Math.min(...flightOptions.map((f: any) => f.price || 0));
             
             return (
                 <View style={styles.card}>
                     <View style={styles.bestPriceBanner}>
                         <Ionicons name="pricetag" size={16} color="#10B981" />
-                        <Text style={styles.bestPriceText}>Best price from €{Math.round(bestPrice)}/person</Text>
+                        <Text style={styles.bestPriceText}>Best price from €{Math.round(bestPrice / (trip.travelers || 1))}/person</Text>
                     </View>
                     
                     <Text style={styles.flightOptionsLabel}>Select your flight:</Text>
@@ -608,16 +608,16 @@ export default function TripDetails() {
                                 ]}
                                 onPress={() => setSelectedFlightIndex(index)}
                             >
-                                {option.isBestPrice && (
+                                {option.price === bestPrice && (
                                     <View style={styles.bestPriceBadge}>
                                         <Text style={styles.bestPriceBadgeText}>Best Price</Text>
                                     </View>
                                 )}
-                                <Text style={styles.flightOptionAirline}>{option.outbound.airline}</Text>
-                                <Text style={styles.flightOptionTime}>{option.outbound.departure}</Text>
-                                <Text style={styles.flightOptionPrice}>€{Math.round(option.pricePerPerson)}</Text>
+                                <Text style={styles.flightOptionAirline}>{option.outbound?.airline || 'Airline'}</Text>
+                                <Text style={styles.flightOptionTime}>{option.outbound?.departure?.split('T')[1]?.slice(0, 5) || 'TBD'}</Text>
+                                <Text style={styles.flightOptionPrice}>€{Math.round((option.price || 0) / (trip.travelers || 1))}</Text>
                                 <Text style={styles.flightOptionStops}>
-                                    {option.outbound.stops === 0 ? 'Direct' : `${option.outbound.stops} stop`}
+                                    {option.outbound?.stops === 0 ? 'Direct' : `${option.outbound?.stops || 0} stop`}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -642,19 +642,12 @@ export default function TripDetails() {
                         </View>
 
                         <View style={styles.flightHeader}>
-                            <Text style={styles.flightPrice}>€{Math.round(selectedFlight.pricePerPerson)}/person</Text>
+                            <Text style={styles.flightPrice}>€{Math.round((selectedFlight.price || 0) / (trip.travelers || 1))}/person</Text>
                             <View style={styles.luggageBadge}>
                                 <Ionicons name="briefcase-outline" size={14} color="#14B8A6" />
-                                <Text style={styles.luggageText}>{selectedFlight.luggage}</Text>
+                                <Text style={styles.luggageText}>Included</Text>
                             </View>
                         </View>
-                        
-                        {itinerary.flights.dataSource === "ai-generated" && (
-                            <View style={styles.dataSourceBadge}>
-                                <Ionicons name="sparkles" size={14} color="#FF9500" />
-                                <Text style={styles.dataSourceText}>AI-Generated Flight Data</Text>
-                            </View>
-                        )}
                         
                         <View style={styles.flightSegment}>
                             <View style={styles.segmentHeader}>
@@ -663,15 +656,15 @@ export default function TripDetails() {
                             </View>
                             <View style={styles.row}>
                                 <View style={styles.flightInfo}>
-                                    <Text style={styles.cardTitle}>{selectedFlight.outbound.airline}</Text>
-                                    <Text style={styles.cardSubtitle}>{selectedFlight.outbound.flightNumber}</Text>
+                                    <Text style={styles.cardTitle}>{selectedFlight.outbound?.airline || 'Airline'}</Text>
+                                    <Text style={styles.cardSubtitle}>{selectedFlight.outbound?.flightNumber || 'N/A'}</Text>
                                 </View>
-                                <Text style={styles.duration}>{selectedFlight.outbound.duration}</Text>
+                                <Text style={styles.duration}>{selectedFlight.outbound?.duration || 'N/A'}</Text>
                             </View>
                             <View style={styles.flightTimes}>
-                                <Text style={styles.time}>{selectedFlight.outbound.departure}</Text>
+                                <Text style={styles.time}>{selectedFlight.outbound?.departure?.split('T')[1]?.slice(0, 5) || 'TBD'}</Text>
                                 <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-                                <Text style={styles.time}>{selectedFlight.outbound.arrival}</Text>
+                                <Text style={styles.time}>{selectedFlight.outbound?.arrival?.split('T')[1]?.slice(0, 5) || 'TBD'}</Text>
                             </View>
                         </View>
 
@@ -684,26 +677,24 @@ export default function TripDetails() {
                             </View>
                             <View style={styles.row}>
                                 <View style={styles.flightInfo}>
-                                    <Text style={styles.cardTitle}>{selectedFlight.return.airline}</Text>
-                                    <Text style={styles.cardSubtitle}>{selectedFlight.return.flightNumber}</Text>
+                                    <Text style={styles.cardTitle}>{selectedFlight.return?.airline || 'Airline'}</Text>
+                                    <Text style={styles.cardSubtitle}>{selectedFlight.return?.flightNumber || 'N/A'}</Text>
                                 </View>
-                                <Text style={styles.duration}>{selectedFlight.return.duration}</Text>
+                                <Text style={styles.duration}>{selectedFlight.return?.duration || 'N/A'}</Text>
                             </View>
                             <View style={styles.flightTimes}>
-                                <Text style={styles.time}>{selectedFlight.return.departure}</Text>
+                                <Text style={styles.time}>{selectedFlight.return?.departure?.split('T')[1]?.slice(0, 5) || 'TBD'}</Text>
                                 <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-                                <Text style={styles.time}>{selectedFlight.return.arrival}</Text>
+                                <Text style={styles.time}>{selectedFlight.return?.arrival?.split('T')[1]?.slice(0, 5) || 'TBD'}</Text>
                             </View>
                         </View>
 
                         {/* Baggage Options */}
                         <View style={styles.baggageSection}>
-                            <Text style={styles.baggageSectionTitle}>Baggage Options</Text>
-                            
-                            {/* Included Cabin Bag */}
+                            {/* Cabin Bag - Always included */}
                             <View style={styles.baggageOption}>
                                 <View style={styles.baggageOptionLeft}>
-                                    <Ionicons name="briefcase-outline" size={20} color="#14B8A6" />
+                                    <Ionicons name="bag-handle-outline" size={20} color="#14B8A6" />
                                     <View style={styles.baggageOptionInfo}>
                                         <Text style={styles.baggageOptionTitle}>Cabin Bag (8kg)</Text>
                                         <Text style={styles.baggageOptionDesc}>Included in fare</Text>
@@ -715,60 +706,36 @@ export default function TripDetails() {
                                 </View>
                             </View>
 
-                            {/* Checked Baggage - Show as included or as option */}
-                            {selectedFlight.checkedBaggageIncluded ? (
-                                <View style={styles.baggageOption}>
-                                    <View style={styles.baggageOptionLeft}>
-                                        <Ionicons name="bag-handle-outline" size={20} color="#14B8A6" />
-                                        <View style={styles.baggageOptionInfo}>
-                                            <Text style={styles.baggageOptionTitle}>Checked Bag (23kg)</Text>
-                                            <Text style={styles.baggageOptionDesc}>Included in fare</Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.includedBadge}>
-                                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                                        <Text style={styles.includedText}>Included</Text>
-                                    </View>
-                                </View>
-                            ) : (
-                                <TouchableOpacity 
-                                    style={[
-                                        styles.baggageOption,
-                                        styles.baggageOptionSelectable,
-                                        checkedBaggageSelected && styles.baggageOptionSelected
-                                    ]}
-                                    onPress={() => setCheckedBaggageSelected(!checkedBaggageSelected)}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={styles.baggageOptionLeft}>
-                                        <Ionicons name="bag-handle-outline" size={20} color={checkedBaggageSelected ? "#14B8A6" : "#546E7A"} />
-                                        <View style={styles.baggageOptionInfo}>
-                                            <Text style={[styles.baggageOptionTitle, checkedBaggageSelected && styles.baggageOptionTitleSelected]}>
-                                                Checked Bag (23kg)
-                                            </Text>
-                                            <Text style={styles.baggageOptionDesc}>Per person, round trip</Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.baggageOptionRight}>
-                                        <Text style={[styles.baggagePrice, checkedBaggageSelected && styles.baggagePriceSelected]}>
-                                            +€{selectedFlight.checkedBaggagePrice || 30}
+                            {/* Checked Baggage - Optional */}
+                            <TouchableOpacity 
+                                style={[
+                                    styles.baggageOption,
+                                    styles.baggageOptionSelectable,
+                                    checkedBaggageSelected && styles.baggageOptionSelected
+                                ]}
+                                onPress={() => setCheckedBaggageSelected(!checkedBaggageSelected)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.baggageOptionLeft}>
+                                    <Ionicons name="bag-handle-outline" size={20} color={checkedBaggageSelected ? "#14B8A6" : "#546E7A"} />
+                                    <View style={styles.baggageOptionInfo}>
+                                        <Text style={[styles.baggageOptionTitle, checkedBaggageSelected && styles.baggageOptionTitleSelected]}>
+                                            Checked Bag (23kg)
                                         </Text>
-                                        <View style={[styles.checkbox, checkedBaggageSelected && styles.checkboxSelected]}>
-                                            {checkedBaggageSelected && (
-                                                <Ionicons name="checkmark" size={16} color="white" />
-                                            )}
-                                        </View>
+                                        <Text style={styles.baggageOptionDesc}>Per person, round trip</Text>
                                     </View>
-                                </TouchableOpacity>
-                            )}
-
-                            {checkedBaggageSelected && !selectedFlight.checkedBaggageIncluded && (
-                                <View style={styles.baggageSummary}>
-                                    <Text style={styles.baggageSummaryText}>
-                                        Checked baggage for {travelers} traveler{travelers > 1 ? 's' : ''}: €{(selectedFlight.checkedBaggagePrice || 30) * travelers}
-                                    </Text>
                                 </View>
-                            )}
+                                <View style={styles.baggageOptionRight}>
+                                    <Text style={[styles.baggagePrice, checkedBaggageSelected && styles.baggagePriceSelected]}>
+                                        +€30
+                                    </Text>
+                                    <View style={[styles.checkbox, checkedBaggageSelected && styles.checkboxSelected]}>
+                                        {checkedBaggageSelected && (
+                                            <Ionicons name="checkmark" size={14} color="white" />
+                                        )}
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -783,97 +750,16 @@ export default function TripDetails() {
             );
         }
 
-        // Legacy array format
-        if (Array.isArray(itinerary.flights)) {
-            return (
-                <View style={styles.card}>
-                    {itinerary.flights.map((flight: any, index: number) => (
-                        <View key={index} style={styles.row}>
-                            <View style={styles.flightInfo}>
-                                <Text style={styles.cardTitle}>{flight.airline}</Text>
-                                <Text style={styles.cardSubtitle}>{flight.flightNumber}</Text>
-                            </View>
-                            <Text style={styles.price}>€{flight.price}</Text>
-                        </View>
-                    ))}
-                </View>
-            );
-        }
-
         // No flights available
-        if (!itinerary.flights || !itinerary.flights.outbound) {
-            return (
-                <View style={styles.card}>
-                    <Text style={styles.cardSubtitle}>Flight details unavailable</Text>
-                </View>
-            );
-        }
-
-        // Old single flight format
         return (
             <View style={styles.card}>
-                <View style={styles.flightHeader}>
-                    <Text style={styles.flightPrice}>€{flightPricePerPerson}/person</Text>
-                    <View style={styles.luggageBadge}>
-                        <Ionicons name="briefcase-outline" size={14} color="#14B8A6" />
-                        <Text style={styles.luggageText}>{itinerary.flights.luggage}</Text>
-                    </View>
+                <View style={styles.skippedFlightsContainer}>
+                    <Ionicons name="airplane" size={32} color="#5EEAD4" />
+                    <Text style={styles.skippedFlightsTitle}>No Flights Available</Text>
+                    <Text style={styles.skippedFlightsText}>
+                        Unable to load flight information at this time.
+                    </Text>
                 </View>
-                
-                {itinerary.flights.dataSource === "ai-generated" && (
-                    <View style={styles.dataSourceBadge}>
-                        <Ionicons name="sparkles" size={14} color="#FF9500" />
-                        <Text style={styles.dataSourceText}>AI-Generated Flight Data</Text>
-                    </View>
-                )}
-                
-                <View style={styles.flightSegment}>
-                    <View style={styles.segmentHeader}>
-                        <Ionicons name="airplane" size={20} color="#14B8A6" />
-                        <Text style={styles.segmentTitle}>Outbound</Text>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.flightInfo}>
-                            <Text style={styles.cardTitle}>{itinerary.flights.outbound.airline}</Text>
-                            <Text style={styles.cardSubtitle}>{itinerary.flights.outbound.flightNumber}</Text>
-                        </View>
-                        <Text style={styles.duration}>{itinerary.flights.outbound.duration}</Text>
-                    </View>
-                    <View style={styles.flightTimes}>
-                        <Text style={styles.time}>{itinerary.flights.outbound.departure}</Text>
-                        <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-                        <Text style={styles.time}>{itinerary.flights.outbound.arrival}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.flightSegment}>
-                    <View style={styles.segmentHeader}>
-                        <Ionicons name="airplane" size={20} color="#14B8A6" style={{ transform: [{ rotate: '180deg' }] }} />
-                        <Text style={styles.segmentTitle}>Return</Text>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.flightInfo}>
-                            <Text style={styles.cardTitle}>{itinerary.flights.return.airline}</Text>
-                            <Text style={styles.cardSubtitle}>{itinerary.flights.return.flightNumber}</Text>
-                        </View>
-                        <Text style={styles.duration}>{itinerary.flights.return.duration}</Text>
-                    </View>
-                    <View style={styles.flightTimes}>
-                        <Text style={styles.time}>{itinerary.flights.return.departure}</Text>
-                        <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
-                        <Text style={styles.time}>{itinerary.flights.return.arrival}</Text>
-                    </View>
-                </View>
-
-                <TouchableOpacity 
-                    style={styles.affiliateButton}
-                    onPress={() => openAffiliateLink('flight', `${trip.origin} to ${trip.destination}`)}
-                >
-                    <Text style={styles.affiliateButtonText}>Check Flight Availability</Text>
-                    <Ionicons name="open-outline" size={16} color="#14B8A6" />
-                </TouchableOpacity>
             </View>
         );
     };
@@ -1088,8 +974,8 @@ export default function TripDetails() {
                                             )}
                                             <View style={styles.flightHeader}>
                                                 <View>
-                                                    <Text style={styles.airlineName}>{flight.outbound.airline}</Text>
-                                                    <Text style={styles.flightTime}>{flight.outbound.departure} - {flight.outbound.arrival}</Text>
+                                                    <Text style={styles.airlineName}>{flight.outbound?.airline || 'Airline'}</Text>
+                                                    <Text style={styles.flightTime}>{flight.outbound?.departure?.split('T')[1]?.slice(0, 5) || 'TBD'}</Text>
                                                 </View>
                                                 <Text style={styles.flightPrice}>€{flight.pricePerPerson}</Text>
                                             </View>
@@ -1101,14 +987,14 @@ export default function TripDetails() {
                                                 </View>
                                                 <Text style={styles.airportCode}>{trip.destination ? trip.destination.substring(0, 3).toUpperCase() : 'DST'}</Text>
                                             </View>
-                                            <Text style={styles.flightDuration}>{flight.outbound.duration} • {flight.outbound.stops === 0 ? 'Direct' : `${flight.outbound.stops} Stop(s)`}</Text>
+                                            <Text style={styles.flightDuration}>{flight.outbound?.duration || 'N/A'} • {flight.outbound?.stops === 0 ? 'Direct' : `${flight.outbound?.stops || 0} Stop(s)`}</Text>
                                             
                                             <View style={styles.divider} />
                                             
                                             <View style={styles.flightHeader}>
                                                 <View>
-                                                    <Text style={styles.airlineName}>{flight.return.airline}</Text>
-                                                    <Text style={styles.flightTime}>{flight.return.departure} - {flight.return.arrival}</Text>
+                                                    <Text style={styles.airlineName}>{flight.return?.airline || 'Airline'}</Text>
+                                                    <Text style={styles.flightTime}>{flight.return?.departure?.split('T')[1]?.slice(0, 5) || 'TBD'}</Text>
                                                 </View>
                                             </View>
                                             <View style={styles.flightRoute}>
@@ -1119,7 +1005,7 @@ export default function TripDetails() {
                                                 </View>
                                                 <Text style={styles.airportCode}>{trip.origin ? trip.origin.substring(0, 3).toUpperCase() : 'ORG'}</Text>
                                             </View>
-                                            <Text style={styles.flightDuration}>{flight.return.duration} • {flight.return.stops === 0 ? 'Direct' : `${flight.return.stops} Stop(s)`}</Text>
+                                            <Text style={styles.flightDuration}>{flight.return?.duration || 'N/A'} • {flight.return?.stops === 0 ? 'Direct' : `${flight.return?.stops || 0} Stop(s)`}</Text>
                                             
                                             {flight.bookingUrl && (
                                                 <TouchableOpacity 
