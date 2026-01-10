@@ -71,9 +71,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     zIndex: 10,
   },
   attributionContent: {
@@ -82,9 +82,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   attributionText: {
-    fontSize: 11,
+    fontSize: 12,
     color: "white",
     fontWeight: "500",
+    lineHeight: 16,
   },
   unsplashLink: {
     fontWeight: "700",
