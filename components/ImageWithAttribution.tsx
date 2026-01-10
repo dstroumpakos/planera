@@ -31,23 +31,18 @@ export function ImageWithAttribution({
   return (
     <View style={[styles.container, style]}>
       <Image source={{ uri: imageUrl }} style={[styles.image, imageStyle]} />
-      <TouchableOpacity
-        style={styles.attributionOverlay}
-        onPress={handleAttributionPress}
-        activeOpacity={0.7}
-      >
+      <View style={styles.attributionOverlay}>
         <Text style={styles.attributionText}>
           Photo by{" "}
-          <Text
-            style={styles.photographerLink}
-            onPress={handlePhotographerPress}
-          >
-            {photographerName}
-          </Text>
+          <TouchableOpacity onPress={handlePhotographerPress} activeOpacity={0.7}>
+            <Text style={styles.photographerLink}>{photographerName}</Text>
+          </TouchableOpacity>
           {" "}on{" "}
-          <Text style={styles.unsplashLink}>Unsplash</Text>
+          <TouchableOpacity onPress={handleAttributionPress} activeOpacity={0.7}>
+            <Text style={styles.unsplashLink}>Unsplash</Text>
+          </TouchableOpacity>
         </Text>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 }
