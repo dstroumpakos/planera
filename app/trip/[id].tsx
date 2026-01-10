@@ -905,10 +905,6 @@ export default function TripDetails() {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Map Preview */}
                 <View style={styles.mapPreviewContainer}>
-                    <LinearGradient
-                        colors={['transparent', 'rgba(248, 248, 245, 1)']}
-                        style={styles.mapGradient}
-                    />
                     {destinationImage ? (
                         <ImageWithAttribution
                             imageUrl={destinationImage.url}
@@ -924,7 +920,11 @@ export default function TripDetails() {
                             style={styles.mapImage} 
                         />
                     )}
-
+                    <LinearGradient
+                        colors={['transparent', 'rgba(248, 248, 245, 1)']}
+                        style={styles.mapGradient}
+                        pointerEvents="none"
+                    />
                     <TouchableOpacity style={styles.viewMapButton} onPress={() => openMap(trip.destination)}>
                         <Ionicons name="map" size={20} color="#F9F506" />
                         <Text style={styles.viewMapText}>View Map</Text>
@@ -1574,7 +1574,7 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         height: 100,
-        zIndex: 1,
+        zIndex: 2,
     },
     viewMapButton: {
         position: "absolute",
