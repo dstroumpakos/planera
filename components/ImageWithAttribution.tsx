@@ -32,16 +32,16 @@ export function ImageWithAttribution({
     <View style={[styles.container, style]}>
       <Image source={{ uri: imageUrl }} style={[styles.image, imageStyle]} />
       <View style={styles.attributionOverlay}>
-        <Text style={styles.attributionText}>
-          Photo by{" "}
+        <View style={styles.attributionContent}>
+          <Text style={styles.attributionText}>Photo by </Text>
           <TouchableOpacity onPress={handlePhotographerPress} activeOpacity={0.7}>
-            <Text style={styles.photographerLink}>{photographerName}</Text>
+            <Text style={[styles.attributionText, styles.photographerLink]}>{photographerName}</Text>
           </TouchableOpacity>
-          {" "}on{" "}
+          <Text style={styles.attributionText}> on </Text>
           <TouchableOpacity onPress={handleAttributionPress} activeOpacity={0.7}>
-            <Text style={styles.unsplashLink}>Unsplash</Text>
+            <Text style={[styles.attributionText, styles.unsplashLink]}>Unsplash</Text>
           </TouchableOpacity>
-        </Text>
+        </View>
       </View>
     </View>
   );
@@ -64,6 +64,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  attributionContent: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
   },
   attributionText: {
     fontSize: 11,
