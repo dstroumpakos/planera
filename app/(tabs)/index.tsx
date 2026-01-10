@@ -179,18 +179,8 @@ export default function HomeScreen() {
                                 key={index}
                                 style={styles.trendingCard}
                             >
-                                <TouchableOpacity 
+                                <View 
                                     style={styles.trendingImageContainer}
-                                    onPress={() => router.push({
-                                        pathname: "/destination-preview",
-                                        params: {
-                                            destination: destination.destination,
-                                            avgBudget: destination.avgBudget.toString(),
-                                            avgRating: destination.avgRating.toString(),
-                                            count: destination.count.toString(),
-                                        }
-                                    })}
-                                    activeOpacity={0.8}
                                 >
                                     {destinationImages[destination.destination] ? (
                                         <ImageWithAttribution
@@ -212,18 +202,9 @@ export default function HomeScreen() {
                                     <TouchableOpacity style={styles.arrowButton}>
                                         <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
                                     </TouchableOpacity>
-                                </TouchableOpacity>
-                                <TouchableOpacity 
+                                </View>
+                                <View 
                                     style={styles.trendingInfo}
-                                    onPress={() => router.push({
-                                        pathname: "/destination-preview",
-                                        params: {
-                                            destination: destination.destination,
-                                            avgBudget: destination.avgBudget.toString(),
-                                            avgRating: destination.avgRating.toString(),
-                                            count: destination.count.toString(),
-                                        }
-                                    })}
                                 >
                                     <Text style={styles.trendingName}>{destination.destination}</Text>
                                     <View style={styles.trendingLocation}>
@@ -231,7 +212,7 @@ export default function HomeScreen() {
                                         <Text style={styles.trendingCountry}>{destination.count} trips</Text>
                                     </View>
                                     <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
-                                </TouchableOpacity>
+                                </View>
                             </View>
                         ))}
                     </ScrollView>
@@ -474,6 +455,7 @@ const styles = StyleSheet.create({
     trendingImageContainer: {
         height: 180,
         position: "relative",
+        pointerEvents: "box-none",
     },
     trendingImage: {
         width: "100%",
