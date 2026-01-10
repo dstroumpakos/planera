@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Image, ScrollView, TextInput } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Image, ScrollView, TextInput, Linking } from "react-native";
 import { useQuery, useMutation, useConvexAuth, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "expo-router";
@@ -175,46 +175,94 @@ export default function HomeScreen() {
                         contentContainerStyle={styles.trendingContainer}
                     >
                         {trendingDestinations.map((destination: any, index: number) => (
-                            <TouchableOpacity 
+                            <View 
                                 key={index}
                                 style={styles.trendingCard}
-                                onPress={() => router.push({
-                                    pathname: "/destination-preview",
-                                    params: {
-                                        destination: destination.destination,
-                                        avgBudget: destination.avgBudget.toString(),
-                                        avgRating: destination.avgRating.toString(),
-                                        count: destination.count.toString(),
-                                    }
-                                })}
-                                activeOpacity={0.8}
                             >
-                                <View 
-                                    style={styles.trendingImageContainer}
-                                >
-                                    {destinationImages[destination.destination] ? (
-                                        <ImageWithAttribution
-                                            imageUrl={destinationImages[destination.destination].url}
-                                            photographerName={destinationImages[destination.destination].photographer}
-                                            unsplashUrl={destinationImages[destination.destination].attribution}
-                                            style={styles.trendingImageContainer}
-                                            imageStyle={styles.trendingImage}
+                                {destinationImages[destination.destination] ? (
+                                    <TouchableOpacity 
+                                        style={styles.trendingImageContainer}
+                                        onPress={() => router.push({
+                                            pathname: "/destination-preview",
+                                            params: {
+                                                destination: destination.destination,
+                                                avgBudget: destination.avgBudget.toString(),
+                                                avgRating: destination.avgRating.toString(),
+                                                count: destination.count.toString(),
+                                            }
+                                        })}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Image 
+                                            source={{ uri: destinationImages[destination.destination].url }}
+                                            style={styles.trendingImage}
                                         />
-                                    ) : (
+                                        <View style={styles.ratingBadge}>
+                                            <Ionicons name="star" size={12} color={COLORS.primary} />
+                                            <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
+                                        </View>
+                                        <TouchableOpacity style={styles.arrowButton}>
+                                            <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                                        </TouchableOpacity>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity 
+                                        style={styles.trendingImageContainer}
+                                        onPress={() => router.push({
+                                            pathname: "/destination-preview",
+                                            params: {
+                                                destination: destination.destination,
+                                                avgBudget: destination.avgBudget.toString(),
+                                                avgRating: destination.avgRating.toString(),
+                                                count: destination.count.toString(),
+                                            }
+                                        })}
+                                        activeOpacity={0.8}
+                                    >
                                         <View style={styles.trendingImagePlaceholder}>
                                             <Text style={styles.trendingEmoji}>✈️</Text>
                                         </View>
-                                    )}
-                                    <View style={styles.ratingBadge}>
-                                        <Ionicons name="star" size={12} color={COLORS.primary} />
-                                        <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
-                                    </View>
-                                    <TouchableOpacity style={styles.arrowButton}>
-                                        <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                                        <View style={styles.ratingBadge}>
+                                            <Ionicons name="star" size={12} color={COLORS.primary} />
+                                            <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
+                                        </View>
+                                        <TouchableOpacity style={styles.arrowButton}>
+                                            <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                                        </TouchableOpacity>
                                     </TouchableOpacity>
-                                </View>
-                                <View 
+                                )}
+                                {destinationImages[destination.destination] && (
+                                    <View style={styles.attributionContainer} pointerEvents="auto">
+                                        <View style={styles.attributionOverlay}>
+                                            <View style={styles.attributionContent}>
+                                                <Text style={styles.attributionText}>Photo by </Text>
+                                                <TouchableOpacity activeOpacity={0.7}>
+                                                    <Text style={[styles.attributionText, styles.photographerLink]}>
+                                                        {destinationImages[destination.destination].photographer}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                                <Text style={styles.attributionText}> on </Text>
+                                                <TouchableOpacity 
+                                                    activeOpacity={0.7}
+                                                    onPress={() => Linking.openURL(destinationImages[destination.destination].attribution)}
+                                                >
+                                                    <Text style={[styles.attributionText, styles.unsplashLink]}>Unsplash</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+                                <TouchableOpacity 
                                     style={styles.trendingInfo}
+                                    onPress={() => router.push({
+                                        pathname: "/destination-preview",
+                                        params: {
+                                            destination: destination.destination,
+                                            avgBudget: destination.avgBudget.toString(),
+                                            avgRating: destination.avgRating.toString(),
+                                            count: destination.count.toString(),
+                                        }
+                                    })}
                                 >
                                     <Text style={styles.trendingName}>{destination.destination}</Text>
                                     <View style={styles.trendingLocation}>
@@ -222,8 +270,8 @@ export default function HomeScreen() {
                                         <Text style={styles.trendingCountry}>{destination.count} trips</Text>
                                     </View>
                                     <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
-                                </View>
-                            </TouchableOpacity>
+                                </TouchableOpacity>
+                            </View>
                         ))}
                     </ScrollView>
                 )}
@@ -531,6 +579,37 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "800",
         color: COLORS.primary,
+    },
+    attributionContainer: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+    },
+    attributionOverlay: {
+        backgroundColor: "rgba(0, 0, 0, 0.75)",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    attributionContent: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        alignItems: "center",
+    },
+    attributionText: {
+        fontSize: 12,
+        color: COLORS.white,
+        fontWeight: "500",
+        lineHeight: 16,
+    },
+    unsplashLink: {
+        fontWeight: "700",
+        textDecorationLine: "underline",
+    },
+    photographerLink: {
+        fontWeight: "700",
+        textDecorationLine: "underline",
     },
     tripCard: {
         flexDirection: "row",
