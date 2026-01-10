@@ -175,20 +175,23 @@ export default function HomeScreen() {
                         contentContainerStyle={styles.trendingContainer}
                     >
                         {trendingDestinations.map((destination: any, index: number) => (
-                            <TouchableOpacity 
+                            <View 
                                 key={index}
                                 style={styles.trendingCard}
-                                onPress={() => router.push({
-                                    pathname: "/destination-preview",
-                                    params: {
-                                        destination: destination.destination,
-                                        avgBudget: destination.avgBudget.toString(),
-                                        avgRating: destination.avgRating.toString(),
-                                        count: destination.count.toString(),
-                                    }
-                                })}
                             >
-                                <View style={styles.trendingImageContainer}>
+                                <TouchableOpacity 
+                                    style={styles.trendingImageContainer}
+                                    onPress={() => router.push({
+                                        pathname: "/destination-preview",
+                                        params: {
+                                            destination: destination.destination,
+                                            avgBudget: destination.avgBudget.toString(),
+                                            avgRating: destination.avgRating.toString(),
+                                            count: destination.count.toString(),
+                                        }
+                                    })}
+                                    activeOpacity={0.8}
+                                >
                                     {destinationImages[destination.destination] ? (
                                         <ImageWithAttribution
                                             imageUrl={destinationImages[destination.destination].url}
@@ -209,16 +212,27 @@ export default function HomeScreen() {
                                     <TouchableOpacity style={styles.arrowButton}>
                                         <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
                                     </TouchableOpacity>
-                                </View>
-                                <View style={styles.trendingInfo}>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    style={styles.trendingInfo}
+                                    onPress={() => router.push({
+                                        pathname: "/destination-preview",
+                                        params: {
+                                            destination: destination.destination,
+                                            avgBudget: destination.avgBudget.toString(),
+                                            avgRating: destination.avgRating.toString(),
+                                            count: destination.count.toString(),
+                                        }
+                                    })}
+                                >
                                     <Text style={styles.trendingName}>{destination.destination}</Text>
                                     <View style={styles.trendingLocation}>
                                         <Ionicons name="people" size={12} color={COLORS.textMuted} />
                                         <Text style={styles.trendingCountry}>{destination.count} trips</Text>
                                     </View>
                                     <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
-                                </View>
-                            </TouchableOpacity>
+                                </TouchableOpacity>
+                            </View>
                         ))}
                     </ScrollView>
                 )}

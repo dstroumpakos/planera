@@ -75,11 +75,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     zIndex: 10,
+    pointerEvents: "auto",
   },
   attributionContent: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
+    pointerEvents: "auto",
   },
   attributionText: {
     fontSize: 12,
