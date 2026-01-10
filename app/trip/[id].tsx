@@ -7,7 +7,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from 'expo-linear-gradient';
 import { useDestinationImage } from "@/lib/useImages";
 import ActivityCard from "@/components/ActivityCard";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
@@ -580,6 +579,10 @@ export default function TripDetails() {
                             {itinerary.flights.message || "You indicated you already have flights booked."}
                         </Text>
                     </View>
+                    <TouchableOpacity style={styles.viewMapButton} onPress={() => openMap(trip.destination)}>
+                        <Ionicons name="map" size={20} color="#F9F506" />
+                        <Text style={styles.viewMapText}>View Map</Text>
+                    </TouchableOpacity>
                 </View>
             );
         }
@@ -920,11 +923,6 @@ export default function TripDetails() {
                             style={styles.mapImage} 
                         />
                     )}
-                    <LinearGradient
-                        colors={['transparent', 'rgba(248, 248, 245, 1)']}
-                        style={styles.mapGradient}
-                        pointerEvents="none"
-                    />
                     <TouchableOpacity style={styles.viewMapButton} onPress={() => openMap(trip.destination)}>
                         <Ionicons name="map" size={20} color="#F9F506" />
                         <Text style={styles.viewMapText}>View Map</Text>
@@ -1567,14 +1565,6 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
         resizeMode: "cover",
-    },
-    mapGradient: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: 100,
-        zIndex: 2,
     },
     viewMapButton: {
         position: "absolute",
