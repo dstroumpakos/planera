@@ -7,6 +7,7 @@ interface UnsplashImage {
   url: string;
   photographer: string;
   attribution: string;
+  photographerUrl?: string;
 }
 
 async function fetchUnsplashImage(query: string): Promise<UnsplashImage | null> {
@@ -41,6 +42,7 @@ async function fetchUnsplashImage(query: string): Promise<UnsplashImage | null> 
       url: photo.urls.regular,
       photographer: photo.user.name,
       attribution: photo.links.html,
+      photographerUrl: photo.user.links.html,
     };
   } catch (error) {
     console.error("Error fetching Unsplash image:", error);
@@ -55,6 +57,7 @@ export const getDestinationImage = action({
       url: v.string(),
       photographer: v.string(),
       attribution: v.string(),
+      photographerUrl: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -70,6 +73,7 @@ export const getDestinationImages = action({
       url: v.string(),
       photographer: v.string(),
       attribution: v.string(),
+      photographerUrl: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -104,6 +108,7 @@ export const getDestinationImages = action({
         url: photo.urls.regular,
         photographer: photo.user.name,
         attribution: photo.links.html,
+        photographerUrl: photo.user.links.html,
       }));
     } catch (error) {
       console.error("Error fetching Unsplash images:", error);
@@ -119,6 +124,7 @@ export const getActivityImage = action({
       url: v.string(),
       photographer: v.string(),
       attribution: v.string(),
+      photographerUrl: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -135,6 +141,7 @@ export const getRestaurantImage = action({
       url: v.string(),
       photographer: v.string(),
       attribution: v.string(),
+      photographerUrl: v.optional(v.string()),
     }),
     v.null()
   ),

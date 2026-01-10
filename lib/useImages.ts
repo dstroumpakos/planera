@@ -6,6 +6,7 @@ interface ImageData {
   url: string;
   photographer: string;
   attribution: string;
+  photographerUrl?: string;
 }
 
 export function useDestinationImage(destination: string | undefined) {

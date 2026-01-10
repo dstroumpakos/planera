@@ -5,6 +5,7 @@ interface ImageWithAttributionProps {
   imageUrl: string;
   photographerName: string;
   unsplashUrl: string;
+  photographerUrl?: string;
   style?: any;
   imageStyle?: any;
 }
@@ -13,11 +14,18 @@ export function ImageWithAttribution({
   imageUrl,
   photographerName,
   unsplashUrl,
+  photographerUrl,
   style,
   imageStyle,
 }: ImageWithAttributionProps) {
   const handleAttributionPress = () => {
     Linking.openURL(unsplashUrl);
+  };
+
+  const handlePhotographerPress = () => {
+    if (photographerUrl) {
+      Linking.openURL(photographerUrl);
+    }
   };
 
   return (
@@ -29,7 +37,14 @@ export function ImageWithAttribution({
         activeOpacity={0.7}
       >
         <Text style={styles.attributionText}>
-          Photo by {photographerName} on{" "}
+          Photo by{" "}
+          <Text
+            style={styles.photographerLink}
+            onPress={handlePhotographerPress}
+          >
+            {photographerName}
+          </Text>
+          {" "}on{" "}
           <Text style={styles.unsplashLink}>Unsplash</Text>
         </Text>
       </TouchableOpacity>
@@ -61,6 +76,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   unsplashLink: {
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  photographerLink: {
     fontWeight: "700",
     textDecorationLine: "underline",
   },
