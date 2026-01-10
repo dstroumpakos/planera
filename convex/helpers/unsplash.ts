@@ -20,6 +20,7 @@ interface UnsplashImage {
   photographer: string;
   photographerUrl: string;
   attribution: string;
+  downloadLocation?: string;
 }
 
 function validateUnsplashKeys(): { accessKey: string; secretKey: string } {
@@ -67,6 +68,7 @@ export async function fetchUnsplashImage(query: string): Promise<UnsplashImage |
       photographer: data.user.name,
       photographerUrl: data.user.links.html,
       attribution: `Photo by ${data.user.name} on Unsplash`,
+      downloadLocation: data.links.download_location,
     };
   } catch (error) {
     console.error("❌ Error fetching from Unsplash:", error);
@@ -96,6 +98,7 @@ export async function fetchUnsplashImages(query: string, count: number = 5): Pro
       photographer: photo.user.name,
       photographerUrl: photo.user.links.html,
       attribution: `Photo by ${photo.user.name} on Unsplash`,
+      downloadLocation: photo.links.download_location,
     }));
   } catch (error) {
     console.error("❌ Error fetching from Unsplash:", error);

@@ -8,6 +8,7 @@ interface UnsplashImage {
   photographer: string;
   attribution: string;
   photographerUrl?: string;
+  downloadLocation?: string;
 }
 
 async function fetchUnsplashImage(query: string): Promise<UnsplashImage | null> {
@@ -43,6 +44,7 @@ async function fetchUnsplashImage(query: string): Promise<UnsplashImage | null> 
       photographer: photo.user.name,
       attribution: photo.links.html,
       photographerUrl: photo.user.links.html,
+      downloadLocation: photo.links.download_location,
     };
   } catch (error) {
     console.error("Error fetching Unsplash image:", error);
@@ -58,6 +60,7 @@ export const getDestinationImage = action({
       photographer: v.string(),
       attribution: v.string(),
       photographerUrl: v.optional(v.string()),
+      downloadLocation: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -74,6 +77,7 @@ export const getDestinationImages = action({
       photographer: v.string(),
       attribution: v.string(),
       photographerUrl: v.optional(v.string()),
+      downloadLocation: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -109,6 +113,7 @@ export const getDestinationImages = action({
         photographer: photo.user.name,
         attribution: photo.links.html,
         photographerUrl: photo.user.links.html,
+        downloadLocation: photo.links.download_location,
       }));
     } catch (error) {
       console.error("Error fetching Unsplash images:", error);
@@ -125,6 +130,7 @@ export const getActivityImage = action({
       photographer: v.string(),
       attribution: v.string(),
       photographerUrl: v.optional(v.string()),
+      downloadLocation: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -142,11 +148,28 @@ export const getRestaurantImage = action({
       photographer: v.string(),
       attribution: v.string(),
       photographerUrl: v.optional(v.string()),
+      downloadLocation: v.optional(v.string()),
     }),
     v.null()
   ),
   handler: async (ctx, args) => {
     const query = `${args.cuisine} restaurant ${args.destination}`;
     return await fetchUnsplashImage(query);
+  },
+});
+
+export const trackUnsplashDownload = action({
+  args: { downloadLocation: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    try {
+      // Make a request to the download_location URL to track the download
+      // This is required by Unsplash API for proper attribution tracking
+      await fetch(args.downloadLocation);
+    } catch (error) {
+      console.error("Error tracking Unsplash download:", error);
+      // Don't throw - this is just for tracking and shouldn't break the app
+    }
+    return null;
   },
 });

@@ -6,6 +6,8 @@ interface ImageWithAttributionProps {
   photographerName: string;
   unsplashUrl: string;
   photographerUrl?: string;
+  downloadLocation?: string;
+  onDownload?: () => void;
   style?: any;
   imageStyle?: any;
 }
@@ -15,14 +17,22 @@ export function ImageWithAttribution({
   photographerName,
   unsplashUrl,
   photographerUrl,
+  downloadLocation,
+  onDownload,
   style,
   imageStyle,
 }: ImageWithAttributionProps) {
   const handleAttributionPress = () => {
+    if (onDownload && downloadLocation) {
+      onDownload();
+    }
     Linking.openURL(unsplashUrl);
   };
 
   const handlePhotographerPress = () => {
+    if (onDownload && downloadLocation) {
+      onDownload();
+    }
     if (photographerUrl) {
       Linking.openURL(photographerUrl);
     }

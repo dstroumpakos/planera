@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useDestinationImage } from "@/lib/useImages";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const { width } = Dimensions.get("window");
 
@@ -94,6 +96,7 @@ export default function DestinationPreviewScreen() {
     const router = useRouter();
     const { destination } = useLocalSearchParams<{ destination: string }>();
     const { image, loading } = useDestinationImage(destination);
+    const trackDownload = useAction(api.images.trackUnsplashDownload);
     
     const avgBudget = parseFloat((useLocalSearchParams() as any).avgBudget) || 0;
     const avgRating = parseFloat((useLocalSearchParams() as any).avgRating) || 0;
@@ -107,7 +110,16 @@ export default function DestinationPreviewScreen() {
         ? DESTINATION_HIGHLIGHTS[destinationKey] 
         : DEFAULT_HIGHLIGHTS;
 
-    const handleCreateTrip = () => {
+    const handleCreateTrip = async () => {
+        // Track the download when user selects this destination
+        if (image?.downloadLocation) {
+            try {
+                await trackDownload({ downloadLocation: image.downloadLocation });
+            } catch (error) {
+                console.error("Error tracking download:", error);
+                // Continue anyway - don't block the user
+            }
+        }
         router.push({
             pathname: "/create-trip",
             params: { prefilledDestination: destination }
@@ -129,6 +141,12 @@ export default function DestinationPreviewScreen() {
                             photographerName={image.photographer}
                             unsplashUrl={image.attribution}
                             photographerUrl={image.photographerUrl}
+                            downloadLocation={image.downloadLocation}
+                            onDownload={() => {
+                                if (image.downloadLocation) {
+                                    trackDownload({ downloadLocation: image.downloadLocation }).catch(console.error);
+                                }
+                            }}
                             style={styles.heroImageContainer}
                             imageStyle={styles.heroImage}
                         />

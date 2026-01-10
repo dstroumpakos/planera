@@ -7,6 +7,7 @@ interface ImageData {
   photographer: string;
   attribution: string;
   photographerUrl?: string;
+  downloadLocation?: string;
 }
 
 export function useDestinationImage(destination: string | undefined) {
