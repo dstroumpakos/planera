@@ -456,7 +456,7 @@ export default function TripDetails() {
         : allAccommodations[0];
     
     // Get selected flight from options if available
-    const flightOptions = itinerary?.flights?.options;
+    const flightOptions = itinerary?.flights?.options || itinerary?.flights;
     const selectedFlight = flightOptions && Array.isArray(flightOptions) 
         ? flightOptions[selectedFlightIndex] || flightOptions[0]
         : null;
