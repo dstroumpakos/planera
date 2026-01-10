@@ -128,7 +128,6 @@ export default function DestinationPreviewScreen() {
                             imageUrl={image.url}
                             photographerName={image.photographer}
                             unsplashUrl={image.attribution}
-                            photographerUrl={image.photographerUrl}
                             style={styles.heroImageContainer}
                             imageStyle={styles.heroImage}
                         />
