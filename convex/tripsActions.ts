@@ -319,79 +319,133 @@ async function searchRestaurants(destination: string) {
     return await searchTripAdvisorRestaurants(destination);
 }
 
+// Helper function to search hotels
+async function searchHotels(
+    token: string,
+    cityCode: string,
+    checkInDate: string,
+    checkOutDate: string,
+    adults: number
+) {
+    console.log(`🔍 Searching hotels via Amadeus in ${cityCode}`);
+
+    try {
+        // Use v2 endpoint for hotel search (not v3 which requires hotelIds)
+        const url = `https://test.api.amadeus.com/v2/shopping/hotel-offers?cityCode=${cityCode}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&max=10`;
+
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("❌ Amadeus Hotel Search API error:", response.status, errorText);
+            throw new Error(`Amadeus API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.data || data.data.length === 0) {
+            console.warn("⚠️ No hotels found via Amadeus");
+            throw new Error("No hotels found");
+        }
+
+        const hotelOptions = data.data.slice(0, 5).map((hotel: any, index: number) => ({
+            id: index + 1,
+            name: hotel.hotel?.name || "Hotel",
+            rating: hotel.hotel?.rating || 4,
+            address: hotel.hotel?.address?.cityName || cityCode,
+            pricePerNight: hotel.offers?.[0]?.price?.total || "N/A",
+            currency: hotel.offers?.[0]?.price?.currency || "EUR",
+            description: "Quality accommodation",
+            amenities: ["WiFi", "Breakfast", "Parking"],
+        }));
+
+        console.log(`✅ Found ${hotelOptions.length} hotels`);
+        return hotelOptions;
+    } catch (error) {
+        console.error("❌ Hotel search error:", error);
+        throw error;
+    }
+}
+
 // Helper function to get fallback hotels
 function getFallbackHotels(destination: string): any[] {
-    const destLower = destination.toLowerCase();
-    
-    const fallbackMap: Record<string, any[]> = {
-        "athens": [
-            { name: "Hotel Grande Bretagne", rating: 4.7, reviewCount: 3200, pricePerNight: 250, address: "Syntagma Square", description: "Luxury 5-star hotel with stunning Acropolis views", amenities: ["WiFi", "Pool", "Spa", "Restaurant"] },
-            { name: "Hotel Electra Palace", rating: 4.5, reviewCount: 2800, pricePerNight: 180, address: "Plaka", description: "Boutique hotel in the heart of Plaka", amenities: ["WiFi", "Rooftop Bar", "Restaurant"] },
-            { name: "Hotel Hermes", rating: 4.3, reviewCount: 2100, pricePerNight: 120, address: "Syntagma", description: "Budget-friendly hotel with good location", amenities: ["WiFi", "Breakfast"] },
-        ],
-        "paris": [
-            { name: "Hotel Ritz Paris", rating: 4.8, reviewCount: 2500, pricePerNight: 400, address: "Place Vendôme", description: "Iconic luxury hotel in the heart of Paris", amenities: ["WiFi", "Spa", "Fine Dining", "Concierge"] },
-            { name: "Hotel Le Marais", rating: 4.6, reviewCount: 2200, pricePerNight: 220, address: "Le Marais", description: "Charming boutique hotel in trendy neighborhood", amenities: ["WiFi", "Restaurant", "Bar"] },
-            { name: "Hotel Ibis Paris", rating: 4.2, reviewCount: 3100, pricePerNight: 100, address: "Various Locations", description: "Budget chain with good value", amenities: ["WiFi", "Breakfast"] },
-        ],
-        "rome": [
-            { name: "Hotel Hassler Roma", rating: 4.7, reviewCount: 2800, pricePerNight: 350, address: "Spanish Steps", description: "Luxury hotel overlooking the Spanish Steps", amenities: ["WiFi", "Spa", "Restaurant", "Rooftop Bar"] },
-            { name: "Hotel Artemide", rating: 4.6, reviewCount: 2400, pricePerNight: 200, address: "Pantheon", description: "Elegant hotel near the Pantheon", amenities: ["WiFi", "Spa", "Restaurant"] },
-            { name: "Hotel Colonna Palace", rating: 4.3, reviewCount: 1900, pricePerNight: 130, address: "Centro Storico", description: "Mid-range hotel in historic center", amenities: ["WiFi", "Breakfast"] },
-        ],
-        "barcelona": [
-            { name: "Hotel Arts Barcelona", rating: 4.7, reviewCount: 3000, pricePerNight: 320, address: "Barceloneta Beach", description: "Luxury beachfront hotel with modern design", amenities: ["WiFi", "Pool", "Spa", "Restaurant"] },
-            { name: "Hotel Omm", rating: 4.6, reviewCount: 2600, pricePerNight: 240, address: "Passeig de Gràcia", description: "Design hotel on famous avenue", amenities: ["WiFi", "Restaurant", "Bar"] },
-            { name: "Hotel Catalonia", rating: 4.2, reviewCount: 2200, pricePerNight: 110, address: "Gothic Quarter", description: "Budget hotel in historic area", amenities: ["WiFi", "Breakfast"] },
-        ],
-    };
-    
-    if (fallbackMap[destLower]) {
-        return fallbackMap[destLower];
-    }
-    
+    console.log(`📋 Using fallback hotels for ${destination}`);
     return [
-        { name: "Luxury Hotel", rating: 4.6, reviewCount: 1500, pricePerNight: 250, address: "City Center", description: "Upscale hotel with premium amenities", amenities: ["WiFi", "Pool", "Restaurant"] },
-        { name: "Mid-Range Hotel", rating: 4.3, reviewCount: 1200, pricePerNight: 120, address: "Downtown", description: "Comfortable hotel with good value", amenities: ["WiFi", "Breakfast"] },
-        { name: "Budget Hotel", rating: 4.0, reviewCount: 800, pricePerNight: 60, address: "Outskirts", description: "Affordable accommodation", amenities: ["WiFi"] },
+        {
+            id: 1,
+            name: `${destination} Grand Hotel`,
+            rating: 5,
+            address: destination,
+            pricePerNight: "€150",
+            currency: "EUR",
+            description: "Luxury accommodation in the heart of the city",
+            amenities: ["WiFi", "Breakfast", "Parking", "Spa", "Restaurant"],
+        },
+        {
+            id: 2,
+            name: `${destination} Comfort Inn`,
+            rating: 4,
+            address: destination,
+            pricePerNight: "€100",
+            currency: "EUR",
+            description: "Comfortable mid-range hotel",
+            amenities: ["WiFi", "Breakfast", "Parking"],
+        },
+        {
+            id: 3,
+            name: `${destination} Budget Hotel`,
+            rating: 3,
+            address: destination,
+            pricePerNight: "€60",
+            currency: "EUR",
+            description: "Affordable accommodation",
+            amenities: ["WiFi", "Parking"],
+        },
     ];
 }
 
 // Helper function to get fallback activities
 function getFallbackActivities(destination: string): any[] {
-    const destLower = destination.toLowerCase();
-    
-    const fallbackMap: Record<string, any[]> = {
-        "athens": [
-            { title: "Acropolis Tour", description: "Visit the iconic Acropolis and Parthenon", type: "cultural", price: 25, duration: "3 hours", bookingUrl: "https://www.viator.com" },
-            { title: "National Archaeological Museum", description: "Explore ancient Greek artifacts", type: "cultural", price: 15, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-            { title: "Plaka Walking Tour", description: "Stroll through historic Plaka neighborhood", type: "walking", price: 20, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-        ],
-        "paris": [
-            { title: "Eiffel Tower Visit", description: "Iconic monument with city views", type: "cultural", price: 30, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-            { title: "Louvre Museum Tour", description: "World's largest art museum", type: "cultural", price: 25, duration: "3 hours", bookingUrl: "https://www.viator.com" },
-            { title: "Seine River Cruise", description: "Scenic boat tour through Paris", type: "scenic", price: 20, duration: "1.5 hours", bookingUrl: "https://www.viator.com" },
-        ],
-        "rome": [
-            { title: "Colosseum Tour", description: "Ancient Roman amphitheater", type: "cultural", price: 20, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-            { title: "Vatican Museums", description: "Art and history in the Vatican", type: "cultural", price: 30, duration: "3 hours", bookingUrl: "https://www.viator.com" },
-            { title: "Roman Forum Walk", description: "Explore ancient Roman ruins", type: "walking", price: 18, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-        ],
-        "barcelona": [
-            { title: "Sagrada Familia", description: "Gaudí's masterpiece basilica", type: "cultural", price: 25, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-            { title: "Park Güell Tour", description: "Colorful park with city views", type: "scenic", price: 20, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-            { title: "Gothic Quarter Walk", description: "Medieval streets and architecture", type: "walking", price: 15, duration: "1.5 hours", bookingUrl: "https://www.viator.com" },
-        ],
-    };
-    
-    if (fallbackMap[destLower]) {
-        return fallbackMap[destLower];
-    }
-    
+    console.log(`📋 Using fallback activities for ${destination}`);
     return [
-        { title: "City Tour", description: "Guided tour of main attractions", type: "cultural", price: 20, duration: "2 hours", bookingUrl: "https://www.viator.com" },
-        { title: "Local Market Visit", description: "Explore local markets and culture", type: "cultural", price: 15, duration: "1.5 hours", bookingUrl: "https://www.viator.com" },
-        { title: "Scenic Viewpoint", description: "Best views of the city", type: "scenic", price: 0, duration: "1 hour", bookingUrl: "https://www.viator.com" },
+        {
+            title: `${destination} City Tour`,
+            description: "Explore the main attractions and landmarks of the city",
+            type: "cultural",
+            price: 45,
+            duration: "3 hours",
+            bookingUrl: "https://www.viator.com",
+            image: null,
+        },
+        {
+            title: `${destination} Food Tour`,
+            description: "Taste local cuisine and visit traditional restaurants",
+            type: "food",
+            price: 65,
+            duration: "2.5 hours",
+            bookingUrl: "https://www.viator.com",
+            image: null,
+        },
+        {
+            title: `${destination} Museum Visit`,
+            description: "Discover art and history at the local museum",
+            type: "cultural",
+            price: 25,
+            duration: "2 hours",
+            bookingUrl: "https://www.viator.com",
+            image: null,
+        },
+        {
+            title: `${destination} Sunset Experience`,
+            description: "Watch the sunset from a scenic viewpoint",
+            type: "nature",
+            price: 35,
+            duration: "1.5 hours",
+            bookingUrl: "https://www.viator.com",
+            image: null,
+        },
     ];
 }
 
@@ -606,55 +660,6 @@ async function searchFlights(
         return flightOptions;
     } catch (error) {
         console.error("❌ Flight search error:", error);
-        throw error;
-    }
-}
-
-// Helper function to search hotels
-async function searchHotels(
-    token: string,
-    cityCode: string,
-    checkInDate: string,
-    checkOutDate: string,
-    adults: number
-) {
-    console.log(`🔍 Searching hotels via Amadeus in ${cityCode}`);
-
-    try {
-        const url = `https://test.api.amadeus.com/v3/shopping/hotel-offers?cityCode=${cityCode}&checkInDate=${checkInDate}&checkOutDate=${checkOutDate}&adults=${adults}&max=10`;
-
-        const response = await fetch(url, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("❌ Amadeus Hotel Search API error:", response.status, errorText);
-            throw new Error(`Amadeus API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.data || data.data.length === 0) {
-            console.warn("⚠️ No hotels found via Amadeus");
-            throw new Error("No hotels found");
-        }
-
-        const hotelOptions = data.data.slice(0, 5).map((hotel: any, index: number) => ({
-            id: index + 1,
-            name: hotel.hotel?.name || "Hotel",
-            rating: hotel.hotel?.rating || 4,
-            address: hotel.hotel?.address?.cityName || cityCode,
-            pricePerNight: hotel.offers?.[0]?.price?.total || "N/A",
-            currency: hotel.offers?.[0]?.price?.currency || "EUR",
-            description: "Quality accommodation",
-            amenities: ["WiFi", "Breakfast", "Parking"],
-        }));
-
-        console.log(`✅ Found ${hotelOptions.length} hotels`);
-        return hotelOptions;
-    } catch (error) {
-        console.error("❌ Hotel search error:", error);
         throw error;
     }
 }
