@@ -103,63 +103,49 @@ export default function HomeScreen() {
               contentContainerStyle={styles.trendingContent}
             >
               {trendingDestinations.map((destination: any, index: number) => (
-                <View 
+                <TouchableOpacity 
                   key={index}
                   style={styles.trendingCard}
+                  onPress={() => router.push({
+                    pathname: "/destination-preview",
+                    params: {
+                      destination: destination.destination,
+                      avgBudget: destination.avgBudget.toString(),
+                      avgRating: destination.avgRating.toString(),
+                      count: destination.count.toString(),
+                    }
+                  })}
+                  activeOpacity={0.8}
                 >
-                  <View style={styles.trendingImageContainer}>
-                    {destinationImages[destination.destination] ? (
-                      <ImageWithAttribution
-                        imageUrl={destinationImages[destination.destination].url}
-                        photographerName={destinationImages[destination.destination].photographer}
-                        unsplashUrl={destinationImages[destination.destination].attribution}
-                        style={styles.trendingImageContainer}
-                        imageStyle={styles.trendingImage}
-                      />
-                    ) : (
-                      <View style={styles.trendingImagePlaceholder}>
-                        <Text style={styles.trendingEmoji}>✈️</Text>
-                      </View>
-                    )}
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={12} color={COLORS.primary} />
-                      <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
+                  {destinationImages[destination.destination] ? (
+                    <ImageWithAttribution
+                      imageUrl={destinationImages[destination.destination].url}
+                      photographerName={destinationImages[destination.destination].photographer}
+                      unsplashUrl={destinationImages[destination.destination].attribution}
+                      style={styles.trendingImageContainer}
+                      imageStyle={styles.trendingImage}
+                    />
+                  ) : (
+                    <View style={styles.trendingImagePlaceholder}>
+                      <Text style={styles.trendingEmoji}>✈️</Text>
                     </View>
-                    <TouchableOpacity 
-                      style={styles.arrowButton}
-                      onPress={() => router.push({
-                        pathname: "/destination-preview",
-                        params: {
-                          destination: destination.destination,
-                          avgBudget: destination.avgBudget.toString(),
-                          avgRating: destination.avgRating.toString(),
-                          count: destination.count.toString(),
-                        }
-                      })}
-                    >
-                      <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
-                    </TouchableOpacity>
+                  )}
+                  <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={12} color={COLORS.primary} />
+                    <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.trendingInfo}
-                    onPress={() => router.push({
-                      pathname: "/destination-preview",
-                      params: {
-                        destination: destination.destination,
-                        avgBudget: destination.avgBudget.toString(),
-                        avgRating: destination.avgRating.toString(),
-                        count: destination.count.toString(),
-                      }
-                    })}
-                  >
+                  <TouchableOpacity style={styles.arrowButton}>
+                    <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                  </TouchableOpacity>
+                  <View style={styles.trendingInfo}>
                     <Text style={styles.trendingName}>{destination.destination}</Text>
                     <View style={styles.trendingLocation}>
                       <Ionicons name="people" size={12} color={COLORS.textMuted} />
                       <Text style={styles.trendingCountry}>{destination.count} trips</Text>
                     </View>
                     <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </>
