@@ -69,7 +69,7 @@ export const getDestinationImage = action({
   },
 });
 
-export const getDestinationImages = query({
+export const getDestinationImages = action({
   args: { destination: v.string(), count: v.optional(v.number()) },
   returns: v.array(
     v.object({
