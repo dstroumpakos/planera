@@ -18,13 +18,14 @@ import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 
 const COLORS = {
   primary: "#FFC107",
-  secondary: "#F5E6D3",
-  background: "#FFFFFF",
-  text: "#000000",
-  textMuted: "#666666",
+  secondary: "#FFF8E1", // Lighter yellow for backgrounds
+  background: "#FAFAFA", // Slightly off-white
+  text: "#1A1A1A",
+  textMuted: "#8E8E93",
   white: "#FFFFFF",
-  border: "#E0E0E0",
-  lightGray: "#F5F5F5",
+  border: "#E5E5EA",
+  lightGray: "#F2F2F7",
+  darkOverlay: "rgba(0,0,0,0.4)",
 };
 
 export default function HomeScreen() {
@@ -33,6 +34,7 @@ export default function HomeScreen() {
   const [destinationImages, setDestinationImages] = useState<Record<string, any>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
+  const userSettings = useQuery(api.users.getSettings);
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
   const getImages = useAction(api.images.getDestinationImages);
@@ -77,6 +79,8 @@ export default function HomeScreen() {
     );
   }
 
+  const userName = userSettings?.name?.split(" ")[0] || "Traveler";
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -86,104 +90,142 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Planera</Text>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
-            <Ionicons name="person-circle" size={32} color={COLORS.text} />
+          <View style={styles.headerLeft}>
+            <View style={styles.avatarContainer}>
+              <Ionicons name="person-circle" size={48} color={COLORS.textMuted} />
+              <View style={styles.onlineBadge} />
+            </View>
+            <View style={styles.headerTexts}>
+              <Text style={styles.greetingSub}>Good Morning, {userName}</Text>
+              <Text style={styles.greetingMain}>Ready for your next journey?</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
+            <View style={styles.notificationBadge} />
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={18} color={COLORS.textMuted} />
+          <Ionicons name="search-outline" size={20} color={COLORS.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search destinations..."
+            placeholder="Where do you want to go?"
             placeholderTextColor={COLORS.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          <TouchableOpacity style={styles.searchButton}>
+            <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+          </TouchableOpacity>
         </View>
 
-        {/* Create Trip Button */}
-        <TouchableOpacity 
-          style={styles.createButton}
-          onPress={() => router.push("/create-trip")}
+        {/* Feature Cards */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.featuresScroll}
+          contentContainerStyle={styles.featuresContent}
         >
-          <Ionicons name="add" size={24} color={COLORS.white} />
-          <Text style={styles.createButtonText}>Create New Trip</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.featureCard, styles.featureCardPrimary]}
+            onPress={() => router.push("/create-trip")}
+          >
+            <View style={[styles.featureIcon, styles.featureIconPrimary]}>
+              <Ionicons name="sparkles" size={20} color={COLORS.text} />
+            </View>
+            <Text style={styles.featureTextPrimary}>AI Trip Planner</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.featureCard}>
+            <View style={styles.featureIcon}>
+              <Ionicons name="map-outline" size={20} color={COLORS.text} />
+            </View>
+            <Text style={styles.featureText}>Multi-City Route</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.featureCard}>
+            <View style={styles.featureIcon}>
+              <Ionicons name="pricetag-outline" size={20} color={COLORS.text} />
+            </View>
+            <Text style={styles.featureText}>Explore Deals</Text>
+          </TouchableOpacity>
+        </ScrollView>
 
         {/* Trending Destinations Section */}
         {trendingDestinations && trendingDestinations.length > 0 && (
-          <>
+          <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Trending Destinations</Text>
+              <Text style={styles.sectionTitle}>Trending Now</Text>
+              <TouchableOpacity onPress={() => {}}>
+                <Text style={styles.viewAllText}>View All</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.trendingGrid}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.trendingScroll}
+              contentContainerStyle={styles.trendingContent}
+            >
               {trendingDestinations.map((destination: any, index: number) => (
-                <View 
+                <TouchableOpacity 
                   key={index}
-                  style={styles.trendingCardWrapper}
+                  style={styles.trendingCard}
+                  onPress={() => router.push({
+                    pathname: "/destination-preview",
+                    params: {
+                      destination: destination.destination,
+                      avgBudget: destination.avgBudget.toString(),
+                      avgRating: destination.avgRating.toString(),
+                      count: destination.count.toString(),
+                    }
+                  })}
+                  activeOpacity={0.9}
                 >
-                  <TouchableOpacity 
-                    style={styles.trendingImageContainer}
-                    onPress={() => router.push({
-                      pathname: "/destination-preview",
-                      params: {
-                        destination: destination.destination,
-                        avgBudget: destination.avgBudget.toString(),
-                        avgRating: destination.avgRating.toString(),
-                        count: destination.count.toString(),
-                      }
-                    })}
-                    activeOpacity={0.8}
-                  >
-                    {destinationImages[destination.destination] ? (
-                      <ImageWithAttribution
-                        imageUrl={destinationImages[destination.destination].url}
-                        photographerName={destinationImages[destination.destination].photographer}
-                        unsplashUrl={destinationImages[destination.destination].attribution}
-                        style={styles.trendingImageContainer}
-                        imageStyle={styles.trendingImage}
-                      />
-                    ) : (
-                      <View style={styles.trendingImagePlaceholder}>
-                        <Text style={styles.trendingEmoji}>✈️</Text>
-                      </View>
-                    )}
+                  {destinationImages[destination.destination] ? (
+                    <ImageWithAttribution
+                      imageUrl={destinationImages[destination.destination].url}
+                      photographerName={destinationImages[destination.destination].photographer}
+                      unsplashUrl={destinationImages[destination.destination].attribution}
+                      style={styles.trendingImageContainer}
+                      imageStyle={styles.trendingImage}
+                    />
+                  ) : (
+                    <View style={styles.trendingImagePlaceholder}>
+                      <Text style={styles.trendingEmoji}>✈️</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.trendingOverlay}>
                     <View style={styles.ratingBadge}>
                       <Ionicons name="star" size={12} color={COLORS.primary} />
                       <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
                     </View>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.trendingInfo}
-                    onPress={() => router.push({
-                      pathname: "/destination-preview",
-                      params: {
-                        destination: destination.destination,
-                        avgBudget: destination.avgBudget.toString(),
-                        avgRating: destination.avgRating.toString(),
-                        count: destination.count.toString(),
-                      }
-                    })}
-                  >
-                    <Text style={styles.trendingName}>{destination.destination}</Text>
-                    <View style={styles.trendingLocation}>
-                      <Ionicons name="people" size={12} color={COLORS.textMuted} />
-                      <Text style={styles.trendingCountry}>{destination.count} trips</Text>
+                    
+                    <View style={styles.trendingCardContent}>
+                      <Text style={styles.trendingName}>{destination.destination}</Text>
+                      <View style={styles.trendingLocationRow}>
+                        <Ionicons name="location-sharp" size={12} color={COLORS.white} />
+                        <Text style={styles.trendingCountry}>Popular Destination</Text>
+                      </View>
+                      <View style={styles.trendingFooter}>
+                        <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
+                        <View style={styles.trendingArrow}>
+                          <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                        </View>
+                      </View>
                     </View>
-                    <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
               ))}
-            </View>
-          </>
+            </ScrollView>
+          </View>
         )}
 
         {/* My Trips Section */}
         {trips && trips.length > 0 && (
-          <>
+          <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>My Trips</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/trips")}>
@@ -209,7 +251,7 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
               </TouchableOpacity>
             ))}
-          </>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -225,8 +267,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 100, // Extra padding for tab bar
   },
   loadingContainer: {
     flex: 1,
@@ -247,80 +288,183 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-    marginTop: 12,
+    alignItems: "flex-start",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    marginBottom: 24,
   },
-  greeting: {
-    fontSize: 28,
+  headerLeft: {
+    flex: 1,
+    marginRight: 16,
+  },
+  avatarContainer: {
+    position: "relative",
+    width: 48,
+    height: 48,
+    marginBottom: 12,
+  },
+  onlineBadge: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary,
+    borderWidth: 2,
+    borderColor: COLORS.background,
+  },
+  headerTexts: {
+    gap: 4,
+  },
+  greetingSub: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+  },
+  greetingMain: {
+    fontSize: 24,
     fontWeight: "700",
     color: COLORS.text,
+    lineHeight: 32,
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FF3B30",
+    borderWidth: 1.5,
+    borderColor: COLORS.white,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 30,
+    padding: 8,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginLeft: 12,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
+    marginLeft: 12,
+    fontSize: 16,
     color: COLORS.text,
+    height: 40,
   },
-  createButton: {
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  featuresScroll: {
+    marginBottom: 32,
+  },
+  featuresContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  featureCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginBottom: 24,
+    backgroundColor: COLORS.white,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
     gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  createButtonText: {
-    fontSize: 16,
+  featureCardPrimary: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  featureIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.lightGray,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  featureIconPrimary: {
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+  featureText: {
+    fontSize: 14,
     fontWeight: "600",
     color: COLORS.text,
+  },
+  featureTextPrimary: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  sectionContainer: {
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-    marginTop: 20,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     color: COLORS.text,
   },
   viewAllText: {
     fontSize: 14,
-    color: COLORS.primary,
+    color: COLORS.textMuted,
     fontWeight: "500",
   },
-  trendingGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
+  trendingScroll: {
+    paddingLeft: 20,
   },
-  trendingCardWrapper: {
-    width: "48%",
-    borderRadius: 12,
+  trendingContent: {
+    paddingRight: 20,
+    gap: 16,
+  },
+  trendingCard: {
+    width: 260,
+    height: 340,
+    borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.lightGray,
+    position: "relative",
   },
   trendingImageContainer: {
     width: "100%",
-    height: 140,
-    position: "relative",
+    height: "100%",
   },
   trendingImage: {
     width: "100%",
@@ -334,80 +478,105 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   trendingEmoji: {
-    fontSize: 40,
+    fontSize: 64,
+  },
+  trendingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "space-between",
+    padding: 16,
+    backgroundColor: "rgba(0,0,0,0.1)", // Slight tint
   },
   ratingBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    alignSelf: "flex-end",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   ratingText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: COLORS.text,
   },
-  trendingInfo: {
-    padding: 12,
+  trendingCardContent: {
+    width: "100%",
   },
   trendingName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: "700",
+    color: COLORS.white,
     marginBottom: 4,
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  trendingLocation: {
+  trendingLocationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 6,
+    marginBottom: 12,
   },
   trendingCountry: {
-    fontSize: 12,
-    color: COLORS.textMuted,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: "500",
+  },
+  trendingFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   trendingPrice: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     color: COLORS.primary,
+  },
+  trendingArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
   },
   tripCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   tripIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 16,
   },
   tripInfo: {
     flex: 1,
   },
   tripDestination: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: COLORS.text,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   tripDates: {
-    fontSize: 12,
+    fontSize: 14,
     color: COLORS.textMuted,
   },
 });
