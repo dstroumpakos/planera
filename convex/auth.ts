@@ -25,17 +25,29 @@ export const createAuth = (
     ctx: GenericCtx<DataModel>,
     { optionsOnly } = { optionsOnly: false }
 ) => {
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const appleClientId = process.env.APPLE_CLIENT_ID;
+    const appleClientSecret = process.env.APPLE_CLIENT_SECRET;
+
+    const socialProviders: any = {};
+
+    if (googleClientId && googleClientSecret) {
+        socialProviders.google = {
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+        };
+    }
+
+    if (appleClientId && appleClientSecret) {
+        socialProviders.apple = {
+            clientId: appleClientId,
+            clientSecret: appleClientSecret,
+        };
+    }
+
     return betterAuth({
-        socialProviders: {
-            google: {
-                clientId: process.env.GOOGLE_CLIENT_ID as string,
-                clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-            },
-            apple: {
-                clientId: process.env.APPLE_CLIENT_ID as string,
-                clientSecret: process.env.APPLE_CLIENT_SECRET as string,
-            },
-        },
+        socialProviders,
         // disable logging when createAuth is called just to generate options.
         // this is not required, but there's a lot of noise in logs without it.
         logger: {
