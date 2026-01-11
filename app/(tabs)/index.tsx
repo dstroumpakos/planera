@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useConvexAuth } from "convex/react";
@@ -33,26 +33,27 @@ export default function HomeScreen() {
 
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
-  const getImages = useQuery(
-    api.images.getDestinationImages,
-    trendingDestinations && trendingDestinations.length > 0
-      ? { destination: trendingDestinations[0].destination }
-      : "skip"
-  );
+  const getImages = useAction(api.images.getDestinationImages);
 
   useEffect(() => {
-    if (getImages) {
-      const imageMap: Record<string, any> = {};
-      if (Array.isArray(getImages)) {
-        getImages.forEach((img: any, index: number) => {
-          if (trendingDestinations && index < trendingDestinations.length) {
-            imageMap[trendingDestinations[index].destination] = img;
+    if (trendingDestinations && trendingDestinations.length > 0) {
+      const fetchImages = async () => {
+        const imageMap: Record<string, any> = {};
+        for (const destination of trendingDestinations) {
+          try {
+            const images = await getImages({ destination: destination.destination });
+            if (images && images.length > 0) {
+              imageMap[destination.destination] = images[0];
+            }
+          } catch (error) {
+            console.error(`Failed to fetch images for ${destination.destination}:`, error);
           }
-        });
-      }
-      setDestinationImages(imageMap);
+        }
+        setDestinationImages(imageMap);
+      };
+      fetchImages();
     }
-  }, [getImages, trendingDestinations]);
+  }, [trendingDestinations, getImages]);
 
   if (authLoading) {
     return (
