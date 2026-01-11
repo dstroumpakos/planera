@@ -17,13 +17,13 @@ import { useConvexAuth } from "convex/react";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 
 const COLORS = {
-  primary: "#FFC107",
-  secondary: "#FFF8E1", // Lighter yellow for backgrounds
-  background: "#FAFAFA", // Slightly off-white
-  text: "#1A1A1A",
-  textMuted: "#8E8E93",
+  primary: "#FFE500", // Bright Yellow
+  secondary: "#FFF8E1", // Light Yellow/Cream
+  background: "#FAF9F6", // Off-white
+  text: "#1A1A1A", // Black
+  textMuted: "#9B9B9B", // Gray
   white: "#FFFFFF",
-  border: "#E5E5EA",
+  border: "#E8E6E1",
   lightGray: "#F2F2F7",
   darkOverlay: "rgba(0,0,0,0.4)",
 };
@@ -401,6 +401,11 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   featureCardPrimary: {
     backgroundColor: COLORS.primary,
@@ -410,12 +415,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.secondary,
     justifyContent: "center",
     alignItems: "center",
   },
   featureIconPrimary: {
-    backgroundColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
   featureText: {
     fontSize: 14,
