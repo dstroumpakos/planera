@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const userSettings = useQuery(api.users.getSettings);
+
   const userPlan = useQuery(api.users.getPlan);
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
@@ -81,6 +82,10 @@ export default function HomeScreen() {
   }
 
   const userName = userSettings?.name?.split(" ")[0] || "Traveler";
+
+  // Log to debug
+  console.log("User Settings:", userSettings);
+  console.log("User Name:", userName);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
