@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const userSettings = useQuery(api.users.getSettings);
+  const userPlan = useQuery(api.users.getPlan);
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
   const getImages = useAction(api.images.getDestinationImages);
@@ -81,6 +82,26 @@ export default function HomeScreen() {
 
   const userName = userSettings?.name?.split(" ")[0] || "Traveler";
 
+  const getCreditDisplay = () => {
+    if (!userPlan) return null;
+    
+    if (userPlan.isSubscriptionActive) {
+      return (
+        <View style={styles.creditBadge}>
+          <Ionicons name="infinite" size={16} color={COLORS.text} />
+          <Text style={styles.creditText}>Unlimited</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.creditBadge}>
+        <Ionicons name="ticket-outline" size={16} color={COLORS.text} />
+        <Text style={styles.creditText}>{userPlan.tripCredits} Credits</Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -100,9 +121,11 @@ export default function HomeScreen() {
               <Text style={styles.greetingMain}>Ready for your next journey?</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
-            <View style={styles.notificationBadge} />
+          <TouchableOpacity 
+            style={styles.creditContainer}
+            onPress={() => router.push("/subscription")}
+          >
+            {getCreditDisplay()}
           </TouchableOpacity>
         </View>
 
@@ -315,7 +338,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.background,
   },
   headerTexts: {
-    gap: 4,
+    justifyContent: "center",
   },
   greetingSub: {
     fontSize: 14,
@@ -323,34 +346,28 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   greetingMain: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: "700",
     color: COLORS.text,
-    lineHeight: 32,
   },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.white,
+  creditContainer: {
     justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
   },
-  notificationBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FF3B30",
-    borderWidth: 1.5,
-    borderColor: COLORS.white,
+  creditBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.secondary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  creditText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
   },
   searchContainer: {
     flexDirection: "row",
