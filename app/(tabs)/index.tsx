@@ -82,6 +82,23 @@ export default function HomeScreen() {
 
   const userName = userSettings?.name?.split(" ")[0] || "Traveler";
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    let greeting = "";
+    
+    if (hour < 12) {
+      greeting = "Good Morning";
+    } else if (hour < 18) {
+      greeting = "Good Afternoon";
+    } else if (hour < 21) {
+      greeting = "Good Evening";
+    } else {
+      greeting = "Good Night";
+    }
+    
+    return `${greeting}, ${userName}`;
+  };
+
   const getCreditDisplay = () => {
     if (!userPlan) return null;
     
@@ -117,7 +134,7 @@ export default function HomeScreen() {
               <View style={styles.onlineBadge} />
             </View>
             <View style={styles.headerTexts}>
-              <Text style={styles.greetingSub}>Good Morning, {userName}</Text>
+              <Text style={styles.greetingSub}>{getGreeting()}</Text>
               <Text style={styles.greetingMain}>Ready for your next journey?</Text>
             </View>
           </View>
