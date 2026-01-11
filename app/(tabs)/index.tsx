@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
-  Platform,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useConvexAuth } from "convex/react";
@@ -24,12 +24,14 @@ const COLORS = {
   textMuted: "#666666",
   white: "#FFFFFF",
   border: "#E0E0E0",
+  lightGray: "#F5F5F5",
 };
 
 export default function HomeScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const [destinationImages, setDestinationImages] = useState<Record<string, any>>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
@@ -90,64 +92,92 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={18} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search destinations..."
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        {/* Create Trip Button */}
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => router.push("/create-trip")}
+        >
+          <Ionicons name="add" size={24} color={COLORS.white} />
+          <Text style={styles.createButtonText}>Create New Trip</Text>
+        </TouchableOpacity>
+
         {/* Trending Destinations Section */}
         {trendingDestinations && trendingDestinations.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Trending Destinations</Text>
             </View>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.trendingScroll}
-              contentContainerStyle={styles.trendingContent}
-            >
+            <View style={styles.trendingGrid}>
               {trendingDestinations.map((destination: any, index: number) => (
-                <TouchableOpacity 
+                <View 
                   key={index}
-                  style={styles.trendingCard}
-                  onPress={() => router.push({
-                    pathname: "/destination-preview",
-                    params: {
-                      destination: destination.destination,
-                      avgBudget: destination.avgBudget.toString(),
-                      avgRating: destination.avgRating.toString(),
-                      count: destination.count.toString(),
-                    }
-                  })}
-                  activeOpacity={0.8}
+                  style={styles.trendingCardWrapper}
                 >
-                  {destinationImages[destination.destination] ? (
-                    <ImageWithAttribution
-                      imageUrl={destinationImages[destination.destination].url}
-                      photographerName={destinationImages[destination.destination].photographer}
-                      unsplashUrl={destinationImages[destination.destination].attribution}
-                      style={styles.trendingImageContainer}
-                      imageStyle={styles.trendingImage}
-                    />
-                  ) : (
-                    <View style={styles.trendingImagePlaceholder}>
-                      <Text style={styles.trendingEmoji}>✈️</Text>
+                  <TouchableOpacity 
+                    style={styles.trendingImageContainer}
+                    onPress={() => router.push({
+                      pathname: "/destination-preview",
+                      params: {
+                        destination: destination.destination,
+                        avgBudget: destination.avgBudget.toString(),
+                        avgRating: destination.avgRating.toString(),
+                        count: destination.count.toString(),
+                      }
+                    })}
+                    activeOpacity={0.8}
+                  >
+                    {destinationImages[destination.destination] ? (
+                      <ImageWithAttribution
+                        imageUrl={destinationImages[destination.destination].url}
+                        photographerName={destinationImages[destination.destination].photographer}
+                        unsplashUrl={destinationImages[destination.destination].attribution}
+                        style={styles.trendingImageContainer}
+                        imageStyle={styles.trendingImage}
+                      />
+                    ) : (
+                      <View style={styles.trendingImagePlaceholder}>
+                        <Text style={styles.trendingEmoji}>✈️</Text>
+                      </View>
+                    )}
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={12} color={COLORS.primary} />
+                      <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
                     </View>
-                  )}
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={12} color={COLORS.primary} />
-                    <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.arrowButton}>
-                    <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
                   </TouchableOpacity>
-                  <View style={styles.trendingInfo}>
+                  <TouchableOpacity 
+                    style={styles.trendingInfo}
+                    onPress={() => router.push({
+                      pathname: "/destination-preview",
+                      params: {
+                        destination: destination.destination,
+                        avgBudget: destination.avgBudget.toString(),
+                        avgRating: destination.avgRating.toString(),
+                        count: destination.count.toString(),
+                      }
+                    })}
+                  >
                     <Text style={styles.trendingName}>{destination.destination}</Text>
                     <View style={styles.trendingLocation}>
                       <Ionicons name="people" size={12} color={COLORS.textMuted} />
                       <Text style={styles.trendingCountry}>{destination.count} trips</Text>
                     </View>
                     <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                </View>
               ))}
-            </ScrollView>
+            </View>
           </>
         )}
 
@@ -181,15 +211,6 @@ export default function HomeScreen() {
             ))}
           </>
         )}
-
-        {/* Create Trip Button */}
-        <TouchableOpacity 
-          style={styles.createButton}
-          onPress={() => router.push("/create-trip")}
-        >
-          <Ionicons name="add" size={24} color={COLORS.white} />
-          <Text style={styles.createButtonText}>Create New Trip</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -227,12 +248,42 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 20,
     marginTop: 12,
   },
   greeting: {
     fontSize: 28,
     fontWeight: "700",
+    color: COLORS.text,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  createButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 8,
+    marginBottom: 24,
+    gap: 8,
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
     color: COLORS.text,
   },
   sectionHeader: {
@@ -252,15 +303,14 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: "500",
   },
-  trendingScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
+  trendingGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
   },
-  trendingContent: {
-    paddingRight: 16,
-  },
-  trendingCard: {
-    marginRight: 12,
+  trendingCardWrapper: {
+    width: "48%",
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: COLORS.background,
@@ -268,7 +318,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   trendingImageContainer: {
-    width: 200,
+    width: "100%",
     height: 140,
     position: "relative",
   },
@@ -302,17 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: COLORS.text,
-  },
-  arrowButton: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    backgroundColor: COLORS.white,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
   },
   trendingInfo: {
     padding: 12,
@@ -370,20 +409,5 @@ const styles = StyleSheet.create({
   tripDates: {
     fontSize: 12,
     color: COLORS.textMuted,
-  },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 20,
-    gap: 8,
-  },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.text,
   },
 });
