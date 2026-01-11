@@ -198,10 +198,16 @@ export const getSettings = authQuery({
             .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
             .unique();
 
+        // Extract name from email if user.name is not available
+        let userName = ctx.user.name || "";
+        if (!userName && ctx.user.email) {
+            userName = ctx.user.email.split("@")[0];
+        }
+
         if (!settings) {
             // Return default settings
             return {
-                name: ctx.user.name || "",
+                name: userName,
                 email: ctx.user.email || "",
                 phone: "",
                 dateOfBirth: "",
