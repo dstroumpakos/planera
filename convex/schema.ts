@@ -94,6 +94,8 @@ export default defineSchema({
         email: v.optional(v.string()),
         phone: v.optional(v.string()),
         dateOfBirth: v.optional(v.string()),
+        profilePicture: v.optional(v.id("_storage")),
+        darkMode: v.optional(v.boolean()),
         homeAirport: v.optional(v.string()),
         defaultTravelers: v.optional(v.float64()),
         defaultInterests: v.optional(v.array(v.string())),

@@ -204,6 +204,12 @@ export const getSettings = authQuery({
             userName = ctx.user.email.split("@")[0];
         }
 
+        // Get profile picture URL if exists
+        let profilePictureUrl = null;
+        if (settings?.profilePicture) {
+            profilePictureUrl = await ctx.storage.getUrl(settings.profilePicture);
+        }
+
         if (!settings) {
             // Return default settings
             return {
@@ -211,6 +217,9 @@ export const getSettings = authQuery({
                 email: ctx.user.email || "",
                 phone: "",
                 dateOfBirth: "",
+                profilePicture: null,
+                profilePictureUrl: null,
+                darkMode: false,
                 preferredAirlines: [],
                 seatPreference: "window",
                 mealPreference: "none",
@@ -226,7 +235,11 @@ export const getSettings = authQuery({
             };
         }
 
-        return settings;
+        return {
+            ...settings,
+            name: settings.name || userName,
+            profilePictureUrl,
+        };
     },
 });
 
@@ -339,6 +352,67 @@ export const updateNotifications = authMutation({
             await ctx.db.insert("userSettings", {
                 userId: ctx.user._id,
                 ...args,
+            });
+        }
+
+        return null;
+    },
+});
+
+export const updateDarkMode = authMutation({
+    args: {
+        darkMode: v.boolean(),
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const settings = await ctx.db
+            .query("userSettings")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        if (settings) {
+            await ctx.db.patch(settings._id, { darkMode: args.darkMode });
+        } else {
+            await ctx.db.insert("userSettings", {
+                userId: ctx.user._id,
+                darkMode: args.darkMode,
+            });
+        }
+
+        return null;
+    },
+});
+
+export const generateUploadUrl = authMutation({
+    args: {},
+    returns: v.string(),
+    handler: async (ctx) => {
+        return await ctx.storage.generateUploadUrl();
+    },
+});
+
+export const saveProfilePicture = authMutation({
+    args: {
+        storageId: v.id("_storage"),
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const settings = await ctx.db
+            .query("userSettings")
+            .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+            .unique();
+
+        // Delete old profile picture if exists
+        if (settings?.profilePicture) {
+            await ctx.storage.delete(settings.profilePicture);
+        }
+
+        if (settings) {
+            await ctx.db.patch(settings._id, { profilePicture: args.storageId });
+        } else {
+            await ctx.db.insert("userSettings", {
+                userId: ctx.user._id,
+                profilePicture: args.storageId,
             });
         }
 
