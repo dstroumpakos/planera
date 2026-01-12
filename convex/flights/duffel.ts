@@ -37,7 +37,11 @@ export async function createOfferRequest(params: any) {
     headers: getHeaders(config),
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error("Duffel offer request failed");
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error("Duffel API Error:", response.status, errorData);
+    throw new Error(`Duffel offer request failed: ${response.status} - ${errorData}`);
+  }
   const data = await response.json();
   return { offerRequestId: data.data.id, offers: data.data.offers || [] };
 }

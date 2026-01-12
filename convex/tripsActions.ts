@@ -130,6 +130,7 @@ export const generate = internalAction({
                         const returnDate = new Date(trip.endDate).toISOString().split('T')[0];
 
                         console.log(`🔍 Searching flights via Duffel: ${originCode} -> ${destCode}`);
+                        console.log(`   Departure: ${departureDate}, Return: ${returnDate}, Adults: ${trip.travelers}`);
                         
                         const { offerRequestId, offers } = await duffel.createOfferRequest({
                             originCode,
