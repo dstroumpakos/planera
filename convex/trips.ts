@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 
 export const create = authMutation({
@@ -270,7 +270,7 @@ export const deleteTrip = authMutation({
     },
 });
 
-export const getTrendingDestinations = authQuery({
+export const getTrendingDestinations = query({
     args: {},
     returns: v.array(v.object({
         destination: v.string(),
