@@ -193,9 +193,9 @@ export default function HomeScreen() {
             onPress={() => router.push("/create-trip")}
           >
             <View style={[styles.featureIcon, styles.featureIconPrimary]}>
-              <Ionicons name="sparkles" size={20} color={colors.text} />
+              <Ionicons name="sparkles" size={20} color="#000000" />
             </View>
-            <Text style={[styles.featureText, { color: colors.text }]}>AI Trip Planner</Text>
+            <Text style={[styles.featureText, { color: "#000000" }]}>AI Trip Planner</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
