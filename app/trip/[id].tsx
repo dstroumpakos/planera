@@ -901,9 +901,7 @@ export default function TripDetails() {
                             <Text style={[styles.aiBadgeText, { color: colors.textMuted }]}>AI Generated</Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
-                    </TouchableOpacity>
+                    <View style={styles.iconButton} />
                 </View>
             </SafeAreaView>
 
@@ -1518,45 +1516,41 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#F8F8F5",
     },
-    headerContainer: {
-        backgroundColor: "rgba(255, 255, 255, 0.9)",
-        zIndex: 10,
-    },
     header: {
+        backgroundColor: "white",
+        borderBottomWidth: 1,
+        borderBottomColor: "#E2E8F0",
+    },
+    headerContent: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
+    headerTitleContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#1A1A1A",
+        textAlign: "center",
+    },
     iconButton: {
         width: 40,
         height: 40,
-        borderRadius: 20,
-        backgroundColor: "transparent",
+        alignItems: "center",
         justifyContent: "center",
+    },
+    headerContainer: {
         alignItems: "center",
-    },
-    headerTitleContainer: {
-        alignItems: "center",
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#1A1A1A",
-    },
-    aiBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    aiBadgeText: {
-        fontSize: 12,
-        fontWeight: "500",
-        color: "#64748B",
-    },
-    scrollContent: {
-        paddingBottom: 100,
+        justifyContent: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 24,
+        gap: 8,
     },
     mapPreviewContainer: {
         height: 224,
