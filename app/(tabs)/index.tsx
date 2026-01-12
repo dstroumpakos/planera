@@ -255,7 +255,7 @@ export default function HomeScreen() {
                   <View style={styles.trendingOverlay}>
                     <View style={styles.ratingBadge}>
                       <Ionicons name="star" size={12} color={colors.primary} />
-                      <Text style={[styles.ratingText, { color: colors.text }]}>{destination.avgRating.toFixed(1)}</Text>
+                      <Text style={[styles.ratingText, { color: "#000000" }]}>{destination.avgRating.toFixed(1)}</Text>
                     </View>
                     
                     <View style={styles.trendingCardContent}>
