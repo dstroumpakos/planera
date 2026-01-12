@@ -3,7 +3,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useConvexAuth } from 'convex/react';
 
-// Planera Colors
+// Planera Colors - Light Mode (cream/yellow theme)
 export const LIGHT_COLORS = {
     primary: "#FFE500",
     secondary: "#FFF8E1",
@@ -23,23 +23,24 @@ export const LIGHT_COLORS = {
     inactive: "#8E8E93",
 };
 
+// Dark Mode - Inverted colors with dark backgrounds and light text
 export const DARK_COLORS = {
     primary: "#FFE500",
-    secondary: "#2D2A1A",
-    background: "#0D1117",
-    backgroundSecondary: "#161B22",
-    text: "#F0F6FC",
-    textSecondary: "#8B949E",
-    textMuted: "#6E7681",
+    secondary: "#3D3A2A",
+    background: "#121212",
+    backgroundSecondary: "#1E1E1E",
+    text: "#FFFFFF",
+    textSecondary: "#B3B3B3",
+    textMuted: "#808080",
     white: "#FFFFFF",
-    border: "#30363D",
-    error: "#F85149",
-    card: "#161B22",
-    cardBackground: "#161B22",
-    inputBackground: "#21262D",
-    lightGray: "#21262D",
-    tabBar: "#0D1117",
-    inactive: "#6E7681",
+    border: "#2C2C2C",
+    error: "#FF6B6B",
+    card: "#1E1E1E",
+    cardBackground: "#1E1E1E",
+    inputBackground: "#2A2A2A",
+    lightGray: "#2A2A2A",
+    tabBar: "#121212",
+    inactive: "#666666",
 };
 
 interface ThemeContextType {
@@ -61,10 +62,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         isAuthenticated ? {} : "skip"
     );
     const updateDarkMode = useMutation(api.users.updateDarkMode);
-    
     const [isDarkMode, setIsDarkMode] = useState(false);
 
-    // Sync with user settings from database
     useEffect(() => {
         if (userSettings?.darkMode !== undefined) {
             setIsDarkMode(userSettings.darkMode);
@@ -74,7 +73,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const toggleDarkMode = async () => {
         const newValue = !isDarkMode;
         setIsDarkMode(newValue);
-        
         if (isAuthenticated) {
             try {
                 await updateDarkMode({ darkMode: newValue });

@@ -70,6 +70,17 @@ export default function HomeScreen() {
     );
   }
 
+  // Handle loading states for queries
+  if (userSettings === undefined || userPlan === undefined) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const userName = userSettings?.name?.split(" ")[0] || "Traveler";
 
   const getGreeting = () => {

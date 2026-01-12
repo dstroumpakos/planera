@@ -5,25 +5,15 @@ import { Redirect, useRouter } from "expo-router";
 import { useState, useRef, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme, LIGHT_COLORS } from "@/lib/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
-// Planera Colors
-const COLORS = {
-    primary: "#FFE500", // Bright Yellow
-    primaryDark: "#E6CF00",
-    background: "#FAF9F6", // Cream/Off-white
-    backgroundDark: "#F5F3EE",
-    text: "#1A1A1A", // Near black
-    textSecondary: "#6B6B6B",
-    textMuted: "#9B9B9B",
-    white: "#FFFFFF",
-    border: "#E8E6E1",
-    success: "#4CAF50",
-    error: "#EF4444",
-};
+// Fallback colors for when theme is not available (e.g., during initial load)
+const COLORS = LIGHT_COLORS;
 
 export default function Index() {
+    const { colors } = useTheme();
     const [currentStep, setCurrentStep] = useState(0); // 0: splash, 1: onboarding, 2: auth
     const [onboardingPage, setOnboardingPage] = useState(0);
     const [isEmailAuth, setIsEmailAuth] = useState(false);
@@ -117,9 +107,9 @@ export default function Index() {
             <View style={styles.splashContent}>
                 <View style={styles.logoContainer}>
                     <View style={styles.logoIconWrapper}>
-                        <Ionicons name="globe-outline" size={48} color={COLORS.primary} />
+                        <Ionicons name="globe-outline" size={48} color={colors.primary} />
                         <View style={styles.logoSparkle}>
-                            <Ionicons name="sparkles" size={16} color={COLORS.primary} />
+                            <Ionicons name="sparkles" size={16} color={colors.primary} />
                         </View>
                     </View>
                 </View>
@@ -133,7 +123,7 @@ export default function Index() {
                     onPress={() => setCurrentStep(1)}
                 >
                     <Text style={styles.getStartedText}>Get Started</Text>
-                    <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+                    <Ionicons name="arrow-forward" size={20} color={colors.text} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity onPress={() => setCurrentStep(2)}>
@@ -158,7 +148,7 @@ export default function Index() {
                     {onboardingData[0].features.map((feature, index) => (
                         <View key={index} style={styles.featureCard}>
                             <View style={styles.featureIconWrapper}>
-                                <Ionicons name={feature.icon as any} size={24} color={COLORS.text} />
+                                <Ionicons name={feature.icon as any} size={24} color={colors.text} />
                             </View>
                             <View style={styles.featureTextContainer}>
                                 <Text style={styles.featureTitle}>{feature.title}</Text>
@@ -181,7 +171,7 @@ export default function Index() {
                     onPress={() => setCurrentStep(2)}
                 >
                     <Text style={styles.nextButtonText}>Next</Text>
-                    <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+                    <Ionicons name="arrow-forward" size={20} color={colors.text} />
                 </TouchableOpacity>
             </View>
         </View>
@@ -226,7 +216,7 @@ export default function Index() {
                             <TextInput
                                 style={styles.input}
                                 placeholder="Full Name"
-                                placeholderTextColor={COLORS.textMuted}
+                                placeholderTextColor={colors.textMuted}
                                 value={name}
                                 onChangeText={setName}
                                 autoCapitalize="words"
@@ -235,7 +225,7 @@ export default function Index() {
                         <TextInput
                             style={styles.input}
                             placeholder="Email"
-                            placeholderTextColor={COLORS.textMuted}
+                            placeholderTextColor={colors.textMuted}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -244,7 +234,7 @@ export default function Index() {
                         <TextInput
                             style={styles.input}
                             placeholder="Password"
-                            placeholderTextColor={COLORS.textMuted}
+                            placeholderTextColor={colors.textMuted}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
@@ -256,7 +246,7 @@ export default function Index() {
                             disabled={loading}
                         >
                             {loading ? (
-                                <ActivityIndicator color={COLORS.text} />
+                                <ActivityIndicator color={colors.text} />
                             ) : (
                                 <Text style={styles.primaryButtonText}>
                                     {isSignUp ? "Create Account" : "Sign In"}
@@ -272,7 +262,7 @@ export default function Index() {
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => setIsEmailAuth(false)} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={16} color={COLORS.textSecondary} />
+                            <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
                             <Text style={styles.backText}>Back to options</Text>
                         </TouchableOpacity>
                     </View>
@@ -284,7 +274,7 @@ export default function Index() {
                             disabled={oauthLoading !== null}
                         >
                             {oauthLoading === "google" ? (
-                                <ActivityIndicator color={COLORS.text} />
+                                <ActivityIndicator color={colors.text} />
                             ) : (
                                 <>
                                     <View style={styles.googleIcon}>
@@ -301,10 +291,10 @@ export default function Index() {
                             disabled={oauthLoading !== null}
                         >
                             {oauthLoading === "apple" ? (
-                                <ActivityIndicator color={COLORS.text} />
+                                <ActivityIndicator color={colors.text} />
                             ) : (
                                 <>
-                                    <Ionicons name="logo-apple" size={20} color={COLORS.text} style={styles.socialIcon} />
+                                    <Ionicons name="logo-apple" size={20} color={colors.text} style={styles.socialIcon} />
                                     <Text style={styles.socialButtonText}>Continue with Apple</Text>
                                 </>
                             )}
@@ -314,7 +304,7 @@ export default function Index() {
                             style={styles.primaryButton} 
                             onPress={() => setIsEmailAuth(true)}
                         >
-                            <Ionicons name="mail-outline" size={20} color={COLORS.text} style={styles.socialIcon} />
+                            <Ionicons name="mail-outline" size={20} color={colors.text} style={styles.socialIcon} />
                             <Text style={styles.primaryButtonText}>Sign Up with Email</Text>
                         </TouchableOpacity>
 
@@ -324,10 +314,10 @@ export default function Index() {
                             disabled={oauthLoading !== null}
                         >
                             {oauthLoading === "guest" ? (
-                                <ActivityIndicator color={COLORS.text} />
+                                <ActivityIndicator color={colors.text} />
                             ) : (
                                 <>
-                                    <Ionicons name="eye-outline" size={20} color={COLORS.text} style={styles.socialIcon} />
+                                    <Ionicons name="eye-outline" size={20} color={colors.text} style={styles.socialIcon} />
                                     <Text style={styles.guestButtonText}>Explore as Guest</Text>
                                 </>
                             )}
@@ -352,7 +342,7 @@ export default function Index() {
         <View style={styles.container}>
             <AuthLoading>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             </AuthLoading>
 

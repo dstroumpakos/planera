@@ -889,16 +889,16 @@ export default function TripDetails() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
-            <SafeAreaView edges={['top']} style={[styles.headerContainer, { backgroundColor: colors.background }]}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                        <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <SafeAreaView style={[styles.header, { backgroundColor: colors.card }]}>
+                <View style={styles.headerContent}>
+                    <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
+                        <Ionicons name="chevron-back" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <View style={styles.headerTitleContainer}>
-                        <Text style={[styles.headerTitle, { color: colors.text }]}>{trip.destination} Escape</Text>
-                        <View style={[styles.aiBadge, { backgroundColor: isDarkMode ? '#2D2A1A' : '#1C1C1E' }]}>
-                            <Ionicons name="sparkles" size={12} color="#F9F506" />
-                            <Text style={styles.aiBadgeText}>AI Generated</Text>
+                        <Text style={[styles.headerTitle, { color: colors.text }]}>{trip.destination}</Text>
+                        <View style={styles.aiBadge}>
+                            <Ionicons name="sparkles" size={12} color={colors.primary} />
+                            <Text style={[styles.aiBadgeText, { color: colors.textMuted }]}>AI Generated</Text>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.iconButton}>
@@ -925,53 +925,53 @@ export default function TripDetails() {
                             style={styles.mapImage} 
                         />
                     )}
-                    <TouchableOpacity style={styles.viewMapButton} onPress={() => openMap(trip.destination)}>
-                        <Ionicons name="map" size={20} color="#F9F506" />
-                        <Text style={styles.viewMapText}>View Map</Text>
+                    <TouchableOpacity style={[styles.viewMapButton, { backgroundColor: colors.card }]} onPress={() => openMap(trip.destination)}>
+                        <Ionicons name="map" size={20} color={colors.primary} />
+                        <Text style={[styles.viewMapText, { color: colors.text }]}>View Map</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Filter Chips */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
                     <TouchableOpacity 
-                        style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
+                        style={[styles.filterChip, { backgroundColor: colors.card, borderColor: colors.border }, activeFilter === 'all' && { backgroundColor: colors.text, borderColor: colors.text }]}
                         onPress={() => setActiveFilter('all')}
                     >
-                        <Text style={[styles.filterText, activeFilter === 'all' && styles.filterTextActive]}>All</Text>
+                        <Text style={[styles.filterText, { color: colors.textMuted }, activeFilter === 'all' && { color: colors.card }]}>All</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.filterChip, activeFilter === 'flights' && styles.filterChipActive]}
+                        style={[styles.filterChip, { backgroundColor: colors.card, borderColor: colors.border }, activeFilter === 'flights' && { backgroundColor: colors.text, borderColor: colors.text }]}
                         onPress={() => setActiveFilter('flights')}
                     >
-                        <Text style={[styles.filterText, activeFilter === 'flights' && styles.filterTextActive]}>Flights</Text>
+                        <Text style={[styles.filterText, { color: colors.textMuted }, activeFilter === 'flights' && { color: colors.card }]}>Flights</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.filterChip, activeFilter === 'food' && styles.filterChipActive]}
+                        style={[styles.filterChip, { backgroundColor: colors.card, borderColor: colors.border }, activeFilter === 'food' && { backgroundColor: colors.text, borderColor: colors.text }]}
                         onPress={() => setActiveFilter('food')}
                     >
-                        <Ionicons name="restaurant" size={18} color={activeFilter === 'food' ? "#1A1A1A" : "#64748B"} />
-                        <Text style={[styles.filterText, activeFilter === 'food' && styles.filterTextActive]}>Food</Text>
+                        <Ionicons name="restaurant" size={18} color={activeFilter === 'food' ? colors.card : colors.textMuted} />
+                        <Text style={[styles.filterText, { color: colors.textMuted }, activeFilter === 'food' && { color: colors.card }]}>Food</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.filterChip, activeFilter === 'sights' && styles.filterChipActive]}
+                        style={[styles.filterChip, { backgroundColor: colors.card, borderColor: colors.border }, activeFilter === 'sights' && { backgroundColor: colors.text, borderColor: colors.text }]}
                         onPress={() => setActiveFilter('sights')}
                     >
-                        <Ionicons name="ticket" size={18} color={activeFilter === 'sights' ? "#1A1A1A" : "#64748B"} />
-                        <Text style={[styles.filterText, activeFilter === 'sights' && styles.filterTextActive]}>Sights</Text>
+                        <Ionicons name="ticket" size={18} color={activeFilter === 'sights' ? colors.card : colors.textMuted} />
+                        <Text style={[styles.filterText, { color: colors.textMuted }, activeFilter === 'sights' && { color: colors.card }]}>Sights</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.filterChip, activeFilter === 'stays' && styles.filterChipActive]}
+                        style={[styles.filterChip, { backgroundColor: colors.card, borderColor: colors.border }, activeFilter === 'stays' && { backgroundColor: colors.text, borderColor: colors.text }]}
                         onPress={() => setActiveFilter('stays')}
                     >
-                        <Ionicons name="bed" size={18} color={activeFilter === 'stays' ? "#1A1A1A" : "#64748B"} />
-                        <Text style={[styles.filterText, activeFilter === 'stays' && styles.filterTextActive]}>Stays</Text>
+                        <Ionicons name="bed" size={18} color={activeFilter === 'stays' ? colors.card : colors.textMuted} />
+                        <Text style={[styles.filterText, { color: colors.textMuted }, activeFilter === 'stays' && { color: colors.card }]}>Stays</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.filterChip, activeFilter === 'transportation' && styles.filterChipActive]}
+                        style={[styles.filterChip, { backgroundColor: colors.card, borderColor: colors.border }, activeFilter === 'transportation' && { backgroundColor: colors.text, borderColor: colors.text }]}
                         onPress={() => setActiveFilter('transportation')}
                     >
-                        <Ionicons name="car" size={18} color={activeFilter === 'transportation' ? "#1A1A1A" : "#64748B"} />
-                        <Text style={[styles.filterText, activeFilter === 'transportation' && styles.filterTextActive]}>Transport</Text>
+                        <Ionicons name="car" size={18} color={activeFilter === 'transportation' ? colors.card : colors.textMuted} />
+                        <Text style={[styles.filterText, { color: colors.textMuted }, activeFilter === 'transportation' && { color: colors.card }]}>Transport</Text>
                     </TouchableOpacity>
                 </ScrollView>
 
@@ -981,18 +981,18 @@ export default function TripDetails() {
                         <View key={index} style={styles.daySection}>
                             <View style={styles.dayHeader}>
                                 <View>
-                                    <Text style={styles.dayTitle}>Day {day.day}</Text>
-                                    <Text style={styles.daySubtitle}>{day.title || `Explore ${trip.destination}`}</Text>
+                                    <Text style={[styles.dayTitle, { color: colors.text }]}>Day {day.day}</Text>
+                                    <Text style={[styles.daySubtitle, { color: colors.textMuted }]}>{day.title || `Explore ${trip.destination}`}</Text>
                                 </View>
-                                <View style={styles.energyBadge}>
-                                    <Text style={styles.energyText}>HIGH ENERGY</Text>
+                                <View style={[styles.energyBadge, { backgroundColor: isDarkMode ? 'rgba(255, 229, 0, 0.2)' : 'rgba(249, 245, 6, 0.2)' }]}>
+                                    <Text style={[styles.energyText, { color: colors.primary }]}>HIGH ENERGY</Text>
                                 </View>
                             </View>
 
                             {day.activities.map((activity: any, actIndex: number) => (
                                 <View key={actIndex} style={styles.timelineItem}>
                                     <View style={styles.timelineLeft}>
-                                        <View style={styles.timelineIconContainer}>
+                                        <View style={[styles.timelineIconContainer, { backgroundColor: colors.secondary }]}>
                                             <Ionicons 
                                                 name={
                                                     activity.type === 'restaurant' ? 'restaurant' :
@@ -1001,24 +1001,24 @@ export default function TripDetails() {
                                                     'location'
                                                 } 
                                                 size={20} 
-                                                color={editForm.interests.includes(activity.type) ? "#1A1A1A" : "#1A1A1A"} 
+                                                color={colors.text} 
                                             />
                                         </View>
-                                        <Text style={styles.timelineTime}>{activity.time}</Text>
-                                        {actIndex < day.activities.length - 1 && <View style={styles.timelineLine} />}
+                                        <Text style={[styles.timelineTime, { color: colors.textMuted }]}>{activity.time}</Text>
+                                        {actIndex < day.activities.length - 1 && <View style={[styles.timelineLine, { backgroundColor: colors.border }]} />}
                                     </View>
-                                    <TouchableOpacity style={styles.timelineCard}>
+                                    <TouchableOpacity style={[styles.timelineCard, { backgroundColor: colors.card }]}>
                                         <View style={styles.timelineCardContent}>
                                             <View style={{flex: 1}}>
-                                                <Text style={styles.activityTitle}>{activity.title}</Text>
-                                                <Text style={styles.activityDesc} numberOfLines={2}>{activity.description}</Text>
+                                                <Text style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
+                                                <Text style={[styles.activityDesc, { color: colors.textMuted }]} numberOfLines={2}>{activity.description}</Text>
                                                 <View style={styles.activityMeta}>
-                                                    <View style={styles.metaBadge}>
-                                                        <Text style={styles.metaText}>{activity.type || 'Activity'}</Text>
+                                                    <View style={[styles.metaBadge, { backgroundColor: colors.secondary }]}>
+                                                        <Text style={[styles.metaText, { color: colors.text }]}>{activity.type || 'Activity'}</Text>
                                                     </View>
                                                     <View style={styles.metaDuration}>
-                                                        <Ionicons name="time-outline" size={12} color="#94A3B8" />
-                                                        <Text style={styles.metaDurationText}>{activity.duration || '1h'}</Text>
+                                                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                                                        <Text style={[styles.metaDurationText, { color: colors.textMuted }]}>{activity.duration || '1h'}</Text>
                                                     </View>
                                                 </View>
                                             </View>
@@ -1727,7 +1727,7 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#64748B",
+        color: "#1A1A1A",
     },
     metaDuration: {
         flexDirection: "row",

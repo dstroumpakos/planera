@@ -33,7 +33,7 @@ const CATEGORIES = [
 
 export default function InsightsScreen() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   const [tripToVerify, setTripToVerify] = useState<any>(null);
   const [shareView, setShareView] = useState<"trips" | "form">("trips");
@@ -61,10 +61,10 @@ export default function InsightsScreen() {
   // Show loading state while auth is initializing
   if (isAuthLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
@@ -73,11 +73,11 @@ export default function InsightsScreen() {
   // Show sign-in prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.authContainer}>
           <Ionicons name="bulb-outline" size={64} color={colors.primary} />
-          <Text style={styles.authTitle}>Traveler Insights</Text>
-          <Text style={styles.authSubtitle}>
+          <Text style={[styles.authTitle, { color: colors.text }]}>Traveler Insights</Text>
+          <Text style={[styles.authSubtitle, { color: colors.textMuted }]}>
             Sign in to browse and share travel tips with other travelers
           </Text>
         </View>
@@ -144,22 +144,26 @@ export default function InsightsScreen() {
     
     return (
       <TouchableOpacity 
-        style={[styles.tripCard, isSelected && styles.tripCardSelected]}
+        style={[
+          styles.tripCard, 
+          { backgroundColor: colors.card, borderColor: colors.border },
+          isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }
+        ]}
         onPress={() => setTripToVerify(item)}
       >
-        <View style={styles.tripIconContainer}>
-          <Ionicons name="airplane" size={24} color={isSelected ? "#181710" : "#F5A623"} />
+        <View style={[styles.tripIconContainer, { backgroundColor: colors.secondary }]}>
+          <Ionicons name="airplane" size={24} color={isSelected ? colors.text : colors.primary} />
         </View>
         <View style={styles.tripInfo}>
-          <Text style={[styles.tripDestination, isSelected && styles.tripTextSelected]}>
+          <Text style={[styles.tripDestination, { color: colors.text }]}>
             {item.destination}
           </Text>
-          <Text style={[styles.tripDates, isSelected && styles.tripDatesSelected]}>
+          <Text style={[styles.tripDates, { color: colors.textMuted }, isSelected && { color: colors.text }]}>
             {formatDate(item.startDate)} - {formatDate(item.endDate)}
           </Text>
         </View>
         {isSelected && (
-          <Ionicons name="checkmark-circle" size={24} color="#181710" />
+          <Ionicons name="checkmark-circle" size={24} color={colors.text} />
         )}
       </TouchableOpacity>
     );
@@ -179,7 +183,7 @@ export default function InsightsScreen() {
       </View>
 
       {shareView === "trips" ? (
-        <ScrollView style={[styles.shareContainer, { backgroundColor: colors.card }]} contentContainerStyle={styles.shareContent}>
+        <ScrollView style={[styles.shareContainer, { backgroundColor: colors.background }]} contentContainerStyle={styles.shareContent}>
           {completedTrips === undefined ? (
             <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
           ) : completedTrips.length === 0 ? (
@@ -204,34 +208,36 @@ export default function InsightsScreen() {
           )}
         </ScrollView>
       ) : shareView === "form" ? (
-        <ScrollView style={[styles.shareContainer, { backgroundColor: colors.card }]} contentContainerStyle={styles.shareContent}>
+        <ScrollView style={[styles.shareContainer, { backgroundColor: colors.background }]} contentContainerStyle={styles.shareContent}>
           {selectedTrip && (
             <>
-              <Text style={styles.selectedTripLabel}>
-                Sharing insights for: <Text style={styles.selectedTripName}>{selectedTrip.destination}</Text>
+              <Text style={[styles.selectedTripLabel, { color: colors.textMuted }]}>
+                Sharing insights for: <Text style={[styles.selectedTripName, { color: colors.primary }]}>{selectedTrip.destination}</Text>
               </Text>
 
-              <View style={styles.insightFormContainer}>
-                <Text style={styles.label}>Category</Text>
+              <View style={[styles.insightFormContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.label, { color: colors.text }]}>Category</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
                   {CATEGORIES.map((cat) => (
                     <TouchableOpacity
                       key={cat.id}
                       style={[
                         styles.categoryChip,
-                        category === cat.id && styles.categoryChipSelected,
+                        { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                        category === cat.id && { backgroundColor: colors.primary, borderColor: colors.primary },
                       ]}
                       onPress={() => setCategory(cat.id)}
                     >
                       <Ionicons
                         name={cat.icon as any}
                         size={16}
-                        color={category === cat.id ? "#181710" : "#666"}
+                        color={category === cat.id ? colors.text : colors.textMuted}
                       />
                       <Text
                         style={[
                           styles.categoryChipText,
-                          category === cat.id && styles.categoryChipTextSelected,
+                          { color: colors.textMuted },
+                          category === cat.id && { color: colors.text },
                         ]}
                       >
                         {cat.label}
@@ -240,19 +246,19 @@ export default function InsightsScreen() {
                   ))}
                 </ScrollView>
 
-                <Text style={styles.label}>Your Insight</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Your Insight</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.text, borderColor: colors.border }]}
                   placeholder="Share your experience, tips, or recommendations..."
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textMuted}
                   value={content}
                   onChangeText={setContent}
                   multiline
                 />
 
-                <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                  <Ionicons name="send" size={18} color="#181710" />
-                  <Text style={styles.submitButtonText}>Share Insight</Text>
+                <TouchableOpacity style={[styles.submitButton, { backgroundColor: colors.primary }]} onPress={handleSubmit}>
+                  <Ionicons name="send" size={18} color={colors.text} />
+                  <Text style={[styles.submitButtonText, { color: colors.text }]}>Share Insight</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -268,7 +274,7 @@ export default function InsightsScreen() {
         onRequestClose={() => setTripToVerify(null)}
       >
         <View style={styles.verifyModalOverlay}>
-          <View style={styles.verifyModalContent}>
+          <View style={[styles.verifyModalContent, { backgroundColor: colors.background }]}>
             {/* Status Bar Placeholder */}
             <View style={{ height: insets.top }} />
             
@@ -278,16 +284,16 @@ export default function InsightsScreen() {
                 style={styles.verifyCloseButton}
                 onPress={() => setTripToVerify(null)}
               >
-                <Ionicons name="close" size={24} color="#181710" />
+                <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
-              <Text style={styles.verifyHeaderTitle}>Trip Feedback</Text>
+              <Text style={[styles.verifyHeaderTitle, { color: colors.text }]}>Trip Feedback</Text>
               <View style={{ width: 48 }} /> 
             </View>
 
             <ScrollView contentContainerStyle={styles.verifyScrollContent}>
               {/* Trip Card with Image */}
               {tripToVerify && (
-                <View style={styles.verifyTripCard}>
+                <View style={[styles.verifyTripCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.verifyTripImageContainer}>
                     <Image
                       source={{ uri: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=200&h=200&fit=crop" }}
@@ -295,24 +301,24 @@ export default function InsightsScreen() {
                     />
                   </View>
                   <View style={styles.verifyTripInfo}>
-                    <Text style={styles.verifyTripDestination}>{tripToVerify.destination}</Text>
-                    <Text style={styles.verifyTripDetails}>
+                    <Text style={[styles.verifyTripDestination, { color: colors.text }]}>{tripToVerify.destination}</Text>
+                    <Text style={[styles.verifyTripDetails, { color: colors.textMuted }]}>
                       {formatDate(tripToVerify.startDate)} - {formatDate(tripToVerify.endDate)} • {tripToVerify.travelers} Travelers
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={24} color="#181710" />
+                  <Ionicons name="chevron-forward" size={24} color={colors.text} />
                 </View>
               )}
 
               {/* Main Prompt */}
               <View style={styles.verifyPromptContainer}>
-                <View style={styles.verifyIconContainer}>
+                <View style={[styles.verifyIconContainer, { backgroundColor: isDarkMode ? 'rgba(255, 229, 0, 0.2)' : 'rgba(255, 217, 0, 0.2)' }]}>
                   <Ionicons name="sparkles" size={28} color={colors.primary} />
                 </View>
-                <Text style={styles.verifyTitle}>
+                <Text style={[styles.verifyTitle, { color: colors.text }]}>
                   Have you taken{"\n"}this trip?
                 </Text>
-                <Text style={styles.verifySubtitle}>
+                <Text style={[styles.verifySubtitle, { color: colors.textMuted }]}>
                   Help Planera AI build better itineraries for your future adventures.
                 </Text>
               </View>
@@ -322,17 +328,17 @@ export default function InsightsScreen() {
               {/* Action Buttons */}
               <View style={[styles.verifyActions, { paddingBottom: Math.max(insets.bottom, 32) }]}>
                 <TouchableOpacity 
-                  style={styles.verifyYesButton}
+                  style={[styles.verifyYesButton, { backgroundColor: colors.primary }]}
                   onPress={() => handleVerifyTrip(true)}
                 >
-                  <Text style={styles.verifyYesButtonText}>Yes, I have</Text>
+                  <Text style={[styles.verifyYesButtonText, { color: colors.text }]}>Yes, I have</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={styles.verifyNoButton}
+                  style={[styles.verifyNoButton, { borderColor: colors.border }]}
                   onPress={() => handleVerifyTrip(false)}
                 >
-                  <Text style={styles.verifyNoButtonText}>No, not yet</Text>
+                  <Text style={[styles.verifyNoButtonText, { color: colors.text }]}>No, not yet</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>

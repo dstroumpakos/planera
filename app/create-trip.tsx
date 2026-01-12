@@ -70,7 +70,7 @@ const DESTINATIONS = [
 export default function CreateTripScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
-    const { colors } = useTheme();
+    const { colors, isDarkMode } = useTheme();
     const prefilledDestination = params.prefilledDestination as string | undefined;
     
     const createTrip = useMutation(api.trips.create);
@@ -332,30 +332,30 @@ export default function CreateTripScreen() {
 
     if (showLoadingScreen) {
         return (
-            <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FFE500" style={{ marginBottom: 24 }} />
-                <Text style={styles.loadingTitle}>Generating your trip...</Text>
-                <Text style={styles.loadingDestination}>{formData.destination}</Text>
-                <Text style={styles.loadingSubtitle}>This usually takes a few seconds.</Text>
+            <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: 24 }} />
+                <Text style={[styles.loadingTitle, { color: colors.text }]}>Generating your trip...</Text>
+                <Text style={[styles.loadingDestination, { color: colors.primary }]}>{formData.destination}</Text>
+                <Text style={[styles.loadingSubtitle, { color: colors.textMuted }]}>This usually takes a few seconds.</Text>
             </SafeAreaView>
         );
     }
 
     if (showErrorScreen) {
         return (
-            <SafeAreaView style={styles.errorContainer}>
+            <SafeAreaView style={[styles.errorContainer, { backgroundColor: colors.background }]}>
                 <View style={styles.errorContent}>
-                    <Ionicons name="alert-circle" size={64} color="#FF4444" style={{ marginBottom: 24 }} />
-                    <Text style={styles.errorTitle}>Trip Generation Failed</Text>
-                    <Text style={styles.errorMessage}>{errorMessage}</Text>
+                    <Ionicons name="alert-circle" size={64} color={colors.error} style={{ marginBottom: 24 }} />
+                    <Text style={[styles.errorTitle, { color: colors.text }]}>Trip Generation Failed</Text>
+                    <Text style={[styles.errorMessage, { color: colors.textMuted }]}>{errorMessage}</Text>
                     <TouchableOpacity 
-                        style={styles.errorButton}
+                        style={[styles.errorButton, { backgroundColor: colors.text }]}
                         onPress={() => {
                             setShowErrorScreen(false);
                             setErrorMessage("");
                         }}
                     >
-                        <Text style={styles.errorButtonText}>Go Back</Text>
+                        <Text style={[styles.errorButtonText, { color: colors.background }]}>Go Back</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -363,41 +363,41 @@ export default function CreateTripScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 {/* Header */}
                 <View style={styles.headerSection}>
                     <View style={styles.headerTop}>
-                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.secondary }]}>
+                            <Ionicons name="arrow-back" size={24} color={colors.text} />
                         </TouchableOpacity>
                         <View style={styles.logoContainer}>
                             <Image source={logoImage} style={styles.headerLogo} resizeMode="contain" />
-                            <Text style={styles.headerLogoText}>PLANERA</Text>
+                            <Text style={[styles.headerLogoText, { color: colors.text }]}>PLANERA</Text>
                         </View>
-                        <TouchableOpacity style={styles.settingsButton}>
-                            <Ionicons name="settings-outline" size={24} color="#9B9B9B" />
+                        <TouchableOpacity style={[styles.settingsButton, { backgroundColor: colors.secondary }]}>
+                            <Ionicons name="settings-outline" size={24} color={colors.textMuted} />
                         </TouchableOpacity>
                     </View>
                     
                     <View style={styles.titleSection}>
-                        <Text style={styles.titleMain}>Design your</Text>
-                        <Text style={styles.titleHighlight}>perfect escape</Text>
-                        <Text style={styles.subtitle}>Let AI craft your itinerary.</Text>
+                        <Text style={[styles.titleMain, { color: colors.text }]}>Design your</Text>
+                        <Text style={[styles.titleHighlight, { color: colors.text, borderBottomColor: colors.primary }]}>perfect escape</Text>
+                        <Text style={[styles.subtitle, { color: colors.textMuted }]}>Let AI craft your itinerary.</Text>
                     </View>
                 </View>
 
                 {/* From/To Section */}
-                <View style={styles.card}>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <View style={styles.locationSection}>
                         <View style={styles.locationItem}>
-                            <Text style={styles.locationLabel}>FROM</Text>
+                            <Text style={[styles.locationLabel, { color: colors.textMuted }]}>FROM</Text>
                             <View style={styles.locationContent}>
-                                <Ionicons name="location" size={24} color="#1A1A1A" />
+                                <Ionicons name="location" size={24} color={colors.text} />
                                 <TextInput
-                                    style={styles.locationText}
+                                    style={[styles.locationText, { color: colors.text }]}
                                     placeholder="Where from?"
-                                    placeholderTextColor="#9B9B9B"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.origin}
                                     onChangeText={(text) => {
                                         setFormData({ ...formData, origin: text });
@@ -412,18 +412,18 @@ export default function CreateTripScreen() {
                             </View>
                             
                             {showAirportSuggestions && airportSuggestions.length > 0 && (
-                                <View style={styles.suggestionsContainer}>
+                                <View style={[styles.suggestionsContainer, { backgroundColor: colors.secondary }]}>
                                     <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
                                         {airportSuggestions.map((airport, index) => (
                                             <TouchableOpacity
                                                 key={`${airport.city}-${airport.country}-${index}`}
-                                                style={styles.suggestionItem}
+                                                style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
                                                 onPress={() => selectAirport(airport)}
                                             >
-                                                <Ionicons name="location" size={20} color="#FFE500" style={{ marginRight: 12 }} />
+                                                <Ionicons name="location" size={20} color={colors.primary} style={{ marginRight: 12 }} />
                                                 <View>
-                                                    <Text style={styles.suggestionCity}>{airport.city}</Text>
-                                                    <Text style={styles.suggestionDetails}>{airport.country}</Text>
+                                                    <Text style={[styles.suggestionCity, { color: colors.text }]}>{airport.city}</Text>
+                                                    <Text style={[styles.suggestionDetails, { color: colors.textMuted }]}>{airport.country}</Text>
                                                 </View>
                                             </TouchableOpacity>
                                         ))}
@@ -433,17 +433,17 @@ export default function CreateTripScreen() {
                         </View>
 
                         <TouchableOpacity style={styles.swapButton}>
-                            <Ionicons name="swap-vertical" size={20} color="#9B9B9B" />
+                            <Ionicons name="swap-vertical" size={20} color={colors.textMuted} />
                         </TouchableOpacity>
 
                         <View style={styles.locationItem}>
-                            <Text style={styles.locationLabel}>TO</Text>
+                            <Text style={[styles.locationLabel, { color: colors.textMuted }]}>TO</Text>
                             <View style={styles.locationContent}>
-                                <Ionicons name="location" size={24} color="#FF4444" />
+                                <Ionicons name="location" size={24} color={colors.error} />
                                 <TextInput
-                                    style={styles.destinationInput}
+                                    style={[styles.destinationInput, { color: colors.text }]}
                                     placeholder="Where to?"
-                                    placeholderTextColor="#9B9B9B"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.destination}
                                     onChangeText={(text) => {
                                         setFormData({ ...formData, destination: text });
@@ -458,18 +458,18 @@ export default function CreateTripScreen() {
                             </View>
                             
                             {showDestinationSuggestions && destinationSuggestions.length > 0 && (
-                                <View style={styles.suggestionsContainer}>
+                                <View style={[styles.suggestionsContainer, { backgroundColor: colors.secondary }]}>
                                     <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
                                         {destinationSuggestions.map((dest, index) => (
                                             <TouchableOpacity
                                                 key={`${dest.city}-${dest.country}-${index}`}
-                                                style={styles.suggestionItem}
+                                                style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
                                                 onPress={() => selectDestination(dest)}
                                             >
                                                 <Text style={{ fontSize: 18, marginRight: 12 }}>{dest.image}</Text>
                                                 <View>
-                                                    <Text style={styles.suggestionCity}>{dest.city}</Text>
-                                                    <Text style={styles.suggestionDetails}>{dest.country}</Text>
+                                                    <Text style={[styles.suggestionCity, { color: colors.text }]}>{dest.city}</Text>
+                                                    <Text style={[styles.suggestionDetails, { color: colors.textMuted }]}>{dest.country}</Text>
                                                 </View>
                                             </TouchableOpacity>
                                         ))}
@@ -480,30 +480,30 @@ export default function CreateTripScreen() {
                     </View>
                     
                     <TouchableOpacity 
-                        style={styles.skipFlightsContainer}
+                        style={[styles.skipFlightsContainer, { borderTopColor: colors.border }]}
                         onPress={() => setFormData(prev => ({ ...prev, skipFlights: !prev.skipFlights }))}
                     >
-                        <View style={[styles.checkbox, formData.skipFlights && styles.checkboxChecked]}>
-                            {formData.skipFlights && <Ionicons name="checkmark" size={14} color="#1A1A1A" />}
+                        <View style={[styles.checkbox, { borderColor: colors.text }, formData.skipFlights && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                            {formData.skipFlights && <Ionicons name="checkmark" size={14} color={colors.text} />}
                         </View>
-                        <Text style={styles.skipFlightsText}>I already have flights (Skip flight search)</Text>
+                        <Text style={[styles.skipFlightsText, { color: colors.text }]}>I already have flights (Skip flight search)</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.multiCityButton} disabled={true}>
+                    <TouchableOpacity style={[styles.multiCityButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]} disabled={true}>
                         <View style={styles.multiCityContent}>
-                            <Ionicons name="git-merge-outline" size={20} color="#1A1A1A" />
-                            <Text style={styles.multiCityText}>Multi-City Trip</Text>
+                            <Ionicons name="git-merge-outline" size={20} color={colors.text} />
+                            <Text style={[styles.multiCityText, { color: colors.text }]}>Multi-City Trip</Text>
                         </View>
-                        <View style={styles.comingSoonBadge}>
-                            <Text style={styles.comingSoonText}>COMING SOON</Text>
+                        <View style={[styles.comingSoonBadge, { backgroundColor: colors.primary }]}>
+                            <Text style={[styles.comingSoonText, { color: colors.text }]}>COMING SOON</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
 
                 {/* Dates Section */}
-                <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>DATES</Text>
-                    <View style={styles.datesContainer}>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>DATES</Text>
+                    <View style={[styles.datesContainer, { backgroundColor: colors.secondary }]}>
                         <TouchableOpacity 
                             style={styles.dateInputButton}
                             onPress={() => {
@@ -511,14 +511,14 @@ export default function CreateTripScreen() {
                                 setShowCalendar(true);
                             }}
                         >
-                            <Text style={styles.dateLabel}>START DATE</Text>
+                            <Text style={[styles.dateLabel, { color: colors.textMuted }]}>START DATE</Text>
                             <View style={styles.dateValueContainer}>
-                                <Ionicons name="calendar-outline" size={20} color="#1A1A1A" />
-                                <Text style={styles.dateValueText}>{formatDate(formData.startDate)}</Text>
+                                <Ionicons name="calendar-outline" size={20} color={colors.text} />
+                                <Text style={[styles.dateValueText, { color: colors.text }]}>{formatDate(formData.startDate)}</Text>
                             </View>
                         </TouchableOpacity>
                         
-                        <View style={styles.dateSeparator} />
+                        <View style={[styles.dateSeparator, { backgroundColor: colors.border }]} />
 
                         <TouchableOpacity 
                             style={styles.dateInputButton}
@@ -527,45 +527,45 @@ export default function CreateTripScreen() {
                                 setShowCalendar(true);
                             }}
                         >
-                            <Text style={styles.dateLabel}>END DATE</Text>
+                            <Text style={[styles.dateLabel, { color: colors.textMuted }]}>END DATE</Text>
                             <View style={styles.dateValueContainer}>
-                                <Ionicons name="calendar-outline" size={20} color="#1A1A1A" />
-                                <Text style={styles.dateValueText}>{formatDate(formData.endDate)}</Text>
+                                <Ionicons name="calendar-outline" size={20} color={colors.text} />
+                                <Text style={[styles.dateValueText, { color: colors.text }]}>{formatDate(formData.endDate)}</Text>
                             </View>
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Who's Going Section */}
-                <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>WHO'S GOING?</Text>
-                    <View style={styles.numberInputContainer}>
-                        <Text style={styles.inputLabel}>Travelers</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>WHO'S GOING?</Text>
+                    <View style={[styles.numberInputContainer, { backgroundColor: colors.secondary }]}>
+                        <Text style={[styles.inputLabel, { color: colors.text }]}>Travelers</Text>
                         <View style={styles.counterContainer}>
                             <TouchableOpacity 
-                                style={styles.counterButton}
+                                style={[styles.counterButton, { backgroundColor: colors.card }]}
                                 onPress={() => setFormData(prev => ({ ...prev, travelers: Math.max(1, prev.travelers - 1) }))}
                             >
-                                <Ionicons name="remove" size={24} color="#1A1A1A" />
+                                <Ionicons name="remove" size={24} color={colors.text} />
                             </TouchableOpacity>
-                            <Text style={styles.counterValue}>{formData.travelers}</Text>
+                            <Text style={[styles.counterValue, { color: colors.text }]}>{formData.travelers}</Text>
                             <TouchableOpacity 
-                                style={styles.counterButton}
+                                style={[styles.counterButton, { backgroundColor: colors.card }]}
                                 onPress={() => setFormData(prev => ({ ...prev, travelers: prev.travelers + 1 }))}
                             >
-                                <Ionicons name="add" size={24} color="#1A1A1A" />
+                                <Ionicons name="add" size={24} color={colors.text} />
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
 
                 {/* Budget Section */}
-                <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>BUDGET (EUR)</Text>
-                    <View style={styles.budgetInputContainer}>
-                        <Text style={styles.currencySymbol}>€</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>BUDGET (EUR)</Text>
+                    <View style={[styles.budgetInputContainer, { backgroundColor: colors.secondary }]}>
+                        <Text style={[styles.currencySymbol, { color: colors.text }]}>€</Text>
                         <TextInput
-                            style={styles.budgetInput}
+                            style={[styles.budgetInput, { color: colors.text }]}
                             value={formData.budget.toString()}
                             onChangeText={(text) => {
                                 const value = parseInt(text.replace(/[^0-9]/g, '')) || 0;
@@ -573,21 +573,22 @@ export default function CreateTripScreen() {
                             }}
                             keyboardType="numeric"
                             placeholder="Enter budget"
-                            placeholderTextColor="#9B9B9B"
+                            placeholderTextColor={colors.textMuted}
                         />
                     </View>
                 </View>
 
                 {/* Travel Style Section */}
-                <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>Travel Style</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Travel Style</Text>
                     <View style={styles.interestsContainer}>
                         {INTERESTS.map((interest) => (
                             <TouchableOpacity
                                 key={interest}
                                 style={[
                                     styles.interestTag,
-                                    formData.interests.includes(interest) && styles.interestTagActive,
+                                    { backgroundColor: colors.secondary, borderColor: colors.primary },
+                                    formData.interests.includes(interest) && { backgroundColor: colors.primary },
                                 ]}
                                 onPress={() => toggleInterest(interest)}
                             >
@@ -605,11 +606,11 @@ export default function CreateTripScreen() {
                                         "people"
                                     } 
                                     size={20} 
-                                    color={formData.interests.includes(interest) ? "white" : "#FFE500"}
+                                    color={formData.interests.includes(interest) ? colors.text : colors.primary}
                                 />
                                 <Text style={[
                                     styles.interestTagText,
-                                    formData.interests.includes(interest) && styles.interestTagTextActive,
+                                    { color: colors.text },
                                 ]}>
                                     {interest}
                                 </Text>
@@ -620,15 +621,16 @@ export default function CreateTripScreen() {
 
                 {/* Flight Preferences Section */}
                 {!formData.skipFlights && (
-                    <View style={styles.card}>
-                        <Text style={styles.sectionLabel}>Flight Preference</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Flight Preference</Text>
                         <View style={styles.flightPreferencesContainer}>
                             {(['any', 'morning', 'afternoon', 'evening', 'night'] as const).map((time) => (
                                 <TouchableOpacity
                                     key={time}
                                     style={[
                                         styles.flightTimeButton,
-                                        formData.preferredFlightTime === time && styles.flightTimeButtonActive,
+                                        { backgroundColor: colors.secondary, borderColor: colors.primary },
+                                        formData.preferredFlightTime === time && { backgroundColor: colors.primary },
                                     ]}
                                     onPress={() => setFormData({ ...formData, preferredFlightTime: time })}
                                 >
@@ -641,11 +643,11 @@ export default function CreateTripScreen() {
                                             'time'
                                         }
                                         size={20}
-                                        color={formData.preferredFlightTime === time ? '#1A1A1A' : '#FFE500'}
+                                        color={formData.preferredFlightTime === time ? colors.text : colors.primary}
                                     />
                                     <Text style={[
                                         styles.flightTimeText,
-                                        formData.preferredFlightTime === time && styles.flightTimeTextActive,
+                                        { color: colors.text },
                                     ]}>
                                         {time.charAt(0).toUpperCase() + time.slice(1)}
                                     </Text>
@@ -656,32 +658,32 @@ export default function CreateTripScreen() {
                 )}
 
                 {/* Hotel Preference Section */}
-                <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>Hotel Preference</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Hotel Preference</Text>
                     <TouchableOpacity 
-                        style={styles.skipHotelContainer}
+                        style={[styles.skipHotelContainer, { backgroundColor: colors.secondary }]}
                         onPress={() => setFormData(prev => ({ ...prev, skipHotel: !prev.skipHotel }))}
                     >
-                        <View style={[styles.checkbox, formData.skipHotel && styles.checkboxChecked]}>
-                            {formData.skipHotel && <Ionicons name="checkmark" size={14} color="#1A1A1A" />}
+                        <View style={[styles.checkbox, { borderColor: colors.text }, formData.skipHotel && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                            {formData.skipHotel && <Ionicons name="checkmark" size={14} color={colors.text} />}
                         </View>
-                        <Text style={styles.skipFlightsText}>I already have accommodation (Skip hotel search)</Text>
+                        <Text style={[styles.skipFlightsText, { color: colors.text }]}>I already have accommodation (Skip hotel search)</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Generate Button */}
                 <TouchableOpacity 
-                    style={[styles.generateButton, loading && styles.disabledButton]}
+                    style={[styles.generateButton, { backgroundColor: colors.text }, loading && styles.disabledButton]}
                     onPress={handleSubmit}
                     disabled={loading}
                 >
                     {loading ? (
-                        <ActivityIndicator color="white" />
+                        <ActivityIndicator color={colors.background} />
                     ) : (
                         <>
-                            <Text style={styles.generateButtonText}>Generate with Planera AI</Text>
-                            <View style={styles.sparkleIcon}>
-                                <Ionicons name="sparkles" size={20} color="#1A1A1A" />
+                            <Text style={[styles.generateButtonText, { color: colors.background }]}>Generate with Planera AI</Text>
+                            <View style={[styles.sparkleIcon, { backgroundColor: colors.primary }]}>
+                                <Ionicons name="sparkles" size={20} color={colors.text} />
                             </View>
                         </>
                     )}
@@ -695,13 +697,13 @@ export default function CreateTripScreen() {
                     onRequestClose={() => setShowCalendar(false)}
                 >
                     <View style={styles.modalOverlay}>
-                        <View style={styles.calendarModal}>
-                            <View style={styles.calendarHeader}>
-                                <Text style={styles.calendarTitle}>
+                        <View style={[styles.calendarModal, { backgroundColor: colors.card }]}>
+                            <View style={[styles.calendarHeader, { borderBottomColor: colors.border }]}>
+                                <Text style={[styles.calendarTitle, { color: colors.text }]}>
                                     Select {selectingDate === 'start' ? 'Departure' : 'Return'} Date
                                 </Text>
                                 <TouchableOpacity onPress={() => setShowCalendar(false)}>
-                                    <Ionicons name="close" size={24} color="#1A1A1A" />
+                                    <Ionicons name="close" size={24} color={colors.text} />
                                 </TouchableOpacity>
                             </View>
                             
@@ -712,18 +714,18 @@ export default function CreateTripScreen() {
                                 markingType={'period'}
                                 markedDates={getMarkedDates()}
                                 theme={{
-                                    backgroundColor: '#ffffff',
-                                    calendarBackground: '#ffffff',
-                                    textSectionTitleColor: '#FFE500',
-                                    selectedDayBackgroundColor: '#FFE500',
-                                    selectedDayTextColor: '#1A1A1A',
-                                    todayTextColor: '#FFE500',
-                                    dayTextColor: '#1A1A1A',
-                                    textDisabledColor: '#E8E6E1',
-                                    dotColor: '#FFE500',
-                                    selectedDotColor: '#1A1A1A',
-                                    arrowColor: '#FFE500',
-                                    monthTextColor: '#1A1A1A',
+                                    backgroundColor: colors.card,
+                                    calendarBackground: colors.card,
+                                    textSectionTitleColor: colors.primary,
+                                    selectedDayBackgroundColor: colors.primary,
+                                    selectedDayTextColor: colors.text,
+                                    todayTextColor: colors.primary,
+                                    dayTextColor: colors.text,
+                                    textDisabledColor: colors.border,
+                                    dotColor: colors.primary,
+                                    selectedDotColor: colors.text,
+                                    arrowColor: colors.primary,
+                                    monthTextColor: colors.text,
                                     textDayFontWeight: '500',
                                     textMonthFontWeight: '700',
                                     textDayHeaderFontWeight: '600',
