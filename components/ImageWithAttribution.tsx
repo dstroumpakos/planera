@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     zIndex: 10,
-    pointerEvents: "auto",
+    pointerEvents: "box-none",
   },
   attributionContent: {
     flexDirection: "row",
