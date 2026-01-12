@@ -114,13 +114,15 @@ export default function DestinationPreviewScreen() {
         avgRating,
         tripCount
     } = useLocalSearchParams();
+    
+    const destination = typeof destinationParam === 'string' ? destinationParam : '';
     const { image, loading } = useDestinationImage(destination);
     const trackDownload = useAction(api.images.trackUnsplashDownload);
     const trendingDestinations = useQuery(api.trips.getTrendingDestinations) || [];
     
-    const avgBudgetValue = parseFloat((useLocalSearchParams() as any).avgBudget) || 2500;
-    const avgRatingValue = parseFloat((useLocalSearchParams() as any).avgRating) || 4.8;
-    const tripCountValue = parseInt((useLocalSearchParams() as any).count) || 1240;
+    const avgBudgetValue = parseFloat(typeof avgBudget === 'string' ? avgBudget : '2500') || 2500;
+    const avgRatingValue = parseFloat(typeof avgRating === 'string' ? avgRating : '4.8') || 4.8;
+    const tripCountValue = parseInt(typeof tripCount === 'string' ? tripCount : '1240') || 1240;
 
     const destinationKey = Object.keys(DESTINATION_HIGHLIGHTS).find(
         key => destination.toLowerCase().includes(key.toLowerCase())
