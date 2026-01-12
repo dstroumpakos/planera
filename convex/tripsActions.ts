@@ -131,16 +131,13 @@ export const generate = internalAction({
 
                         console.log(`🔍 Searching flights via Duffel: ${originCode} -> ${destCode}`);
                         
-                        const { offerRequestId, offers } = await duffel.createOfferRequest(
+                        const { offerRequestId, offers } = await duffel.createOfferRequest({
                             originCode,
-                            destCode,
+                            destinationCode: destCode,
                             departureDate,
                             returnDate,
-                            trip.travelers,
-                            0,
-                            0,
-                            "economy"
-                        );
+                            adults: trip.travelers,
+                        });
 
                         if (!offers || offers.length === 0) {
                             console.warn("⚠️ No flights found via Duffel");
@@ -343,6 +340,122 @@ Make sure prices are realistic for ${trip.destination}. Museums typically cost �
         }
     },
 });
+
+// Helper function to check if API keys are configured
+function checkApiKeys() {
+    return {
+        hasDuffelKey: !!process.env.DUFFEL_ACCESS_TOKEN,
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    };
+}
+
+// Helper function to extract IATA code from city name
+function extractIATACode(cityName: string): string {
+    const cityToIATA: Record<string, string> = {
+        "london": "LHR",
+        "paris": "CDG",
+        "rome": "FCO",
+        "barcelona": "BCN",
+        "athens": "ATH",
+        "amsterdam": "AMS",
+        "berlin": "BER",
+        "madrid": "MAD",
+        "lisbon": "LIS",
+        "prague": "PRG",
+        "vienna": "VIE",
+        "budapest": "BUD",
+        "warsaw": "WAW",
+        "krakow": "KRK",
+        "istanbul": "IST",
+        "dubai": "DXB",
+        "bangkok": "BKK",
+        "singapore": "SIN",
+        "hong kong": "HKG",
+        "tokyo": "NRT",
+        "new york": "JFK",
+        "los angeles": "LAX",
+        "chicago": "ORD",
+        "miami": "MIA",
+        "san francisco": "SFO",
+        "toronto": "YYZ",
+        "mexico city": "MEX",
+        "buenos aires": "EZE",
+        "sydney": "SYD",
+        "melbourne": "MEL",
+    };
+
+    const normalized = cityName.toLowerCase().trim();
+    return cityToIATA[normalized] || "LHR"; // Default to London if not found
+}
+
+// Helper function to get fallback hotel data
+function getFallbackHotels(destination: string) {
+    const hotels: Record<string, any[]> = {
+        "paris": [
+            { name: "Hotel Le Marais", stars: 4, price: 150, currency: "EUR", description: "Charming 4-star hotel in the heart of Le Marais" },
+            { name: "Boutique Hotel Montmartre", stars: 3, price: 95, currency: "EUR", description: "Cozy 3-star hotel near Sacré-Cœur" },
+            { name: "Luxury Palace Hotel", stars: 5, price: 350, currency: "EUR", description: "5-star luxury hotel on the Champs-Élysées" },
+        ],
+        "rome": [
+            { name: "Hotel Colosseum View", stars: 4, price: 140, currency: "EUR", description: "4-star hotel with Colosseum views" },
+            { name: "Trastevere Inn", stars: 3, price: 85, currency: "EUR", description: "Charming 3-star hotel in Trastevere" },
+            { name: "Vatican Palace Hotel", stars: 5, price: 320, currency: "EUR", description: "Luxury 5-star hotel near Vatican" },
+        ],
+        "barcelona": [
+            { name: "Sagrada Familia Hotel", stars: 4, price: 130, currency: "EUR", description: "Modern 4-star hotel near Sagrada Familia" },
+            { name: "Gothic Quarter Inn", stars: 3, price: 80, currency: "EUR", description: "Cozy 3-star hotel in the Gothic Quarter" },
+            { name: "Luxury Eixample Hotel", stars: 5, price: 300, currency: "EUR", description: "5-star luxury hotel in Eixample" },
+        ],
+    };
+
+    const destLower = destination.toLowerCase();
+    for (const [city, cityHotels] of Object.entries(hotels)) {
+        if (destLower.includes(city)) {
+            return cityHotels;
+        }
+    }
+
+    // Generic fallback
+    return [
+        { name: "City Center Hotel", stars: 4, price: 120, currency: "EUR", description: "4-star hotel in city center" },
+        { name: "Budget Inn", stars: 2, price: 60, currency: "EUR", description: "Budget-friendly 2-star hotel" },
+        { name: "Luxury Resort", stars: 5, price: 280, currency: "EUR", description: "5-star luxury resort" },
+    ];
+}
+
+// Helper function to search for activities
+async function searchActivities(destination: string) {
+    // Return mock activity data
+    return [
+        { name: "City Tour", type: "tour", price: 25 },
+        { name: "Museum Visit", type: "museum", price: 15 },
+        { name: "Local Market", type: "experience", price: 0 },
+        { name: "Sunset Viewpoint", type: "viewpoint", price: 0 },
+        { name: "Adventure Activity", type: "adventure", price: 50 },
+    ];
+}
+
+// Helper function to search for restaurants
+async function searchRestaurants(destination: string) {
+    // Return mock restaurant data
+    return [
+        { name: "Local Bistro", cuisine: "French", priceRange: "€€", rating: 4.5, reviewCount: 250 },
+        { name: "Fine Dining", cuisine: "International", priceRange: "€€€€", rating: 4.8, reviewCount: 180 },
+        { name: "Street Food", cuisine: "Local", priceRange: "€", rating: 4.3, reviewCount: 420 },
+        { name: "Seafood Restaurant", cuisine: "Seafood", priceRange: "€€€", rating: 4.6, reviewCount: 310 },
+        { name: "Vegetarian Cafe", cuisine: "Vegetarian", priceRange: "€€", rating: 4.4, reviewCount: 190 },
+    ];
+}
+
+// Helper function to generate transportation options
+function generateTransportationOptions(destination: string, origin: string, travelers: number) {
+    return [
+        { name: "Public Transport Pass", price: 15, currency: "EUR", description: "24-hour public transport pass" },
+        { name: "Taxi/Uber", price: 25, currency: "EUR", description: "Average taxi ride in city" },
+        { name: "Car Rental", price: 50, currency: "EUR", description: "Daily car rental" },
+        { name: "Bike Rental", price: 10, currency: "EUR", description: "Daily bike rental" },
+    ];
+}
 
 // Merge TripAdvisor restaurant data into itinerary activities
 function mergeRestaurantDataIntoItinerary(dayByDayItinerary: any[], restaurants: any[]): any[] {

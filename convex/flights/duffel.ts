@@ -1,393 +1,138 @@
 "use node";
 
-import { v } from "convex/values";
+const DUFFEL_API_BASE = "https://api.duffel.com";
 
-/**
- * Duffel Flights API Integration
- * 
- * Handles flight search, offer retrieval, and booking creation via Duffel API.
- * All responses are transformed to match the existing frontend contract.
- */
-
-interface DuffelPassenger {
-  type: "adult" | "child" | "infant";
-  count: number;
-}
-
-interface DuffelSlice {
-  origin_airport_iata_code: string;
-  destination_airport_iata_code: string;
-  departure_date: string;
-}
-
-interface DuffelOfferRequest {
-  slices: DuffelSlice[];
-  passengers: DuffelPassenger[];
-  cabin_class?: "economy" | "premium_economy" | "business" | "first";
-}
-
-interface DuffelSegment {
-  id: string;
-  departing_at: string;
-  arriving_at: string;
-  origin_airport: { iata_code: string };
-  destination_airport: { iata_code: string };
-  operating_carrier: { iata_code: string; name: string };
-  aircraft: { iata_code: string; name: string };
-  flight_number: string;
-  duration: string;
-}
-
-interface DuffelSliceSegment {
-  segments: DuffelSegment[];
-  duration: string;
-}
-
-interface DuffelOffer {
-  id: string;
-  offer_request_id: string;
-  slices: DuffelSliceSegment[];
-  total_emissions_kg: string;
-  available_services: any[];
-  passengers: Array<{
-    id: string;
-    type: string;
-  }>;
-  base_amount: string;
-  tax_amount: string;
-  total_amount: string;
-  owner: { iata_code: string; name: string };
-}
-
-interface DuffelOrder {
-  id: string;
-  booking_reference: string;
-  slices: DuffelSliceSegment[];
-  passengers: Array<{
-    id: string;
-    type: string;
-    given_name: string;
-    family_name: string;
-    email?: string;
-    phone_number?: string;
-  }>;
-  total_amount: string;
-  currency: string;
-}
-
-// Get Duffel API token
-export async function getDuffelToken(): Promise<string> {
+function getDuffelConfig() {
   const token = process.env.DUFFEL_ACCESS_TOKEN;
-  if (!token) {
-    throw new Error("DUFFEL_ACCESS_TOKEN environment variable is not set");
-  }
-  return token;
+  if (!token) throw new Error("DUFFEL_ACCESS_TOKEN required");
+  return { accessToken: token };
 }
 
-// Get Duffel API base URL based on environment
-function getDuffelBaseUrl(): string {
-  const env = process.env.DUFFEL_ENV || "test";
-  return env === "live"
-    ? "https://api.duffel.com"
-    : "https://api.sandbox.duffel.com";
+function getHeaders(config: any) {
+  return {
+    "Authorization": `Bearer ${config.accessToken}`,
+    "Content-Type": "application/json",
+    "Duffel-Version": "v1",
+  };
 }
 
-/**
- * Create an offer request (search for flights)
- */
-export async function createOfferRequest(
-  origin: string,
-  destination: string,
-  departureDate: string,
-  returnDate: string | null,
-  adults: number,
-  children: number = 0,
-  infants: number = 0,
-  cabinClass: string = "economy"
-): Promise<{ offerRequestId: string; offers: any[] }> {
-  const token = await getDuffelToken();
-  const baseUrl = getDuffelBaseUrl();
-
-  const passengers: DuffelPassenger[] = [];
-  if (adults > 0) passengers.push({ type: "adult", count: adults });
-  if (children > 0) passengers.push({ type: "child", count: children });
-  if (infants > 0) passengers.push({ type: "infant", count: infants });
-
-  const slices: DuffelSlice[] = [
-    {
-      origin_airport_iata_code: origin,
-      destination_airport_iata_code: destination,
-      departure_date: departureDate,
-    },
-  ];
-
-  // Add return slice if roundtrip
-  if (returnDate) {
+export async function createOfferRequest(params: any) {
+  const config = getDuffelConfig();
+  const slices = [{
+    origin_airport_iata_code: params.originCode,
+    destination_airport_iata_code: params.destinationCode,
+    departure_date: params.departureDate,
+  }];
+  if (params.returnDate) {
     slices.push({
-      origin_airport_iata_code: destination,
-      destination_airport_iata_code: origin,
-      departure_date: returnDate,
+      origin_airport_iata_code: params.destinationCode,
+      destination_airport_iata_code: params.originCode,
+      departure_date: params.returnDate,
     });
   }
-
-  const payload: DuffelOfferRequest = {
-    slices,
-    passengers,
-    cabin_class: (cabinClass.toLowerCase() as any) || "economy",
-  };
-
-  console.log("📤 Creating Duffel offer request:", {
-    origin,
-    destination,
-    departureDate,
-    returnDate,
-    passengers,
+  const passengers = Array(params.adults || 1).fill({ type: "adult" });
+  const body = { slices, passengers, cabin_class: "economy" };
+  const response = await fetch(`${DUFFEL_API_BASE}/air/offer_requests`, {
+    method: "POST",
+    headers: getHeaders(config),
+    body: JSON.stringify(body),
   });
-
-  try {
-    const response = await fetch(`${baseUrl}/air/offer_requests`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("❌ Duffel offer request error:", response.status, errorData);
-      throw new Error(
-        `Duffel API error: ${errorData.errors?.[0]?.message || response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-    console.log("✅ Duffel offer request created:", data.data.id);
-
-    return {
-      offerRequestId: data.data.id,
-      offers: data.data.offers || [],
-    };
-  } catch (error) {
-    console.error("❌ Failed to create Duffel offer request:", error);
-    throw error;
-  }
+  if (!response.ok) throw new Error("Duffel offer request failed");
+  const data = await response.json();
+  return { offerRequestId: data.data.id, offers: data.data.offers || [] };
 }
 
-/**
- * Get offers for an offer request (with fresh pricing)
- */
-export async function getOffers(
-  offerRequestId: string,
-  limit: number = 10
-): Promise<DuffelOffer[]> {
-  const token = await getDuffelToken();
-  const baseUrl = getDuffelBaseUrl();
-
-  console.log("📥 Fetching Duffel offers for request:", offerRequestId);
-
-  try {
-    const response = await fetch(
-      `${baseUrl}/air/offer_requests/${offerRequestId}/offers?limit=${limit}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("❌ Duffel get offers error:", response.status, errorData);
-      throw new Error(
-        `Duffel API error: ${errorData.errors?.[0]?.message || response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-    console.log(`✅ Retrieved ${data.data.length} offers`);
-    return data.data;
-  } catch (error) {
-    console.error("❌ Failed to get Duffel offers:", error);
-    throw error;
-  }
+export async function getOffer(offerId: string) {
+  const config = getDuffelConfig();
+  const response = await fetch(`${DUFFEL_API_BASE}/air/offers/${offerId}`, {
+    headers: getHeaders(config),
+  });
+  if (!response.ok) throw new Error("Duffel get offer failed");
+  return (await response.json()).data;
 }
 
-/**
- * Get a single offer by ID (for fresh pricing before booking)
- */
-export async function getOffer(offerId: string): Promise<DuffelOffer> {
-  const token = await getDuffelToken();
-  const baseUrl = getDuffelBaseUrl();
-
-  console.log("📥 Fetching Duffel offer:", offerId);
-
-  try {
-    const response = await fetch(`${baseUrl}/air/offers/${offerId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("❌ Duffel get offer error:", response.status, errorData);
-      throw new Error(
-        `Duffel API error: ${errorData.errors?.[0]?.message || response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-    console.log("✅ Retrieved offer:", data.data.id);
-    return data.data;
-  } catch (error) {
-    console.error("❌ Failed to get Duffel offer:", error);
-    throw error;
-  }
-}
-
-/**
- * Create an order (booking) from an offer
- */
-export async function createOrder(
-  offerId: string,
-  passengers: Array<{
-    id: string;
-    given_name: string;
-    family_name: string;
-    email?: string;
-    phone_number?: string;
-  }>,
-  paymentType: string = "balance"
-): Promise<DuffelOrder> {
-  const token = await getDuffelToken();
-  const baseUrl = getDuffelBaseUrl();
-
-  const payload = {
-    selected_offers: [offerId],
-    passengers,
-    payments: [
-      {
-        type: paymentType, // "balance", "card", etc.
-        currency: "EUR",
-      },
-    ],
+export async function createOrder(params: any) {
+  const config = getDuffelConfig();
+  const body = {
+    selected_offers: params.selectedOffers,
+    passengers: params.passengers,
+    payments: [{ type: "balance", currency: "EUR", amount: "0" }],
   };
+  const response = await fetch(`${DUFFEL_API_BASE}/air/orders`, {
+    method: "POST",
+    headers: getHeaders(config),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error("Duffel order creation failed");
+  const data = await response.json();
+  return { orderId: data.data.id, bookingReference: data.data.booking_reference };
+}
 
-  console.log("📤 Creating Duffel order for offer:", offerId);
-
+export function validateConfig(): boolean {
   try {
-    const response = await fetch(`${baseUrl}/air/orders`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("❌ Duffel order creation error:", response.status, errorData);
-      throw new Error(
-        `Duffel API error: ${errorData.errors?.[0]?.message || response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-    console.log("✅ Order created:", data.data.id, "Booking ref:", data.data.booking_reference);
-    return data.data;
-  } catch (error) {
-    console.error("❌ Failed to create Duffel order:", error);
-    throw error;
+    getDuffelConfig();
+    return true;
+  } catch {
+    return false;
   }
 }
 
-/**
- * Transform Duffel offer to frontend contract format
- */
-export function transformOfferToFlightOption(
-  offer: DuffelOffer,
-  adults: number,
-  index: number
-): any {
-  const outboundSlice = offer.slices[0];
-  const returnSlice = offer.slices[1];
-
-  const outboundSegment = outboundSlice.segments[0];
-  const returnSegment = returnSlice?.segments[0];
-
-  const totalPrice = parseFloat(offer.total_amount);
-  const pricePerPerson = totalPrice / adults;
-
+export function transformOfferToFlightOption(offer: any, adults: number, index: number) {
+  // Transform Duffel offer to our flight option format
+  const slices = offer.slices || [];
+  const outbound = slices[0];
+  const returnFlight = slices[1];
+  
+  const outboundSegments = outbound?.segments || [];
+  const returnSegments = returnFlight?.segments || [];
+  
+  const outboundDeparture = outboundSegments[0]?.departing_at || "";
+  const outboundArrival = outboundSegments[outboundSegments.length - 1]?.arriving_at || "";
+  const returnDeparture = returnSegments[0]?.departing_at || "";
+  const returnArrival = returnSegments[returnSegments.length - 1]?.arriving_at || "";
+  
+  // Calculate duration
+  const outboundDurationMs = new Date(outboundArrival).getTime() - new Date(outboundDeparture).getTime();
+  const outboundDurationHours = outboundDurationMs / (1000 * 60 * 60);
+  
+  const returnDurationMs = new Date(returnArrival).getTime() - new Date(returnDeparture).getTime();
+  const returnDurationHours = returnDurationMs / (1000 * 60 * 60);
+  
+  const pricePerPerson = parseInt(offer.total_amount || "0");
+  
   return {
     id: offer.id,
-    offerId: offer.id,
-    offerRequestId: offer.offer_request_id,
     outbound: {
-      airline: outboundSegment.operating_carrier.name,
-      airlineCode: outboundSegment.operating_carrier.iata_code,
-      flightNumber: `${outboundSegment.operating_carrier.iata_code}${outboundSegment.flight_number}`,
-      duration: formatDuration(outboundSlice.duration),
-      departure: formatTime(outboundSegment.departing_at),
-      arrival: formatTime(outboundSegment.arriving_at),
-      stops: outboundSlice.segments.length - 1,
-      departureTime: outboundSegment.departing_at,
+      airline: outboundSegments[0]?.operating_airline?.name || "Unknown",
+      airlineCode: outboundSegments[0]?.operating_airline?.iata_code || "XX",
+      flightNumber: outboundSegments[0]?.flight_number || "N/A",
+      duration: `${Math.floor(outboundDurationHours)}h ${Math.round((outboundDurationHours % 1) * 60)}m`,
+      departure: new Date(outboundDeparture).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      arrival: new Date(outboundArrival).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      stops: outboundSegments.length - 1,
+      departureTime: outboundDeparture,
     },
-    return: returnSegment
-      ? {
-          airline: returnSegment.operating_carrier.name,
-          airlineCode: returnSegment.operating_carrier.iata_code,
-          flightNumber: `${returnSegment.operating_carrier.iata_code}${returnSegment.flight_number}`,
-          duration: formatDuration(returnSlice.duration),
-          departure: formatTime(returnSegment.departing_at),
-          arrival: formatTime(returnSegment.arriving_at),
-          stops: returnSlice.segments.length - 1,
-          departureTime: returnSegment.departing_at,
-        }
-      : null,
+    return: {
+      airline: returnSegments[0]?.operating_airline?.name || "Unknown",
+      airlineCode: returnSegments[0]?.operating_airline?.iata_code || "XX",
+      flightNumber: returnSegments[0]?.flight_number || "N/A",
+      duration: `${Math.floor(returnDurationHours)}h ${Math.round((returnDurationHours % 1) * 60)}m`,
+      departure: new Date(returnDeparture).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      arrival: new Date(returnArrival).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      stops: returnSegments.length - 1,
+      departureTime: returnDeparture,
+    },
+    luggage: "Cabin bag included",
+    cabinBaggage: "1 cabin bag (8kg) included",
+    checkedBaggageIncluded: false,
+    checkedBaggagePrice: 0,
     pricePerPerson,
-    totalPrice,
+    totalPrice: pricePerPerson * adults,
     currency: "EUR",
     isBestPrice: index === 0,
-    luggage: "1 checked bag included",
-    cabinBaggage: "1 cabin bag (8kg) included",
-    checkedBaggageIncluded: true,
-    checkedBaggagePrice: 0,
     timeCategory: "any",
     matchesPreference: true,
-    label: index === 0 ? "Best Value" : undefined,
+    label: `Option ${index + 1}`,
+    bookingUrl: `https://www.duffel.com/bookings/${offer.id}`,
   };
-}
-
-/**
- * Helper: Format ISO 8601 duration (e.g., "PT2H30M" -> "2h 30m")
- */
-function formatDuration(duration: string): string {
-  const match = duration.match(/PT(\d+H)?(\d+M)?/);
-  if (!match) return duration;
-
-  const hours = match[1] ? parseInt(match[1]) : 0;
-  const minutes = match[2] ? parseInt(match[2]) : 0;
-
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
-}
-
-/**
- * Helper: Format ISO 8601 timestamp to readable time (e.g., "2025-11-23T10:00:00" -> "10:00 AM")
- */
-function formatTime(isoString: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
 }
