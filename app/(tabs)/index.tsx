@@ -31,7 +31,15 @@ export default function HomeScreen() {
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
   const getImages = useAction(api.images.getDestinationImages);
-  const getProfileImageUrl = useAction(api.users.getProfileImageUrl);
+
+  const getProfileImageUrl = useQuery(
+    userSettings?.profilePicture 
+      ? api.users.getProfileImageUrl 
+      : "skip",
+    userSettings?.profilePicture 
+      ? { storageId: userSettings.profilePicture } 
+      : "skip"
+  );
 
   const fetchImages = useCallback(async () => {
     const imageMap: Record<string, any> = {};
@@ -55,12 +63,10 @@ export default function HomeScreen() {
   }, [trendingDestinations]);
 
   useEffect(() => {
-    if (userSettings?.profilePicture) {
-      getProfileImageUrl({ storageId: userSettings.profilePicture })
-        .then(url => setProfileImageUrl(url))
-        .catch(error => console.error("Failed to fetch profile image:", error));
+    if (getProfileImageUrl) {
+      setProfileImageUrl(getProfileImageUrl);
     }
-  }, [userSettings?.profilePicture]);
+  }, [getProfileImageUrl]);
 
   if (authLoading) {
     return (
