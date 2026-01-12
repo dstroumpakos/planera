@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -30,25 +30,26 @@ export default function HomeScreen() {
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
   const getImages = useAction(api.images.getDestinationImages);
 
+  const fetchImages = useCallback(async () => {
+    const imageMap: Record<string, any> = {};
+    for (const destination of trendingDestinations) {
+      try {
+        const images = await getImages({ destination: destination.destination });
+        if (images && images.length > 0) {
+          imageMap[destination.destination] = images[0];
+        }
+      } catch (error) {
+        console.error(`Failed to fetch images for ${destination.destination}:`, error);
+      }
+    }
+    setDestinationImages(imageMap);
+  }, [trendingDestinations]);
+
   useEffect(() => {
     if (trendingDestinations && trendingDestinations.length > 0) {
-      const fetchImages = async () => {
-        const imageMap: Record<string, any> = {};
-        for (const destination of trendingDestinations) {
-          try {
-            const images = await getImages({ destination: destination.destination });
-            if (images && images.length > 0) {
-              imageMap[destination.destination] = images[0];
-            }
-          } catch (error) {
-            console.error(`Failed to fetch images for ${destination.destination}:`, error);
-          }
-        }
-        setDestinationImages(imageMap);
-      };
       fetchImages();
     }
-  }, [trendingDestinations, getImages]);
+  }, [trendingDestinations]);
 
   if (authLoading) {
     return (
