@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TextInput,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery, useAction } from "convex/react";
@@ -23,12 +24,14 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const [destinationImages, setDestinationImages] = useState<Record<string, any>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   const userSettings = useQuery(api.users.getSettings);
   const userPlan = useQuery(api.users.getPlan);
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
   const getImages = useAction(api.images.getDestinationImages);
+  const getProfileImageUrl = useAction(api.users.getProfileImageUrl);
 
   const fetchImages = useCallback(async () => {
     const imageMap: Record<string, any> = {};
@@ -50,6 +53,14 @@ export default function HomeScreen() {
       fetchImages();
     }
   }, [trendingDestinations]);
+
+  useEffect(() => {
+    if (userSettings?.profilePicture) {
+      getProfileImageUrl({ storageId: userSettings.profilePicture })
+        .then(url => setProfileImageUrl(url))
+        .catch(error => console.error("Failed to fetch profile image:", error));
+    }
+  }, [userSettings?.profilePicture]);
 
   if (authLoading) {
     return (
@@ -121,7 +132,14 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.avatarContainer}>
-              <Ionicons name="person-circle" size={48} color={colors.textMuted} />
+              {profileImageUrl ? (
+                <Image
+                  source={{ uri: profileImageUrl }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Ionicons name="person-circle" size={48} color={colors.textMuted} />
+              )}
               <View style={[styles.onlineBadge, { backgroundColor: colors.primary, borderColor: colors.background }]} />
             </View>
             <View style={styles.headerTexts}>
@@ -331,6 +349,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     marginBottom: 12,
+  },
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   onlineBadge: {
     position: "absolute",

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
+import { action } from "./_generated/server";
 
 export const getPlan = authQuery({
     args: {},
@@ -444,5 +445,15 @@ export const cancelSubscription = authMutation({
         });
 
         return { success: true };
+    },
+});
+
+export const getProfileImageUrl = authQuery({
+    args: {
+        storageId: v.id("_storage"),
+    },
+    returns: v.union(v.string(), v.null()),
+    handler: async (ctx, args) => {
+        return await ctx.storage.getUrl(args.storageId);
     },
 });
