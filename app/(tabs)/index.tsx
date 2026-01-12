@@ -204,13 +204,6 @@ export default function HomeScreen() {
             </View>
             <Text style={[styles.featureText, { color: colors.text }]}>Multi-City Route</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.featureIcon, { backgroundColor: colors.secondary }]}>
-              <Ionicons name="pricetag-outline" size={20} color={colors.text} />
-            </View>
-            <Text style={[styles.featureText, { color: colors.text }]}>Explore Deals</Text>
-          </TouchableOpacity>
         </ScrollView>
 
         {/* Trending Destinations Section */}
