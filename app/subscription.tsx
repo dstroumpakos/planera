@@ -5,22 +5,11 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// Planera Colors
-const COLORS = {
-    primary: "#FFE500",
-    background: "#FAF9F6",
-    text: "#1A1A1A",
-    textSecondary: "#6B6B6B",
-    textMuted: "#9B9B9B",
-    white: "#FFFFFF",
-    border: "#E8E6E1",
-    success: "#4CAF50",
-    error: "#EF4444",
-};
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function SubscriptionScreen() {
     const router = useRouter();
+    const { colors } = useTheme();
     const upgradeToPremium = useMutation(api.users.upgradeToPremium);
     const purchaseTripPack = useMutation(api.users.purchaseTripPack);
     const cancelSubscription = useMutation(api.users.cancelSubscription);
@@ -67,17 +56,17 @@ export default function SubscriptionScreen() {
     const isSubscriptionActive = userPlan?.isSubscriptionActive;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <Text style={styles.brandText}>PLANERA</Text>
+                <Text style={[styles.brandText, { color: colors.text }]}>PLANERA</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color={COLORS.text} />
+                    <Ionicons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.title}>Unlock your next{"\n"}era of travel.</Text>
-                <Text style={styles.subtitle}>
+                <Text style={[styles.title, { color: colors.text }]}>Unlock your next{"\n"}era of travel.</Text>
+                <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                     AI-powered itineraries, unlimited inspiration, and smart recommendations.
                 </Text>
 
@@ -85,37 +74,38 @@ export default function SubscriptionScreen() {
                 <TouchableOpacity 
                     style={[
                         styles.planCard, 
-                        selectedPlan === "yearly" && styles.planCardSelected
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                        selectedPlan === "yearly" && { borderColor: colors.primary }
                     ]}
                     onPress={() => setSelectedPlan("yearly")}
                 >
-                    <View style={styles.bestValueBadge}>
-                        <Text style={styles.bestValueText}>BEST VALUE</Text>
+                    <View style={[styles.bestValueBadge, { backgroundColor: colors.primary }]}>
+                        <Text style={[styles.bestValueText, { color: colors.text }]}>BEST VALUE</Text>
                     </View>
                     <View style={styles.planHeader}>
                         <View>
-                            <Text style={styles.planName}>Yearly</Text>
-                            <View style={styles.saveBadge}>
-                                <Text style={styles.saveText}>SAVE 40%</Text>
+                            <Text style={[styles.planName, { color: colors.text }]}>Yearly</Text>
+                            <View style={[styles.saveBadge, { backgroundColor: colors.primary }]}>
+                                <Text style={[styles.saveText, { color: colors.text }]}>SAVE 40%</Text>
                             </View>
                         </View>
                         <View style={styles.planPriceContainer}>
-                            <Text style={styles.planPrice}>€4.99</Text>
-                            <Text style={styles.planPeriod}>/mo</Text>
+                            <Text style={[styles.planPrice, { color: colors.text }]}>€4.99</Text>
+                            <Text style={[styles.planPeriod, { color: colors.textMuted }]}>/mo</Text>
                         </View>
-                        <Text style={styles.planBilled}>Billed €59.99 yearly</Text>
+                        <Text style={[styles.planBilled, { color: colors.textMuted }]}>Billed €59.99 yearly</Text>
                         <View style={styles.featuresList}>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Unlimited AI Planning</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Unlimited AI Planning</Text>
                             </View>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Smart Recommendations</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Smart Recommendations</Text>
                             </View>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Full Multi-City Routing</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Full Multi-City Routing</Text>
                             </View>
                         </View>
                     </View>
@@ -126,30 +116,31 @@ export default function SubscriptionScreen() {
                     style={[
                         styles.planCard, 
                         styles.planCardSimple,
-                        selectedPlan === "monthly" && styles.planCardSelected
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                        selectedPlan === "monthly" && { borderColor: colors.primary }
                     ]}
                     onPress={() => setSelectedPlan("monthly")}
                 >
                     <View style={styles.planHeader}>
                         <View>
-                            <Text style={styles.planName}>Monthly</Text>
+                            <Text style={[styles.planName, { color: colors.text }]}>Monthly</Text>
                         </View>
                         <View style={styles.planPriceContainer}>
-                            <Text style={styles.planPrice}>€9.99</Text>
-                            <Text style={styles.planPeriod}>/mo</Text>
+                            <Text style={[styles.planPrice, { color: colors.text }]}>€9.99</Text>
+                            <Text style={[styles.planPeriod, { color: colors.textMuted }]}>/mo</Text>
                         </View>
                         <View style={styles.featuresList}>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Unlimited AI Planning</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Unlimited AI Planning</Text>
                             </View>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Smart Recommendations</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Smart Recommendations</Text>
                             </View>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Full Multi-City Routing</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Full Multi-City Routing</Text>
                             </View>
                         </View>
                     </View>
@@ -160,30 +151,31 @@ export default function SubscriptionScreen() {
                     style={[
                         styles.planCard, 
                         styles.planCardSimple,
-                        selectedPlan === "single" && styles.planCardSelected
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                        selectedPlan === "single" && { borderColor: colors.primary }
                     ]}
                     onPress={() => setSelectedPlan("single")}
                 >
                     <View style={styles.planHeader}>
                         <View>
-                            <Text style={styles.planName}>Single Trip</Text>
+                            <Text style={[styles.planName, { color: colors.text }]}>Single Trip</Text>
                         </View>
                         <View style={styles.planPriceContainer}>
-                            <Text style={styles.planPrice}>€2.99</Text>
-                            <Text style={styles.planPeriod}>/trip</Text>
+                            <Text style={[styles.planPrice, { color: colors.text }]}>€2.99</Text>
+                            <Text style={[styles.planPeriod, { color: colors.textMuted }]}>/trip</Text>
                         </View>
                         <View style={styles.featuresList}>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>One-time AI Trip Plan</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>One-time AI Trip Plan</Text>
                             </View>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Smart Recommendations</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Smart Recommendations</Text>
                             </View>
                             <View style={styles.featureItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                                <Text style={styles.featureText}>Full Multi-City Routing</Text>
+                                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                <Text style={[styles.featureText, { color: colors.text }]}>Full Multi-City Routing</Text>
                             </View>
                         </View>
                     </View>
@@ -191,33 +183,33 @@ export default function SubscriptionScreen() {
 
                 {/* Continue with Free */}
                 <TouchableOpacity onPress={() => router.back()}>
-                    <Text style={styles.freePlanLink}>Continue with Free Plan</Text>
+                    <Text style={[styles.freePlanLink, { color: colors.textSecondary }]}>Continue with Free Plan</Text>
                 </TouchableOpacity>
 
                 {/* Terms */}
-                <Text style={styles.termsText}>
+                <Text style={[styles.termsText, { color: colors.textMuted }]}>
                     Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Your account will be charged for renewal within 24-hours prior to the end of the current period. You can manage and cancel your subscriptions by going to your App Store account settings after purchase.
                 </Text>
 
                 <View style={styles.linksRow}>
                     <TouchableOpacity onPress={() => router.push("/privacy")}>
-                        <Text style={styles.linkText}>Privacy Policy</Text>
+                        <Text style={[styles.linkText, { color: colors.textSecondary }]}>Privacy Policy</Text>
                     </TouchableOpacity>
-                    <Text style={styles.linkDot}>•</Text>
+                    <Text style={[styles.linkDot, { color: colors.textMuted }]}>•</Text>
                     <TouchableOpacity onPress={() => router.push("/terms")}>
-                        <Text style={styles.linkText}>Terms of Service</Text>
+                        <Text style={[styles.linkText, { color: colors.textSecondary }]}>Terms of Service</Text>
                     </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity>
-                    <Text style={styles.restoreText}>Restore Purchases</Text>
+                    <Text style={[styles.restoreText, { color: colors.text }]}>Restore Purchases</Text>
                 </TouchableOpacity>
             </ScrollView>
 
             {/* Bottom CTA */}
-            <View style={styles.bottomCTA}>
+            <View style={[styles.bottomCTA, { backgroundColor: colors.background }]}>
                 <TouchableOpacity 
-                    style={[styles.ctaButton, loading && styles.ctaButtonLoading]}
+                    style={[styles.ctaButton, { backgroundColor: colors.primary }, loading && styles.ctaButtonLoading]}
                     onPress={() => {
                         if (selectedPlan === "single") {
                             handlePurchasePack();
@@ -227,13 +219,13 @@ export default function SubscriptionScreen() {
                     }}
                     disabled={loading !== null}
                 >
-                    <Text style={styles.ctaButtonText}>
+                    <Text style={[styles.ctaButtonText, { color: colors.text }]}>
                         {loading ? "Processing..." : "Start my next era"}
                     </Text>
                 </TouchableOpacity>
                 <View style={styles.securedRow}>
-                    <Ionicons name="lock-closed" size={14} color={COLORS.textMuted} />
-                    <Text style={styles.securedText}>Secured with App Store</Text>
+                    <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
+                    <Text style={[styles.securedText, { color: colors.textMuted }]}>Secured with App Store</Text>
                 </View>
             </View>
         </SafeAreaView>
@@ -243,7 +235,6 @@ export default function SubscriptionScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: "row",
@@ -256,7 +247,6 @@ const styles = StyleSheet.create({
     brandText: {
         fontSize: 16,
         fontWeight: "800",
-        color: COLORS.text,
         letterSpacing: 2,
     },
     closeButton: {
@@ -273,36 +263,28 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: "800",
-        color: COLORS.text,
         textAlign: "center",
         marginBottom: 12,
         lineHeight: 40,
     },
     subtitle: {
         fontSize: 16,
-        color: COLORS.textSecondary,
         textAlign: "center",
         marginBottom: 32,
         lineHeight: 24,
     },
     planCard: {
-        backgroundColor: COLORS.white,
         borderRadius: 16,
         padding: 20,
         marginBottom: 12,
         borderWidth: 2,
-        borderColor: COLORS.border,
         position: "relative",
         overflow: "hidden",
     },
     planCardSimple: {
         paddingVertical: 16,
     },
-    planCardSelected: {
-        borderColor: COLORS.primary,
-    },
     saveBadge: {
-        backgroundColor: COLORS.primary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
@@ -312,14 +294,12 @@ const styles = StyleSheet.create({
     saveText: {
         fontSize: 10,
         fontWeight: "800",
-        color: COLORS.text,
     },
     bestValueBadge: {
         position: "absolute",
         top: -1,
         left: "50%",
         transform: [{ translateX: -50 }],
-        backgroundColor: COLORS.primary,
         paddingHorizontal: 16,
         paddingVertical: 6,
         borderBottomLeftRadius: 8,
@@ -328,7 +308,6 @@ const styles = StyleSheet.create({
     bestValueText: {
         fontSize: 11,
         fontWeight: "800",
-        color: COLORS.text,
         letterSpacing: 1,
     },
     planHeader: {
@@ -340,24 +319,20 @@ const styles = StyleSheet.create({
     planName: {
         fontSize: 18,
         fontWeight: "700",
-        color: COLORS.text,
         width: "100%",
         marginBottom: 8,
     },
     planBilled: {
         fontSize: 13,
-        color: COLORS.textMuted,
         marginTop: 2,
         width: "100%",
     },
     planSubtext: {
         fontSize: 13,
-        color: COLORS.textMuted,
         marginTop: 2,
     },
     cancelAnytime: {
         fontSize: 13,
-        color: COLORS.error,
         marginTop: 2,
     },
     planPriceContainer: {
@@ -370,11 +345,9 @@ const styles = StyleSheet.create({
     planPrice: {
         fontSize: 24,
         fontWeight: "800",
-        color: COLORS.text,
     },
     planPeriod: {
         fontSize: 14,
-        color: COLORS.textMuted,
         marginLeft: 2,
     },
     radioButton: {
@@ -382,13 +355,10 @@ const styles = StyleSheet.create({
         height: 28,
         borderRadius: 14,
         borderWidth: 2,
-        borderColor: COLORS.border,
         justifyContent: "center",
         alignItems: "center",
     },
     radioButtonSelected: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
     },
     featuresList: {
         marginTop: 16,
@@ -399,7 +369,6 @@ const styles = StyleSheet.create({
         marginTop: 20,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
         gap: 12,
     },
     featureItem: {
@@ -409,12 +378,10 @@ const styles = StyleSheet.create({
     },
     featureText: {
         fontSize: 15,
-        color: COLORS.text,
         fontWeight: "500",
     },
     freePlanLink: {
         fontSize: 16,
-        color: COLORS.textSecondary,
         textAlign: "center",
         marginTop: 8,
         marginBottom: 24,
@@ -422,7 +389,6 @@ const styles = StyleSheet.create({
     },
     termsText: {
         fontSize: 11,
-        color: COLORS.textMuted,
         textAlign: "center",
         lineHeight: 16,
         marginBottom: 16,
@@ -436,15 +402,12 @@ const styles = StyleSheet.create({
     },
     linkText: {
         fontSize: 13,
-        color: COLORS.textSecondary,
         fontWeight: "500",
     },
     linkDot: {
-        color: COLORS.textMuted,
     },
     restoreText: {
         fontSize: 14,
-        color: COLORS.text,
         textAlign: "center",
         fontWeight: "600",
     },
@@ -452,10 +415,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 16,
         paddingBottom: 32,
-        backgroundColor: COLORS.background,
     },
     ctaButton: {
-        backgroundColor: COLORS.primary,
         paddingVertical: 18,
         borderRadius: 14,
         alignItems: "center",
@@ -466,7 +427,6 @@ const styles = StyleSheet.create({
     ctaButtonText: {
         fontSize: 18,
         fontWeight: "700",
-        color: COLORS.text,
     },
     securedRow: {
         flexDirection: "row",
@@ -477,6 +437,5 @@ const styles = StyleSheet.create({
     },
     securedText: {
         fontSize: 12,
-        color: COLORS.textMuted,
     },
 });

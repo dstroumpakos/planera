@@ -19,6 +19,7 @@ import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Id } from "@/convex/_generated/dataModel";
+import { useTheme } from "@/lib/ThemeContext";
 
 const CATEGORIES = [
   { id: "food", label: "Food & Drink", icon: "restaurant" },
@@ -32,6 +33,7 @@ const CATEGORIES = [
 
 export default function InsightsScreen() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [tripToVerify, setTripToVerify] = useState<any>(null);
   const [shareView, setShareView] = useState<"trips" | "form">("trips");
@@ -61,7 +63,7 @@ export default function InsightsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F5A623" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
@@ -73,7 +75,7 @@ export default function InsightsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.authContainer}>
-          <Ionicons name="bulb-outline" size={64} color="#F5A623" />
+          <Ionicons name="bulb-outline" size={64} color={colors.primary} />
           <Text style={styles.authTitle}>Traveler Insights</Text>
           <Text style={styles.authSubtitle}>
             Sign in to browse and share travel tips with other travelers
@@ -164,33 +166,33 @@ export default function InsightsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={handleBackFromForm}
         >
-          <Ionicons name="chevron-back" size={24} color="#181710" />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Share Your Tips</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Share Your Tips</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {shareView === "trips" ? (
-        <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
+        <ScrollView style={[styles.shareContainer, { backgroundColor: colors.card }]} contentContainerStyle={styles.shareContent}>
           {completedTrips === undefined ? (
-            <ActivityIndicator size="large" color="#F5A623" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
           ) : completedTrips.length === 0 ? (
-            <View style={styles.noTripsContainer}>
-              <Ionicons name="calendar-outline" size={48} color="#CCC" />
-              <Text style={styles.noTripsText}>No completed trips yet</Text>
-              <Text style={styles.noTripsSubtext}>
+            <View style={[styles.noTripsContainer, { backgroundColor: colors.card }]}>
+              <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+              <Text style={[styles.noTripsText, { color: colors.text }]}>No completed trips yet</Text>
+              <Text style={[styles.noTripsSubtext, { color: colors.textMuted }]}>
                 Once you complete a trip, you'll be able to share your insights here
               </Text>
             </View>
           ) : (
             <>
-              <Text style={styles.sectionTitle}>Your Completed Trips</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Completed Trips</Text>
               <FlatList
                 data={completedTrips}
                 renderItem={renderTripItem}
@@ -202,7 +204,7 @@ export default function InsightsScreen() {
           )}
         </ScrollView>
       ) : shareView === "form" ? (
-        <ScrollView style={styles.shareContainer} contentContainerStyle={styles.shareContent}>
+        <ScrollView style={[styles.shareContainer, { backgroundColor: colors.card }]} contentContainerStyle={styles.shareContent}>
           {selectedTrip && (
             <>
               <Text style={styles.selectedTripLabel}>
@@ -305,7 +307,7 @@ export default function InsightsScreen() {
               {/* Main Prompt */}
               <View style={styles.verifyPromptContainer}>
                 <View style={styles.verifyIconContainer}>
-                  <Ionicons name="sparkles" size={28} color="#F5A623" />
+                  <Ionicons name="sparkles" size={28} color={colors.primary} />
                 </View>
                 <Text style={styles.verifyTitle}>
                   Have you taken{"\n"}this trip?

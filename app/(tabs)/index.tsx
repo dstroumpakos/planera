@@ -15,27 +15,16 @@ import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useConvexAuth } from "convex/react";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
-
-const COLORS = {
-  primary: "#FFE500", // Bright Yellow
-  secondary: "#FFF8E1", // Light Yellow/Cream
-  background: "#FAF9F6", // Off-white
-  text: "#1A1A1A", // Black
-  textMuted: "#9B9B9B", // Gray
-  white: "#FFFFFF",
-  border: "#E8E6E1",
-  lightGray: "#F2F2F7",
-  darkOverlay: "rgba(0,0,0,0.4)",
-};
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const { colors } = useTheme();
   const [destinationImages, setDestinationImages] = useState<Record<string, any>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
   const userSettings = useQuery(api.users.getSettings);
-
   const userPlan = useQuery(api.users.getPlan);
   const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
@@ -63,9 +52,9 @@ export default function HomeScreen() {
 
   if (authLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -73,19 +62,15 @@ export default function HomeScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.authContainer}>
-          <Text style={styles.authText}>Please log in to see your trips</Text>
+          <Text style={[styles.authText, { color: colors.textMuted }]}>Please log in to see your trips</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   const userName = userSettings?.name?.split(" ")[0] || "Traveler";
-
-  // Log to debug
-  console.log("User Settings:", userSettings);
-  console.log("User Name:", userName);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -109,23 +94,23 @@ export default function HomeScreen() {
     
     if (userPlan.isSubscriptionActive) {
       return (
-        <View style={styles.creditBadge}>
-          <Ionicons name="infinite" size={16} color={COLORS.text} />
-          <Text style={styles.creditText}>Unlimited</Text>
+        <View style={[styles.creditBadge, { backgroundColor: colors.secondary, borderColor: colors.primary }]}>
+          <Ionicons name="infinite" size={16} color={colors.text} />
+          <Text style={[styles.creditText, { color: colors.text }]}>Unlimited</Text>
         </View>
       );
     }
 
     return (
-      <View style={styles.creditBadge}>
-        <Ionicons name="ticket-outline" size={16} color={COLORS.text} />
-        <Text style={styles.creditText}>{userPlan.tripCredits} Credits</Text>
+      <View style={[styles.creditBadge, { backgroundColor: colors.secondary, borderColor: colors.primary }]}>
+        <Ionicons name="ticket-outline" size={16} color={colors.text} />
+        <Text style={[styles.creditText, { color: colors.text }]}>{userPlan.tripCredits} Credits</Text>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -135,12 +120,12 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.avatarContainer}>
-              <Ionicons name="person-circle" size={48} color={COLORS.textMuted} />
-              <View style={styles.onlineBadge} />
+              <Ionicons name="person-circle" size={48} color={colors.textMuted} />
+              <View style={[styles.onlineBadge, { backgroundColor: colors.primary, borderColor: colors.background }]} />
             </View>
             <View style={styles.headerTexts}>
-              <Text style={styles.greetingSub}>{getGreeting()}</Text>
-              <Text style={styles.greetingMain}>Ready for your next journey?</Text>
+              <Text style={[styles.greetingSub, { color: colors.textMuted }]}>{getGreeting()}</Text>
+              <Text style={[styles.greetingMain, { color: colors.text }]}>Ready for your next journey?</Text>
             </View>
           </View>
           <TouchableOpacity 
@@ -152,17 +137,17 @@ export default function HomeScreen() {
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color={COLORS.textMuted} style={styles.searchIcon} />
+        <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+          <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Where do you want to go?"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          <TouchableOpacity style={styles.searchButton}>
-            <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+          <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.primary }]}>
+            <Ionicons name="arrow-forward" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -174,27 +159,27 @@ export default function HomeScreen() {
           contentContainerStyle={styles.featuresContent}
         >
           <TouchableOpacity 
-            style={[styles.featureCard, styles.featureCardPrimary]}
+            style={[styles.featureCard, { backgroundColor: colors.primary, borderColor: colors.primary }]}
             onPress={() => router.push("/create-trip")}
           >
             <View style={[styles.featureIcon, styles.featureIconPrimary]}>
-              <Ionicons name="sparkles" size={20} color={COLORS.text} />
+              <Ionicons name="sparkles" size={20} color={colors.text} />
             </View>
-            <Text style={styles.featureTextPrimary}>AI Trip Planner</Text>
+            <Text style={[styles.featureText, { color: colors.text }]}>AI Trip Planner</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.featureCard}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="map-outline" size={20} color={COLORS.text} />
+          <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.featureIcon, { backgroundColor: colors.secondary }]}>
+              <Ionicons name="map-outline" size={20} color={colors.text} />
             </View>
-            <Text style={styles.featureText}>Multi-City Route</Text>
+            <Text style={[styles.featureText, { color: colors.text }]}>Multi-City Route</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.featureCard}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="pricetag-outline" size={20} color={COLORS.text} />
+          <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.featureIcon, { backgroundColor: colors.secondary }]}>
+              <Ionicons name="pricetag-outline" size={20} color={colors.text} />
             </View>
-            <Text style={styles.featureText}>Explore Deals</Text>
+            <Text style={[styles.featureText, { color: colors.text }]}>Explore Deals</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -202,9 +187,9 @@ export default function HomeScreen() {
         {trendingDestinations && trendingDestinations.length > 0 && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Trending Now</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending Now</Text>
               <TouchableOpacity onPress={() => {}}>
-                <Text style={styles.viewAllText}>View All</Text>
+                <Text style={[styles.viewAllText, { color: colors.textMuted }]}>View All</Text>
               </TouchableOpacity>
             </View>
             <ScrollView 
@@ -216,7 +201,7 @@ export default function HomeScreen() {
               {trendingDestinations.map((destination: any, index: number) => (
                 <TouchableOpacity 
                   key={index}
-                  style={styles.trendingCard}
+                  style={[styles.trendingCard, { backgroundColor: colors.lightGray }]}
                   onPress={() => router.push({
                     pathname: "/destination-preview",
                     params: {
@@ -237,27 +222,27 @@ export default function HomeScreen() {
                       imageStyle={styles.trendingImage}
                     />
                   ) : (
-                    <View style={styles.trendingImagePlaceholder}>
+                    <View style={[styles.trendingImagePlaceholder, { backgroundColor: colors.secondary }]}>
                       <Text style={styles.trendingEmoji}>✈️</Text>
                     </View>
                   )}
                   
                   <View style={styles.trendingOverlay}>
                     <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={12} color={COLORS.primary} />
-                      <Text style={styles.ratingText}>{destination.avgRating.toFixed(1)}</Text>
+                      <Ionicons name="star" size={12} color={colors.primary} />
+                      <Text style={[styles.ratingText, { color: colors.text }]}>{destination.avgRating.toFixed(1)}</Text>
                     </View>
                     
                     <View style={styles.trendingCardContent}>
                       <Text style={styles.trendingName}>{destination.destination}</Text>
                       <View style={styles.trendingLocationRow}>
-                        <Ionicons name="location-sharp" size={12} color={COLORS.white} />
+                        <Ionicons name="location-sharp" size={12} color="#FFFFFF" />
                         <Text style={styles.trendingCountry}>Popular Destination</Text>
                       </View>
                       <View style={styles.trendingFooter}>
-                        <Text style={styles.trendingPrice}>€{Math.round(destination.avgBudget)}</Text>
+                        <Text style={[styles.trendingPrice, { color: colors.primary }]}>€{Math.round(destination.avgBudget)}</Text>
                         <View style={styles.trendingArrow}>
-                          <Ionicons name="arrow-forward" size={16} color={COLORS.text} />
+                          <Ionicons name="arrow-forward" size={16} color={colors.text} />
                         </View>
                       </View>
                     </View>
@@ -272,28 +257,28 @@ export default function HomeScreen() {
         {trips && trips.length > 0 && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>My Trips</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>My Trips</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/trips")}>
-                <Text style={styles.viewAllText}>View All</Text>
+                <Text style={[styles.viewAllText, { color: colors.textMuted }]}>View All</Text>
               </TouchableOpacity>
             </View>
 
             {trips.slice(0, 2).map((trip: any) => (
               <TouchableOpacity 
                 key={trip._id}
-                style={styles.tripCard}
+                style={[styles.tripCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => router.push(`/trip/${trip._id}`)}
               >
-                <View style={styles.tripIconContainer}>
-                  <Ionicons name="airplane" size={24} color={COLORS.white} />
+                <View style={[styles.tripIconContainer, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="airplane" size={24} color={colors.text} />
                 </View>
                 <View style={styles.tripInfo}>
-                  <Text style={styles.tripDestination}>{trip.destination}</Text>
-                  <Text style={styles.tripDates}>
+                  <Text style={[styles.tripDestination, { color: colors.text }]}>{trip.destination}</Text>
+                  <Text style={[styles.tripDates, { color: colors.textMuted }]}>
                     {new Date(trip.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(trip.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
@@ -306,13 +291,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Extra padding for tab bar
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,
@@ -327,7 +311,6 @@ const styles = StyleSheet.create({
   },
   authText: {
     fontSize: 16,
-    color: COLORS.textMuted,
     textAlign: "center",
   },
   header: {
@@ -355,22 +338,18 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: COLORS.primary,
     borderWidth: 2,
-    borderColor: COLORS.background,
   },
   headerTexts: {
     justifyContent: "center",
   },
   greetingSub: {
     fontSize: 14,
-    color: COLORS.textMuted,
     fontWeight: "500",
   },
   greetingMain: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.text,
   },
   creditContainer: {
     justifyContent: "center",
@@ -378,23 +357,19 @@ const styles = StyleSheet.create({
   creditBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.secondary,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
     gap: 6,
     borderWidth: 1,
-    borderColor: COLORS.primary,
   },
   creditText: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.text,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.white,
     borderRadius: 30,
     padding: 8,
     marginHorizontal: 20,
@@ -412,14 +387,12 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: COLORS.text,
     height: 40,
   },
   searchButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -433,28 +406,20 @@ const styles = StyleSheet.create({
   featureCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.white,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-  featureCardPrimary: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
   featureIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.secondary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -464,12 +429,6 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.text,
-  },
-  featureTextPrimary: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text,
   },
   sectionContainer: {
     marginBottom: 24,
@@ -484,11 +443,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.text,
   },
   viewAllText: {
     fontSize: 14,
-    color: COLORS.textMuted,
     fontWeight: "500",
   },
   trendingScroll: {
@@ -503,7 +460,6 @@ const styles = StyleSheet.create({
     height: 340,
     borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: COLORS.lightGray,
     position: "relative",
   },
   trendingImageContainer: {
@@ -517,7 +473,6 @@ const styles = StyleSheet.create({
   trendingImagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: COLORS.secondary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -532,7 +487,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: "rgba(0,0,0,0.1)", // Slight tint
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   ratingBadge: {
     alignSelf: "flex-end",
@@ -547,7 +502,6 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 12,
     fontWeight: "700",
-    color: COLORS.text,
   },
   trendingCardContent: {
     width: "100%",
@@ -555,7 +509,7 @@ const styles = StyleSheet.create({
   trendingName: {
     fontSize: 24,
     fontWeight: "700",
-    color: COLORS.white,
+    color: "#FFFFFF",
     marginBottom: 4,
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 1 },
@@ -580,13 +534,12 @@ const styles = StyleSheet.create({
   trendingPrice: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.primary,
   },
   trendingArrow: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.white,
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -596,16 +549,13 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 20,
     marginBottom: 12,
-    backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   tripIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -616,11 +566,9 @@ const styles = StyleSheet.create({
   tripDestination: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.text,
     marginBottom: 4,
   },
   tripDates: {
     fontSize: 14,
-    color: COLORS.textMuted,
   },
 });

@@ -5,21 +5,12 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// Planera Colors
-const COLORS = {
-    primary: "#FFE500",
-    background: "#FAF9F6",
-    text: "#1A1A1A",
-    textSecondary: "#6B6B6B",
-    textMuted: "#9B9B9B",
-    white: "#FFFFFF",
-    border: "#E8E6E1",
-};
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function TripsScreen() {
     const router = useRouter();
     const { isAuthenticated } = useConvexAuth();
+    const { colors } = useTheme();
     const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
     const deleteTrip = useMutation(api.trips.deleteTrip);
 
@@ -40,36 +31,36 @@ export default function TripsScreen() {
 
     if (trips === undefined) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+            <View style={[styles.center, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>My Trips</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>My Trips</Text>
                 <TouchableOpacity 
-                    style={styles.addButton}
+                    style={[styles.addButton, { backgroundColor: colors.primary }]}
                     onPress={() => router.push("/create-trip")}
                 >
-                    <Ionicons name="add" size={24} color={COLORS.text} />
+                    <Ionicons name="add" size={24} color={colors.text} />
                 </TouchableOpacity>
             </View>
 
             {trips.length === 0 ? (
                 <View style={styles.emptyState}>
-                    <View style={styles.emptyIconContainer}>
-                        <Ionicons name="airplane-outline" size={48} color={COLORS.primary} />
+                    <View style={[styles.emptyIconContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Ionicons name="airplane-outline" size={48} color={colors.primary} />
                     </View>
-                    <Text style={styles.emptyText}>No trips yet</Text>
-                    <Text style={styles.emptySubtext}>Tap the + button to plan your first adventure!</Text>
+                    <Text style={[styles.emptyText, { color: colors.text }]}>No trips yet</Text>
+                    <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>Tap the + button to plan your first adventure!</Text>
                     <TouchableOpacity 
-                        style={styles.createTripButton}
+                        style={[styles.createTripButton, { backgroundColor: colors.primary }]}
                         onPress={() => router.push("/create-trip")}
                     >
-                        <Text style={styles.createTripButtonText}>Create Your First Trip</Text>
+                        <Text style={[styles.createTripButtonText, { color: colors.text }]}>Create Your First Trip</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -79,36 +70,36 @@ export default function TripsScreen() {
                     contentContainerStyle={styles.listContent}
                     renderItem={({ item }) => (
                         <TouchableOpacity 
-                            style={styles.card} 
+                            style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} 
                             onPress={() => router.push(`/trip/${item._id}`)}
                             activeOpacity={0.9}
                         >
-                            <View style={styles.cardImagePlaceholder}>
-                                <Ionicons name="airplane" size={28} color={COLORS.white} />
+                            <View style={[styles.cardImagePlaceholder, { backgroundColor: colors.text }]}>
+                                <Ionicons name="airplane" size={28} color={colors.card} />
                             </View>
                             <View style={styles.cardContent}>
                                 <View style={styles.cardHeader}>
-                                    <Text style={styles.destination}>{item.destination}</Text>
+                                    <Text style={[styles.destination, { color: colors.text }]}>{item.destination}</Text>
                                     <StatusBadge status={item.status} />
                                 </View>
-                                <Text style={styles.dates}>
+                                <Text style={[styles.dates, { color: colors.textMuted }]}>
                                     {new Date(item.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(item.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </Text>
                                 <View style={styles.cardFooter}>
                                     <View style={styles.detailItem}>
-                                        <Ionicons name="people-outline" size={16} color={COLORS.textMuted} />
-                                        <Text style={styles.details}>{item.travelers}</Text>
+                                        <Ionicons name="people-outline" size={16} color={colors.textMuted} />
+                                        <Text style={[styles.details, { color: colors.textMuted }]}>{item.travelers}</Text>
                                     </View>
                                     <View style={styles.detailItem}>
-                                        <Ionicons name="wallet-outline" size={16} color={COLORS.textMuted} />
-                                        <Text style={styles.details}>{item.budget}</Text>
+                                        <Ionicons name="wallet-outline" size={16} color={colors.textMuted} />
+                                        <Text style={[styles.details, { color: colors.textMuted }]}>{item.budget}</Text>
                                     </View>
                                     <TouchableOpacity 
                                         onPress={() => handleDelete(item._id)}
                                         style={styles.deleteBtn}
                                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                     >
-                                        <Ionicons name="trash-outline" size={18} color={COLORS.textMuted} />
+                                        <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -130,7 +121,7 @@ function StatusBadge({ status }: { status: string }) {
             case "failed":
                 return { bg: "#FFEBEE", text: "#EF4444" };
             default:
-                return { bg: COLORS.border, text: COLORS.textMuted };
+                return { bg: "#E8E6E1", text: "#9B9B9B" };
         }
     };
     
@@ -146,13 +137,11 @@ function StatusBadge({ status }: { status: string }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     center: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: COLORS.background,
     },
     header: {
         paddingHorizontal: 20,
@@ -165,13 +154,11 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 28,
         fontWeight: "800",
-        color: COLORS.text,
     },
     addButton: {
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: COLORS.primary,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -180,17 +167,14 @@ const styles = StyleSheet.create({
         paddingBottom: 100,
     },
     card: {
-        backgroundColor: COLORS.white,
         borderRadius: 16,
         marginBottom: 12,
         flexDirection: "row",
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: COLORS.border,
     },
     cardImagePlaceholder: {
         width: 80,
-        backgroundColor: COLORS.text,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -207,13 +191,11 @@ const styles = StyleSheet.create({
     destination: {
         fontSize: 18,
         fontWeight: "700",
-        color: COLORS.text,
         flex: 1,
         marginRight: 8,
     },
     dates: {
         fontSize: 14,
-        color: COLORS.textMuted,
         marginBottom: 12,
     },
     cardFooter: {
@@ -228,7 +210,6 @@ const styles = StyleSheet.create({
     },
     details: {
         fontSize: 13,
-        color: COLORS.textSecondary,
         fontWeight: "600",
     },
     badge: {
@@ -255,34 +236,28 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: COLORS.white,
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: COLORS.border,
     },
     emptyText: {
         fontSize: 22,
         fontWeight: "800",
-        color: COLORS.text,
         marginBottom: 8,
     },
     emptySubtext: {
         fontSize: 16,
-        color: COLORS.textMuted,
         textAlign: "center",
         marginBottom: 32,
         lineHeight: 24,
     },
     createTripButton: {
-        backgroundColor: COLORS.primary,
         paddingHorizontal: 28,
         paddingVertical: 16,
         borderRadius: 14,
     },
     createTripButtonText: {
-        color: COLORS.text,
         fontSize: 17,
         fontWeight: "700",
     },

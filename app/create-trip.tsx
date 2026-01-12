@@ -11,6 +11,7 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AIRPORTS } from "@/lib/airports";
 import { INTERESTS } from "@/lib/data";
+import { useTheme } from "@/lib/ThemeContext";
 
 import logoImage from "@/assets/images/appicon-1024x1024-01-1vb1vx.png";
 
@@ -69,6 +70,7 @@ const DESTINATIONS = [
 export default function CreateTripScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { colors } = useTheme();
     const prefilledDestination = params.prefilledDestination as string | undefined;
     
     const createTrip = useMutation(api.trips.create);

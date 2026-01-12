@@ -1,30 +1,21 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-
-// Planera Colors
-const COLORS = {
-    primary: "#FFE500",
-    background: "#2C2C2E",
-    backgroundLight: "#FAF9F6",
-    text: "#1A1A1A",
-    textLight: "#FFFFFF",
-    textMuted: "#8E8E93",
-    inactive: "#8E8E93",
-};
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function TabLayout() {
     const router = useRouter();
+    const { colors } = useTheme();
     
     return (
         <Tabs
             screenOptions={{
                 headerShown: false,
-                tabBarActiveTintColor: COLORS.primary,
-                tabBarInactiveTintColor: COLORS.inactive,
+                tabBarActiveTintColor: colors.primary,
+                tabBarInactiveTintColor: colors.inactive,
                 tabBarStyle: {
-                    backgroundColor: COLORS.background,
+                    backgroundColor: colors.tabBar,
                     borderTopWidth: 0,
                     paddingTop: 8,
                     paddingBottom: 24,
@@ -42,6 +33,7 @@ export default function TabLayout() {
                     fontSize: 11,
                     fontWeight: "600",
                     marginTop: 4,
+                    color: colors.textMuted,
                 },
                 tabBarItemStyle: {
                     paddingTop: 4,
@@ -53,8 +45,8 @@ export default function TabLayout() {
                 options={{
                     title: "Home",
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-                            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={focused ? COLORS.background : color} />
+                        <View style={[styles.iconContainer, focused && { backgroundColor: colors.primary }]}>
+                            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={focused ? colors.tabBar : color} />
                         </View>
                     ),
                 }}
@@ -64,8 +56,8 @@ export default function TabLayout() {
                 options={{
                     title: "Trips",
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-                            <Ionicons name={focused ? "map" : "map-outline"} size={24} color={focused ? COLORS.background : color} />
+                        <View style={[styles.iconContainer, focused && { backgroundColor: colors.primary }]}>
+                            <Ionicons name={focused ? "map" : "map-outline"} size={24} color={focused ? colors.tabBar : color} />
                         </View>
                     ),
                 }}
@@ -75,8 +67,8 @@ export default function TabLayout() {
                 options={{
                     title: "",
                     tabBarIcon: ({ focused }) => (
-                        <View style={styles.createButton}>
-                            <Ionicons name="add" size={28} color={COLORS.text} />
+                        <View style={[styles.createButton, { backgroundColor: colors.primary }]}>
+                            <Ionicons name="add" size={28} color={colors.text} />
                         </View>
                     ),
                 }}
@@ -92,8 +84,8 @@ export default function TabLayout() {
                 options={{
                     title: "Insights",
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-                            <Ionicons name={focused ? "bulb" : "bulb-outline"} size={24} color={focused ? COLORS.background : color} />
+                        <View style={[styles.iconContainer, focused && { backgroundColor: colors.primary }]}>
+                            <Ionicons name={focused ? "bulb" : "bulb-outline"} size={24} color={focused ? colors.tabBar : color} />
                         </View>
                     ),
                 }}
@@ -103,8 +95,8 @@ export default function TabLayout() {
                 options={{
                     title: "Profile",
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-                            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={focused ? COLORS.background : color} />
+                        <View style={[styles.iconContainer, focused && { backgroundColor: colors.primary }]}>
+                            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={focused ? colors.tabBar : color} />
                         </View>
                     ),
                 }}
@@ -121,18 +113,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 20,
     },
-    activeIconContainer: {
-        backgroundColor: COLORS.primary,
-    },
     createButton: {
-        backgroundColor: COLORS.primary,
         width: 56,
         height: 56,
         borderRadius: 28,
         justifyContent: "center",
         alignItems: "center",
         marginTop: -20,
-        shadowColor: COLORS.primary,
+        shadowColor: "#FFE500",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 8,

@@ -10,6 +10,7 @@ import { BlurView } from "expo-blur";
 import { useDestinationImage } from "@/lib/useImages";
 import ActivityCard from "@/components/ActivityCard";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
+import { useTheme } from "@/lib/ThemeContext";
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Calendar } from 'react-native-calendars';
@@ -235,6 +236,7 @@ const getAirportName = (codeOrCity: string | undefined): string => {
 export default function TripDetails() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const { colors, isDarkMode } = useTheme();
     const trip = useQuery(api.trips.get, { tripId: id as Id<"trips"> });
     const updateTrip = useMutation(api.trips.update);
     const regenerateTrip = useMutation(api.trips.regenerate);
@@ -389,44 +391,44 @@ export default function TripDetails() {
 
     if (trip === undefined) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#FFE500" />
+            <View style={[styles.center, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         );
     }
 
     if (!trip) {
         return (
-            <View style={styles.center}>
-                <Text>Trip not found</Text>
+            <View style={[styles.center, { backgroundColor: colors.background }]}>
+                <Text style={{ color: colors.text }}>Trip not found</Text>
             </View>
         );
     }
 
     if (trip.status === "generating") {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#FFE500" />
-                <Text style={styles.generatingText}>Generating your trip...</Text>
-                <Text style={styles.generatingSubtext}>{trip.destination}</Text>
+            <View style={[styles.center, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.generatingText, { color: colors.text }]}>Generating your trip...</Text>
+                <Text style={[styles.generatingSubtext, { color: colors.textSecondary }]}>{trip.destination}</Text>
             </View>
         );
     }
 
     if (trip.status === "failed") {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle" size={64} color="#FF3B30" />
-                    <Text style={styles.errorTitle}>Failed to Generate Trip</Text>
-                    <Text style={styles.errorMessage}>
+                    <Ionicons name="alert-circle" size={64} color={colors.error} />
+                    <Text style={[styles.errorTitle, { color: colors.text }]}>Failed to Generate Trip</Text>
+                    <Text style={[styles.errorMessage, { color: colors.textSecondary }]}>
                         We encountered an error while generating your itinerary. Please try again.
                     </Text>
                     <TouchableOpacity 
-                        style={styles.errorButton}
+                        style={[styles.errorButton, { backgroundColor: colors.primary }]}
                         onPress={() => router.back()}
                     >
-                        <Text style={styles.errorButtonText}>Go Back</Text>
+                        <Text style={[styles.errorButtonText, { color: colors.text }]}>Go Back</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -885,22 +887,22 @@ export default function TripDetails() {
     const isPremium = trip.hasFullAccess ?? trip.userPlan === "premium";
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
-            <SafeAreaView edges={['top']} style={styles.headerContainer}>
+            <SafeAreaView edges={['top']} style={[styles.headerContainer, { backgroundColor: colors.background }]}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                        <Ionicons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <View style={styles.headerTitleContainer}>
-                        <Text style={styles.headerTitle}>{trip.destination} Escape</Text>
-                        <View style={styles.aiBadge}>
+                        <Text style={[styles.headerTitle, { color: colors.text }]}>{trip.destination} Escape</Text>
+                        <View style={[styles.aiBadge, { backgroundColor: isDarkMode ? '#2D2A1A' : '#1C1C1E' }]}>
                             <Ionicons name="sparkles" size={12} color="#F9F506" />
                             <Text style={styles.aiBadgeText}>AI Generated</Text>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="ellipsis-horizontal" size={24} color="#1A1A1A" />
+                        <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>

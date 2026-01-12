@@ -6,6 +6,7 @@ import { useConvexAuth } from 'convex/react';
 // Planera Colors
 export const LIGHT_COLORS = {
     primary: "#FFE500",
+    secondary: "#FFF8E1",
     background: "#FAF9F6",
     backgroundSecondary: "#FFFFFF",
     text: "#1A1A1A",
@@ -14,12 +15,17 @@ export const LIGHT_COLORS = {
     white: "#FFFFFF",
     border: "#E8E6E1",
     error: "#EF4444",
+    card: "#FFFFFF",
     cardBackground: "#FFFFFF",
     inputBackground: "#FFFFFF",
+    lightGray: "#F2F2F7",
+    tabBar: "#2C2C2E",
+    inactive: "#8E8E93",
 };
 
 export const DARK_COLORS = {
     primary: "#FFE500",
+    secondary: "#2D2A1A",
     background: "#0D1117",
     backgroundSecondary: "#161B22",
     text: "#F0F6FC",
@@ -28,8 +34,12 @@ export const DARK_COLORS = {
     white: "#FFFFFF",
     border: "#30363D",
     error: "#F85149",
+    card: "#161B22",
     cardBackground: "#161B22",
     inputBackground: "#21262D",
+    lightGray: "#21262D",
+    tabBar: "#0D1117",
+    inactive: "#6E7681",
 };
 
 interface ThemeContextType {
