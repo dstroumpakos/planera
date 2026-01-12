@@ -164,14 +164,19 @@ export default function HomeScreen() {
         {/* Search Bar */}
         <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
           <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
+
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
             placeholder="Where do you want to go?"
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => router.push("/create-trip")}
           />
-          <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.primary }]}>
+          <TouchableOpacity 
+            style={[styles.searchButton, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/create-trip")}
+          >
             <Ionicons name="arrow-forward" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
