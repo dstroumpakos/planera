@@ -102,18 +102,27 @@ export function transformOfferToFlightOption(offer: any) {
 
   return {
     id: offer.id,
-    airline: outbound?.segments?.[0]?.operating_carrier?.iata_code || "Unknown",
-    departure: outbound?.departure_time || "",
-    arrival: outbound?.arrival_time || "",
-    duration: outbound?.duration || "",
-    stops: (outbound?.segments?.length || 1) - 1,
-    price: parseInt(offer.total_amount || "0"),
+    pricePerPerson: Math.round(parseInt(offer.total_amount || "0") / 100), // Convert cents to euros
     currency: offer.total_currency || "EUR",
+    outbound: {
+      airline: outbound?.segments?.[0]?.operating_carrier?.iata_code || "Unknown",
+      departure: outbound?.departure_time || "",
+      arrival: outbound?.arrival_time || "",
+      duration: outbound?.duration || "",
+      stops: (outbound?.segments?.length || 1) - 1,
+    },
+    return: {
+      airline: return_slice?.segments?.[0]?.operating_carrier?.iata_code || "Unknown",
+      departure: return_slice?.departure_time || "",
+      arrival: return_slice?.arrival_time || "",
+      duration: return_slice?.duration || "",
+      stops: (return_slice?.segments?.length || 1) - 1,
+    },
+    luggage: "1 checked bag included",
+    checkedBaggageIncluded: true,
+    checkedBaggagePrice: 0,
+    arrivalAirport: return_slice?.origin_airport_iata_code || "",
     bookingUrl: offer.owner?.website_url || "",
-    returnDeparture: return_slice?.departure_time || "",
-    returnArrival: return_slice?.arrival_time || "",
-    returnDuration: return_slice?.duration || "",
-    returnStops: (return_slice?.segments?.length || 1) - 1,
   };
 }
 
