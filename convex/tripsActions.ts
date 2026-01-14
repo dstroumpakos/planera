@@ -147,8 +147,8 @@ export const generate = internalAction({
                                 originCode,
                                 trip.destination,
                                 destCode,
-                                departureDate,
-                                returnDate,
+                                new Date(trip.startDate).toISOString().split('T')[0],
+                                new Date(trip.endDate).toISOString().split('T')[0],
                                 trip.travelers,
                                 preferredFlightTime || "any"
                             );
