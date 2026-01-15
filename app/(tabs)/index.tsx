@@ -240,9 +240,7 @@ export default function HomeScreen() {
                     <ImageWithAttribution
                       imageUrl={destinationImages[destination.destination].url}
                       photographerName={destinationImages[destination.destination].photographer}
-                      unsplashUrl={destinationImages[destination.destination].attribution}
-                      style={styles.trendingImageContainer}
-                      imageStyle={styles.trendingImage}
+                      photographerUrl={destinationImages[destination.destination].photographerUrl}
                     />
                   ) : (
                     <View style={[styles.trendingImagePlaceholder, { backgroundColor: colors.secondary }]}>
