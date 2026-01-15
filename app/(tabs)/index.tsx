@@ -5,79 +5,68 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
-  Linking,
+  SafeAreaView,
+  TextInput,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useConvexAuth } from "convex/react";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/lib/ThemeContext";
+import { useConvexAuth } from "convex/react";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
+import { useTheme } from "@/lib/ThemeContext";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const { colors } = useTheme();
-
-  const [greeting, setGreeting] = useState("");
-  const [userName, setUserName] = useState("");
   const [destinationImages, setDestinationImages] = useState<Record<string, any>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
-  const settings = useQuery(api.users.getSettings);
-  const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
+  const userSettings = useQuery(api.users.getSettings);
+  const userPlan = useQuery(api.users.getPlan);
   const trips = useQuery(api.trips.list);
-  const getDestinationImages = useAction(api.images.getDestinationImages);
+  const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
+  const getImages = useAction(api.images.getDestinationImages);
 
-  // Set greeting based on time of day
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) {
-      setGreeting("Good morning");
-    } else if (hour < 18) {
-      setGreeting("Good afternoon");
-    } else {
-      setGreeting("Good evening");
-    }
-  }, []);
+  const getProfileImageUrl = useQuery(
+    userSettings?.profilePicture 
+      ? api.users.getProfileImageUrl 
+      : "skip",
+    userSettings?.profilePicture 
+      ? { storageId: userSettings.profilePicture } 
+      : "skip"
+  );
 
-  // Extract user name from settings
-  useEffect(() => {
-    if (settings?.name) {
-      setUserName(settings.name);
-    }
-  }, [settings]);
-
-  // Fetch destination images
-  useEffect(() => {
-    const fetchImages = async () => {
-      if (!trendingDestinations || trendingDestinations.length === 0) return;
-
-      const images: Record<string, any> = {};
-      for (const destination of trendingDestinations) {
-        try {
-          const result = await getDestinationImages({
-            destination: destination.destination,
-          });
-          if (result && result.length > 0) {
-            images[destination.destination] = {
-              url: result[0].url,
-              photographer: result[0].photographer,
-              photographerUrl: result[0].photographerUrl,
-              downloadLocation: result[0].downloadLocation,
-            };
-          }
-        } catch (error) {
-          console.error(`Failed to fetch image for ${destination.destination}:`, error);
+  const fetchImages = useCallback(async () => {
+    const imageMap: Record<string, any> = {};
+    for (const destination of trendingDestinations) {
+      try {
+        const images = await getImages({ destination: destination.destination });
+        if (images && images.length > 0) {
+          imageMap[destination.destination] = images[0];
         }
+      } catch (error) {
+        console.error(`Failed to fetch images for ${destination.destination}:`, error);
       }
-      setDestinationImages(images);
-    };
+    }
+    setDestinationImages(imageMap);
+  }, [trendingDestinations]);
 
-    fetchImages();
-  }, [trendingDestinations, getDestinationImages]);
+  useEffect(() => {
+    if (trendingDestinations && trendingDestinations.length > 0) {
+      fetchImages();
+    }
+  }, [trendingDestinations]);
+
+  useEffect(() => {
+    if (getProfileImageUrl) {
+      setProfileImageUrl(getProfileImageUrl);
+    }
+  }, [getProfileImageUrl]);
 
   if (authLoading) {
     return (
@@ -93,96 +82,160 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.authContainer}>
-          <Text style={[styles.authText, { color: colors.text }]}>
-            Please log in to view your trips
-          </Text>
+          <Text style={[styles.authText, { color: colors.textMuted }]}>Please log in to see your trips</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const userName = userSettings?.name?.split(" ")[0] || "Traveler";
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    let greeting = "";
+    
+    if (hour < 12) {
+      greeting = "Good Morning";
+    } else if (hour < 18) {
+      greeting = "Good Afternoon";
+    } else if (hour < 21) {
+      greeting = "Good Evening";
+    } else {
+      greeting = "Good Night";
+    }
+    
+    return `${greeting}, ${userName}`;
+  };
+
+  const getCreditDisplay = () => {
+    if (!userPlan) return null;
+    
+    if (userPlan.isSubscriptionActive) {
+      return (
+        <View style={[styles.creditBadge, { backgroundColor: colors.secondary, borderColor: colors.primary }]}>
+          <Ionicons name="infinite" size={16} color={colors.text} />
+          <Text style={[styles.creditText, { color: colors.text }]}>Unlimited</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.creditBadge, { backgroundColor: colors.secondary, borderColor: colors.primary }]}>
+        <Ionicons name="ticket-outline" size={16} color={colors.text} />
+        <Text style={[styles.creditText, { color: colors.text }]}>{userPlan.tripCredits} Credits</Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
+      <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={[styles.greeting, { color: colors.textMuted }]}>
-              {greeting}
-            </Text>
-            <Text style={[styles.userName, { color: colors.text }]}>
-              {userName || "Traveler"}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
-            <View
-              style={[
-                styles.creditBadge,
-                { backgroundColor: colors.primary },
-              ]}
-            >
-              <Ionicons name="airplane" size={16} color={colors.text} />
-              <Text style={[styles.creditText, { color: colors.text }]}>
-                {settings?.tripCredits === -1 ? "∞" : settings?.tripCredits || 0}
-              </Text>
+            <View style={styles.avatarContainer}>
+              {profileImageUrl ? (
+                <Image
+                  source={{ uri: profileImageUrl }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Ionicons name="person-circle" size={48} color={colors.textMuted} />
+              )}
+              <View style={[styles.onlineBadge, { backgroundColor: colors.primary, borderColor: colors.background }]} />
             </View>
+            <View style={styles.headerTexts}>
+              <Text style={[styles.greetingSub, { color: colors.textMuted }]}>{getGreeting()}</Text>
+              <Text style={[styles.greetingMain, { color: colors.text }]}>Ready for your next journey?</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.creditContainer}
+            onPress={() => router.push("/subscription")}
+          >
+            {getCreditDisplay()}
           </TouchableOpacity>
         </View>
 
-        {/* Features Section */}
-        <View style={styles.sectionContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.featuresScroll}
-            contentContainerStyle={styles.featuresContent}
-          >
-            <TouchableOpacity
-              style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => router.push("/create-trip")}
-            >
-              <View style={[styles.featureIcon, { backgroundColor: colors.primary }]}>
-                <Ionicons name="sparkles" size={20} color={colors.text} />
-              </View>
-              <Text style={[styles.featureText, { color: colors.text }]}>
-                Create Trip
-              </Text>
-            </TouchableOpacity>
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+          <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
 
-            <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.featureIcon, { backgroundColor: colors.secondary }]}>
-                <Ionicons name="map-outline" size={20} color={colors.text} />
-              </View>
-              <Text style={[styles.featureText, { color: colors.text }]}>Multi-City Route</Text>
-            </TouchableOpacity>
-          </ScrollView>
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Where do you want to go?"
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => router.push("/create-trip")}
+          />
+          <TouchableOpacity 
+            style={[styles.searchButton, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/create-trip")}
+          >
+            <Ionicons name="arrow-forward" size={20} color={colors.text} />
+          </TouchableOpacity>
         </View>
+
+        {/* Feature Cards */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.featuresScroll}
+          contentContainerStyle={styles.featuresContent}
+        >
+          <TouchableOpacity 
+            style={[styles.featureCard, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+            onPress={() => router.push("/create-trip")}
+          >
+            <View style={[styles.featureIcon, styles.featureIconPrimary]}>
+              <Ionicons name="sparkles" size={20} color="#000000" />
+            </View>
+            <Text style={[styles.featureText, { color: "#000000" }]}>AI Trip Planner</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.featureIcon, { backgroundColor: colors.secondary }]}>
+              <Ionicons name="map-outline" size={20} color={colors.text} />
+            </View>
+            <Text style={[styles.featureText, { color: colors.text }]}>Multi-City Route</Text>
+          </TouchableOpacity>
+        </ScrollView>
 
         {/* Trending Destinations Section */}
         {trendingDestinations && trendingDestinations.length > 0 && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Trending Now
-              </Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending Now</Text>
               <TouchableOpacity onPress={() => {}}>
-                <Text style={[styles.viewAllText, { color: colors.textMuted }]}>
-                  View All
-                </Text>
+                <Text style={[styles.viewAllText, { color: colors.textMuted }]}>View All</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView
-              horizontal
+            <ScrollView 
+              horizontal 
               showsHorizontalScrollIndicator={false}
               style={styles.trendingScroll}
               contentContainerStyle={styles.trendingContent}
             >
               {trendingDestinations.map((destination: any, index: number) => (
-                <View key={index} style={styles.trendingCard}>
+                <TouchableOpacity 
+                  key={index}
+                  style={[styles.trendingCard, { backgroundColor: colors.lightGray }]}
+                  onPress={() => router.push({
+                    pathname: "/destination-preview",
+                    params: {
+                      destination: destination.destination,
+                      avgBudget: destination.avgBudget.toString(),
+                      avgRating: destination.avgRating.toString(),
+                      count: destination.count.toString(),
+                    }
+                  })}
+                  activeOpacity={0.9}
+                >
                   {destinationImages[destination.destination] ? (
                     <ImageWithAttribution
                       imageUrl={destinationImages[destination.destination].url}
@@ -194,64 +247,28 @@ export default function HomeScreen() {
                       <Text style={styles.trendingEmoji}>✈️</Text>
                     </View>
                   )}
-
-                  <TouchableOpacity
-                    style={styles.trendingOverlay}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/destination-preview",
-                        params: {
-                          destination: destination.destination,
-                          avgBudget: destination.avgBudget.toString(),
-                          avgRating: destination.avgRating.toString(),
-                          count: destination.count.toString(),
-                        },
-                      })
-                    }
-                    activeOpacity={0.9}
-                    pointerEvents="box-none"
-                  >
-                    <View style={styles.ratingBadge} pointerEvents="none">
+                  
+                  <View style={styles.trendingOverlay}>
+                    <View style={styles.ratingBadge}>
                       <Ionicons name="star" size={12} color={colors.primary} />
-                      <Text style={[styles.ratingText, { color: "#000000" }]}>
-                        {destination.avgRating.toFixed(1)}
-                      </Text>
+                      <Text style={[styles.ratingText, { color: "#000000" }]}>{destination.avgRating.toFixed(1)}</Text>
                     </View>
-
-                    <View style={styles.trendingCardContent} pointerEvents="none">
-                      <Text style={styles.trendingName}>
-                        {destination.destination}
-                      </Text>
+                    
+                    <View style={styles.trendingCardContent}>
+                      <Text style={styles.trendingName}>{destination.destination}</Text>
                       <View style={styles.trendingLocationRow}>
-                        <Ionicons
-                          name="location-sharp"
-                          size={12}
-                          color="#FFFFFF"
-                        />
-                        <Text style={styles.trendingCountry}>
-                          Popular Destination
-                        </Text>
+                        <Ionicons name="location-sharp" size={12} color="#FFFFFF" />
+                        <Text style={styles.trendingCountry}>Popular Destination</Text>
                       </View>
                       <View style={styles.trendingFooter}>
-                        <Text
-                          style={[
-                            styles.trendingPrice,
-                            { color: colors.primary },
-                          ]}
-                        >
-                          €{Math.round(destination.avgBudget)}
-                        </Text>
+                        <Text style={[styles.trendingPrice, { color: colors.primary }]}>€{Math.round(destination.avgBudget)}</Text>
                         <View style={styles.trendingArrow}>
-                          <Ionicons
-                            name="arrow-forward"
-                            size={16}
-                            color="#000000"
-                          />
+                          <Ionicons name="arrow-forward" size={16} color="#000000" />
                         </View>
                       </View>
                     </View>
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
@@ -261,58 +278,28 @@ export default function HomeScreen() {
         {trips && trips.length > 0 && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                My Trips
-              </Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>My Trips</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/trips")}>
-                <Text style={[styles.viewAllText, { color: colors.textMuted }]}>
-                  View All
-                </Text>
+                <Text style={[styles.viewAllText, { color: colors.textMuted }]}>View All</Text>
               </TouchableOpacity>
             </View>
 
             {trips.slice(0, 2).map((trip: any) => (
-              <TouchableOpacity
+              <TouchableOpacity 
                 key={trip._id}
-                style={[
-                  styles.tripCard,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
+                style={[styles.tripCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => router.push(`/trip/${trip._id}`)}
               >
-                <View
-                  style={[
-                    styles.tripIconContainer,
-                    { backgroundColor: colors.primary },
-                  ]}
-                >
+                <View style={[styles.tripIconContainer, { backgroundColor: colors.primary }]}>
                   <Ionicons name="airplane" size={24} color={colors.text} />
                 </View>
                 <View style={styles.tripInfo}>
-                  <Text
-                    style={[styles.tripDestination, { color: colors.text }]}
-                  >
-                    {trip.destination}
-                  </Text>
-                  <Text
-                    style={[styles.tripDates, { color: colors.textMuted }]}
-                  >
-                    {new Date(trip.startDate).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                    })}{" "}
-                    -{" "}
-                    {new Date(trip.endDate).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                    })}
+                  <Text style={[styles.tripDestination, { color: colors.text }]}>{trip.destination}</Text>
+                  <Text style={[styles.tripDates, { color: colors.textMuted }]}>
+                    {new Date(trip.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(trip.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </Text>
                 </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={colors.textMuted}
-                />
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
@@ -359,23 +346,113 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
-  greeting: {
-    fontSize: 14,
-    marginBottom: 4,
+  avatarContainer: {
+    position: "relative",
+    width: 48,
+    height: 48,
+    marginBottom: 12,
   },
-  userName: {
-    fontSize: 24,
-    fontWeight: "600",
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  onlineBadge: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+  },
+  headerTexts: {
+    justifyContent: "center",
+  },
+  greetingSub: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  greetingMain: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  creditContainer: {
+    justifyContent: "center",
   },
   creditBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
     paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 20,
     gap: 6,
+    borderWidth: 1,
   },
   creditText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 30,
+    padding: 8,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginLeft: 12,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    height: 40,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  featuresScroll: {
+    marginBottom: 32,
+  },
+  featuresContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  featureCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    gap: 8,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  featureIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  featureIconPrimary: {
+    backgroundColor: "rgba(255,255,255,0.4)",
+  },
+  featureText: {
     fontSize: 14,
     fontWeight: "600",
   },
@@ -387,54 +464,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
   },
   viewAllText: {
     fontSize: 14,
-  },
-  featuresScroll: {
-    paddingHorizontal: 20,
-  },
-  featuresContent: {
-    gap: 12,
-  },
-  featureCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-    minWidth: 160,
-  },
-  featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  featureText: {
-    fontSize: 14,
     fontWeight: "500",
-    flex: 1,
   },
   trendingScroll: {
-    paddingHorizontal: 20,
+    paddingLeft: 20,
   },
   trendingContent: {
-    gap: 12,
+    paddingRight: 20,
+    gap: 16,
   },
   trendingCard: {
-    width: 280,
-    height: 200,
-    borderRadius: 16,
+    width: 260,
+    height: 340,
+    borderRadius: 24,
     overflow: "hidden",
+    position: "relative",
   },
   trendingImageContainer: {
     width: "100%",
@@ -451,53 +503,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   trendingEmoji: {
-    fontSize: 48,
+    fontSize: 64,
   },
   trendingOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: "70%",
+    bottom: 0,
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    padding: 16,
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   ratingBadge: {
+    alignSelf: "flex-end",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: "flex-start",
     gap: 4,
   },
   ratingText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   trendingCardContent: {
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 8,
+    width: "100%",
   },
   trendingName: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 24,
+    fontWeight: "700",
     color: "#FFFFFF",
     marginBottom: 4,
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   trendingLocationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   trendingCountry: {
-    fontSize: 12,
-    color: "#FFFFFF",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: "500",
   },
   trendingFooter: {
     flexDirection: "row",
@@ -505,13 +558,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   trendingPrice: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
   },
   trendingArrow: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
@@ -519,30 +572,29 @@ const styles = StyleSheet.create({
   tripCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 16,
     marginHorizontal: 20,
     marginBottom: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    gap: 12,
   },
   tripIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 16,
   },
   tripInfo: {
     flex: 1,
   },
   tripDestination: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
   },
   tripDates: {
-    fontSize: 12,
+    fontSize: 14,
   },
 });
