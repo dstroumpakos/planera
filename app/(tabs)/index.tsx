@@ -209,15 +209,16 @@ export default function HomeScreen() {
                       })
                     }
                     activeOpacity={0.9}
+                    pointerEvents="box-none"
                   >
-                    <View style={styles.ratingBadge}>
+                    <View style={styles.ratingBadge} pointerEvents="none">
                       <Ionicons name="star" size={12} color={colors.primary} />
                       <Text style={[styles.ratingText, { color: "#000000" }]}>
                         {destination.avgRating.toFixed(1)}
                       </Text>
                     </View>
 
-                    <View style={styles.trendingCardContent}>
+                    <View style={styles.trendingCardContent} pointerEvents="none">
                       <Text style={styles.trendingName}>
                         {destination.destination}
                       </Text>
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
+    height: "70%",
     justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 12,
