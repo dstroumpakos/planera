@@ -16,7 +16,7 @@ export function ImageWithAttribution({
   downloadLocation,
   onDownload,
 }: ImageWithAttributionProps) {
-  const handlePhotographerPress = async () => {
+  const handleAttributionPress = async () => {
     try {
       await Linking.openURL(photographerUrl);
       if (onDownload && downloadLocation) {
@@ -27,21 +27,13 @@ export function ImageWithAttribution({
     }
   };
 
-  const handleUnsplashPress = async () => {
-    try {
-      await Linking.openURL("https://unsplash.com");
-    } catch (error) {
-      console.error("Failed to open Unsplash:", error);
-    }
-  };
-
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents="box-none">
       <Image source={{ uri: imageUrl }} style={styles.image} />
       <TouchableOpacity 
-        style={styles.attributionOverlay} 
-        activeOpacity={1}
-        onPress={handlePhotographerPress}
+        style={styles.attributionOverlay}
+        onPress={handleAttributionPress}
+        activeOpacity={0.7}
       >
         <View style={styles.attributionContent}>
           <Text style={styles.attributionText}>Photo by </Text>

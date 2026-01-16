@@ -235,6 +235,7 @@ export default function HomeScreen() {
                     }
                   })}
                   activeOpacity={0.9}
+                  pointerEvents="box-none"
                 >
                   {destinationImages[destination.destination] ? (
                     <ImageWithAttribution

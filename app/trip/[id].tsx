@@ -907,7 +907,7 @@ export default function TripDetails() {
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Map Preview */}
-                <View style={styles.mapPreviewContainer}>
+                <View style={styles.mapPreviewContainer} pointerEvents="box-none">
                     {destinationImage ? (
                         <ImageWithAttribution
                             imageUrl={destinationImage.url}
@@ -1475,7 +1475,7 @@ export default function TripDetails() {
                                                 "people"
                                             } 
                                             size={20} 
-                                            color={editForm.interests.includes(interest) ? "#1A1A1A" : "#1A1A1A"}
+                                            color={editForm.interests.includes(interest) ? "#1A1A1A" : "#546E7A"}
                                         />
                                         <Text style={[
                                             styles.interestTagText,
