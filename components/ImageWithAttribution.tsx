@@ -38,20 +38,20 @@ export function ImageWithAttribution({
   return (
     <View style={styles.container}>
       <Image source={{ uri: imageUrl }} style={styles.image} />
-      <View style={styles.attributionOverlay} pointerEvents="box-none">
-        <View style={styles.attributionContent} pointerEvents="auto">
+      <TouchableOpacity 
+        style={styles.attributionOverlay} 
+        activeOpacity={1}
+        onPress={handlePhotographerPress}
+      >
+        <View style={styles.attributionContent}>
           <Text style={styles.attributionText}>Photo by </Text>
-          <TouchableOpacity onPress={handlePhotographerPress}>
-            <Text style={[styles.attributionText, styles.link]}>
-              {photographerName}
-            </Text>
-          </TouchableOpacity>
+          <Text style={[styles.attributionText, styles.link]}>
+            {photographerName}
+          </Text>
           <Text style={styles.attributionText}> on </Text>
-          <TouchableOpacity onPress={handleUnsplashPress}>
-            <Text style={[styles.attributionText, styles.link]}>Unsplash</Text>
-          </TouchableOpacity>
+          <Text style={[styles.attributionText, styles.link]}>Unsplash</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
