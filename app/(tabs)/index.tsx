@@ -569,6 +569,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     marginBottom: 4,
+    color: "#FFFFFF",
   },
   trendingArrow: {
     width: 40,
