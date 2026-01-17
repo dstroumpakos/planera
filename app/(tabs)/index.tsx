@@ -264,7 +264,7 @@ export default function HomeScreen() {
                       <View style={styles.trendingFooter}>
                         <View>
                           <Text style={[styles.trendingPriceLabel, { color: colors.textMuted }]}>Total Budget</Text>
-                          <Text style={[styles.trendingPrice, { color: colors.primary }]}>€{Math.round(destination.avgBudget)}</Text>
+                          <Text style={[styles.trendingPrice, { color: "#FFFFFF" }]}>€{Math.round(destination.avgBudget)}</Text>
                         </View>
                         <View style={styles.trendingArrow}>
                           <Ionicons name="arrow-forward" size={16} color="#000000" />
@@ -564,6 +564,7 @@ const styles = StyleSheet.create({
   trendingPrice: {
     fontSize: 20,
     fontWeight: "700",
+    color: "#FFFFFF",
   },
   trendingPriceLabel: {
     fontSize: 12,
