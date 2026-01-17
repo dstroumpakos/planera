@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
     height: "100%",
-    position: "relative",
+    position: "absolute",
   },
   image: {
     width: "100%",
