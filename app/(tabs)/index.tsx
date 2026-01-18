@@ -564,6 +564,7 @@ const styles = StyleSheet.create({
   trendingPrice: {
     fontSize: 20,
     fontWeight: "700",
+    color: "#FFFFFF",
   },
   trendingPriceLabel: {
     fontSize: 12,
