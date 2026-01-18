@@ -26,18 +26,17 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
-  const userSettings = useQuery(api.users.getSettings);
-  const userPlan = useQuery(api.users.getPlan);
-  const trips = useQuery(api.trips.list);
+  const userSettings = useQuery(api.users.getSettings, isAuthenticated ? {} : "skip");
+  const userPlan = useQuery(api.users.getPlan, isAuthenticated ? {} : "skip");
+  const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
   const getImages = useAction(api.images.getDestinationImages);
 
-  const getProfileImageUrl = useQuery(
-    api.users.getProfileImageUrl,
-    userSettings?.profilePicture 
-      ? { storageId: userSettings.profilePicture } 
-      : "skip"
-  );
+  useEffect(() => {
+    if (userSettings?.profilePictureUrl) {
+      setProfileImageUrl(userSettings.profilePictureUrl);
+    }
+  }, [userSettings?.profilePictureUrl]);
 
   const fetchImages = useCallback(async () => {
     const imageMap: Record<string, any> = {};
@@ -60,12 +59,6 @@ export default function HomeScreen() {
       fetchImages();
     }
   }, [trendingDestinations]);
-
-  useEffect(() => {
-    if (getProfileImageUrl) {
-      setProfileImageUrl(getProfileImageUrl);
-    }
-  }, [getProfileImageUrl]);
 
   if (authLoading) {
     return (
