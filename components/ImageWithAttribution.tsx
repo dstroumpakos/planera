@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Linking, Image } from "react-
 interface ImageWithAttributionProps {
   imageUrl: string;
   photographerName: string;
-  photographerUrl: string;
+  photographerUrl?: string;
   downloadLocation?: string;
   onDownload?: () => void;
 }
@@ -18,7 +18,9 @@ export function ImageWithAttribution({
 }: ImageWithAttributionProps) {
   const handleAttributionPress = async () => {
     try {
-      await Linking.openURL(photographerUrl);
+      if (photographerUrl) {
+        await Linking.openURL(photographerUrl);
+      }
       if (onDownload && downloadLocation) {
         onDownload();
       }

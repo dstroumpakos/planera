@@ -33,9 +33,7 @@ export default function HomeScreen() {
   const getImages = useAction(api.images.getDestinationImages);
 
   const getProfileImageUrl = useQuery(
-    userSettings?.profilePicture 
-      ? api.users.getProfileImageUrl 
-      : "skip",
+    api.users.getProfileImageUrl,
     userSettings?.profilePicture 
       ? { storageId: userSettings.profilePicture } 
       : "skip"
@@ -43,6 +41,7 @@ export default function HomeScreen() {
 
   const fetchImages = useCallback(async () => {
     const imageMap: Record<string, any> = {};
+    if (!trendingDestinations) return imageMap;
     for (const destination of trendingDestinations) {
       try {
         const images = await getImages({ destination: destination.destination });
@@ -235,7 +234,6 @@ export default function HomeScreen() {
                     }
                   })}
                   activeOpacity={0.9}
-                  pointerEvents="box-none"
                 >
                   {destinationImages[destination.destination] ? (
                     <ImageWithAttribution
@@ -517,6 +515,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "space-between",
     padding: 16,
+    paddingBottom: 60,
     backgroundColor: "rgba(0,0,0,0.1)",
   },
   ratingBadge: {
