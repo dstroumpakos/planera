@@ -263,7 +263,7 @@ export default function HomeScreen() {
                       </View>
                       <View style={styles.trendingFooter}>
                         <View>
-                          <Text style={[styles.trendingPriceLabel, { color: colors.textMuted }]}>Total Budget</Text>
+                          <Text style={styles.trendingPriceLabel}>Starting from</Text>
                           <Text style={[styles.trendingPrice, { color: colors.primary }]}>€{Math.round(destination.avgBudget)}</Text>
                         </View>
                         <View style={styles.trendingArrow}>
@@ -570,6 +570,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     marginBottom: 4,
+    color: "#F5A623",
   },
   trendingArrow: {
     width: 40,
