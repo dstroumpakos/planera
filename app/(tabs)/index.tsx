@@ -228,17 +228,19 @@ export default function HomeScreen() {
                   })}
                   activeOpacity={0.9}
                 >
-                  {destinationImages[destination.destination] ? (
-                    <ImageWithAttribution
-                      imageUrl={destinationImages[destination.destination].url}
-                      photographerName={destinationImages[destination.destination].photographer}
-                      photographerUrl={destinationImages[destination.destination].photographerUrl}
-                    />
-                  ) : (
-                    <View style={[styles.trendingImagePlaceholder, { backgroundColor: colors.secondary }]}>
-                      <Text style={styles.trendingEmoji}>✈️</Text>
-                    </View>
-                  )}
+                  <View style={styles.trendingImageContainer} pointerEvents="box-none">
+                    {destinationImages[destination.destination] ? (
+                      <ImageWithAttribution
+                        imageUrl={destinationImages[destination.destination].url}
+                        photographerName={destinationImages[destination.destination].photographer}
+                        photographerUrl={destinationImages[destination.destination].photographerUrl}
+                      />
+                    ) : (
+                      <View style={[styles.trendingImagePlaceholder, { backgroundColor: colors.secondary }]}>
+                        <Text style={styles.trendingEmoji}>✈️</Text>
+                      </View>
+                    )}
+                  </View>
                   
                   <View style={styles.trendingOverlay}>
                     <View style={styles.ratingBadge}>
