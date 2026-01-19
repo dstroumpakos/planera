@@ -558,45 +558,7 @@ async function searchActivities(destination: string) {
     try {
         console.log(`🎯 Searching Viator activities for: ${destination}`);
         
-        // First, search for the destination to get its ID using POST
-        const searchResponse = await fetch(
-            "https://api.viator.com/partner/search/freetext",
-            {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json;version=2.0",
-                    "Accept-Language": "en-US",
-                    "Content-Type": "application/json",
-                    "exp-api-key": apiKey,
-                },
-                body: JSON.stringify({
-                    searchTerm: destination,
-                    searchTypes: ["DESTINATIONS"],
-                    currency: "EUR",
-                }),
-            }
-        );
-        
-        if (!searchResponse.ok) {
-            const errorText = await searchResponse.text();
-            console.warn(`⚠️ Viator destination search failed: ${searchResponse.status}`, errorText);
-            return getFallbackActivities(destination);
-        }
-        
-        const searchData = await searchResponse.json();
-        console.log("📍 Viator destination search response:", JSON.stringify(searchData, null, 2));
-        
-        const destinations = searchData.destinations || [];
-        
-        if (destinations.length === 0) {
-            console.warn(`⚠️ No Viator destination found for: ${destination}`);
-            return getFallbackActivities(destination);
-        }
-        
-        const destinationId = destinations[0].ref;
-        console.log(`✅ Found Viator destination ID: ${destinationId}`);
-        
-        // Now search for products (activities) in this destination
+        // Use products/search endpoint with searchTerm
         const productsResponse = await fetch(
             "https://api.viator.com/partner/products/search",
             {
@@ -608,9 +570,7 @@ async function searchActivities(destination: string) {
                     "exp-api-key": apiKey,
                 },
                 body: JSON.stringify({
-                    filtering: {
-                        destination: destinationId,
-                    },
+                    searchTerm: destination,
                     sorting: {
                         sort: "TRAVELER_RATING",
                         order: "DESC",
@@ -635,22 +595,17 @@ async function searchActivities(destination: string) {
         
         console.log(`✅ Found ${products.length} Viator activities`);
         
-        // Log first product to see structure
         if (products.length > 0) {
-            console.log("📦 Sample Viator product structure:", JSON.stringify(products[0], null, 2));
+            console.log("📦 Sample Viator product:", JSON.stringify(products[0], null, 2));
         }
         
         // Transform Viator products to our format
         const activities = products.map((product: any) => {
-            // Extract the best image URL from Viator's image structure
-            // Viator API v2 returns images as array with variants
             let imageUrl: string | null = null;
             
             if (product.images && Array.isArray(product.images) && product.images.length > 0) {
                 const firstImage = product.images[0];
-                // Try to get a medium-sized variant (around 400-800px wide)
                 if (firstImage.variants && Array.isArray(firstImage.variants)) {
-                    // Sort variants by width and pick one around 480-720px
                     const sortedVariants = [...firstImage.variants].sort((a: any, b: any) => (a.width || 0) - (b.width || 0));
                     const mediumVariant = sortedVariants.find((v: any) => v.width >= 400 && v.width <= 800);
                     const fallbackVariant = sortedVariants.find((v: any) => v.width >= 200);
@@ -658,10 +613,8 @@ async function searchActivities(destination: string) {
                 }
             }
             
-            // Get the title - Viator API v2 uses 'title' field
             const title = product.title || product.name || "Activity";
             
-            // Extract duration in a readable format
             let duration = "Varies";
             if (product.duration) {
                 if (product.duration.fixedDurationInMinutes) {
@@ -676,7 +629,7 @@ async function searchActivities(destination: string) {
             
             return {
                 name: title,
-                title: title, // Include both for compatibility
+                title: title,
                 type: categorizeActivity(title, product.productCode),
                 price: product.pricing?.summary?.fromPrice || 0,
                 currency: product.pricing?.currency || "EUR",
@@ -687,19 +640,15 @@ async function searchActivities(destination: string) {
                 bookingUrl: product.productUrl || `https://www.viator.com/tours/${product.productCode}`,
                 productCode: product.productCode,
                 image: imageUrl,
-                imageUrl: imageUrl, // Include both for compatibility
+                imageUrl: imageUrl,
                 skipTheLine: product.flags?.includes("SKIP_THE_LINE") || title.toLowerCase().includes("skip") || false,
                 dataSource: "viator",
             };
         });
         
-        console.log(`✅ Transformed ${activities.length} activities with images`);
-        // Log first transformed activity
-        if (activities.length > 0) {
-            console.log("📦 Sample transformed activity:", JSON.stringify(activities[0], null, 2));
-        }
+        console.log(`✅ Transformed ${activities.length} activities`);
         
-        return activities;
+        return activities.length > 0 ? activities : getFallbackActivities(destination);
     } catch (error) {
         console.error("❌ Viator API error:", error);
         return getFallbackActivities(destination);
@@ -742,7 +691,7 @@ function getFallbackActivities(destination: string) {
         ],
         "barcelona": [
             { name: "Sagrada Familia Guided Tour", title: "Sagrada Familia Guided Tour", type: "attraction", price: 47, currency: "EUR", rating: 4.8, reviewCount: 21340, duration: "2 hours", description: "Skip-the-line access with expert guide", bookingUrl: "https://www.viator.com/tours/Barcelona/Sagrada-Familia", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
-            { name: "Park Güell Express Tour", title: "Park Güell Express Tour", type: "attraction", price: 24, currency: "EUR", rating: 4.6, reviewCount: 8760, duration: "1.5 hours", description: "Discover Gaudí's colorful mosaic park", bookingUrl: "https://www.viator.com/tours/Barcelona/Park-Guell", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Park Güell Express Tour", title: "Park Güell Express Tour", type: "attraction", price: 24, currency: "EUR", rating: 4.6, reviewCount: 8760, duration: "2 hours", description: "Discover Gaudí's colorful mosaic park", bookingUrl: "https://www.viator.com/tours/Barcelona/Park-Guell", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
             { name: "Tapas & Wine Tour", title: "Tapas & Wine Tour", type: "food", price: 89, currency: "EUR", rating: 4.9, reviewCount: 5430, duration: "4 hours", description: "Sample authentic tapas in the Gothic Quarter", bookingUrl: "https://www.viator.com/tours/Barcelona/Tapas", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
             { name: "Flamenco Show & Dinner", title: "Flamenco Show & Dinner", type: "entertainment", price: 75, currency: "EUR", rating: 4.7, reviewCount: 3210, duration: "2 hours", description: "Traditional flamenco performance with dinner", bookingUrl: "https://www.viator.com/tours/Barcelona/Flamenco", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
             { name: "Gothic Quarter Walking Tour", title: "Gothic Quarter Walking Tour", type: "tour", price: 20, currency: "EUR", rating: 4.8, reviewCount: 4560, duration: "2 hours", description: "Explore medieval streets and hidden squares", bookingUrl: "https://www.viator.com/tours/Barcelona/Gothic", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
@@ -768,92 +717,10 @@ function getFallbackActivities(destination: string) {
 
 // Helper function to search for restaurants using TripAdvisor API
 async function searchRestaurants(destination: string) {
-    const apiKey = process.env.TRIPADVISOR_API_KEY;
-    
-    if (!apiKey) {
-        console.warn("⚠️ TripAdvisor API key not configured, using fallback restaurants");
-        return getFallbackRestaurants(destination);
-    }
-    
-    try {
-        console.log(`🍽️ Searching TripAdvisor restaurants for: ${destination}`);
-        
-        // First, search for the location to get its ID
-        // TripAdvisor Content API requires the key in query params
-        const locationSearchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&category=geos&language=en`;
-        
-        console.log("📍 TripAdvisor location search URL:", locationSearchUrl.replace(apiKey, "***"));
-        
-        const locationResponse = await fetch(locationSearchUrl, {
-            method: "GET",
-            headers: {
-                "Accept": "application/json",
-                "Referer": "https://planera.app",
-                "Origin": "https://planera.app",
-            },
-        });
-        
-        if (!locationResponse.ok) {
-            const errorText = await locationResponse.text();
-            console.warn(`⚠️ TripAdvisor location search failed: ${locationResponse.status}`, errorText);
-            return getFallbackRestaurants(destination);
-        }
-        
-        const locationData = await locationResponse.json();
-        const locations = locationData.data || [];
-        
-        if (locations.length === 0) {
-            console.warn(`⚠️ No TripAdvisor location found for: ${destination}`);
-            return getFallbackRestaurants(destination);
-        }
-        
-        const locationId = locations[0].location_id;
-        console.log(`✅ Found TripAdvisor location ID: ${locationId}`);
-        
-        // Now search for restaurants in this location
-        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/restaurants?key=${apiKey}&language=en&currency=EUR`;
-        
-        const restaurantsResponse = await fetch(restaurantsUrl, {
-            method: "GET",
-            headers: {
-                "Accept": "application/json",
-                "Referer": "https://planera.app",
-                "Origin": "https://planera.app",
-            },
-        });
-        
-        if (!restaurantsResponse.ok) {
-            const errorText = await restaurantsResponse.text();
-            console.warn(`⚠️ TripAdvisor restaurants search failed: ${restaurantsResponse.status}`, errorText);
-            return getFallbackRestaurants(destination);
-        }
-        
-        const restaurantsData = await restaurantsResponse.json();
-        const restaurants = restaurantsData.data || [];
-        
-        console.log(`✅ Found ${restaurants.length} TripAdvisor restaurants`);
-        
-        // Transform TripAdvisor restaurants to our format
-        const transformedRestaurants = restaurants.slice(0, 15).map((restaurant: any) => ({
-            name: restaurant.name || "Restaurant",
-            cuisine: restaurant.cuisine?.[0]?.localized_name || "International",
-            priceRange: restaurant.price_level || "€€",
-            rating: parseFloat(restaurant.rating) || null,
-            reviewCount: parseInt(restaurant.num_reviews) || 0,
-            address: restaurant.address_obj?.street1 || restaurant.address || null,
-            tripAdvisorUrl: restaurant.web_url || `https://www.tripadvisor.com/Restaurant_Review-${restaurant.location_id}`,
-            phone: restaurant.phone || null,
-            website: restaurant.website || null,
-            rankingString: restaurant.ranking_data?.ranking_string || null,
-            image: restaurant.photo?.images?.medium?.url || null,
-            dataSource: "tripadvisor",
-        }));
-        
-        return transformedRestaurants;
-    } catch (error) {
-        console.error("❌ TripAdvisor API error:", error);
-        return getFallbackRestaurants(destination);
-    }
+    // TripAdvisor Content API requires domain whitelisting which may not be configured
+    // Using fallback data for now - user can set up TripAdvisor API key and configure domain
+    console.log(`🍽️ Using fallback restaurants for: ${destination}`);
+    return getFallbackRestaurants(destination);
 }
 
 // Fallback restaurants when TripAdvisor API is unavailable
@@ -1130,7 +997,7 @@ function getActivitiesWithPrices(destination: string) {
         tips: string | null;
     }>> = {
         "paris": [
-            { title: "Eiffel Tower Summit", description: "Visit all 3 levels including the summit", type: "attraction", price: 26, skipTheLine: true, skipTheLinePrice: 42, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/eiffel-tower-summit-access-t395601/", tips: "Book at least 2 weeks in advance" },
+            { title: "Eiffel Tower Summit", description: "Visit all levels including the summit", type: "attraction", price: 26, skipTheLine: true, skipTheLinePrice: 42, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/eiffel-tower-summit-access-t395601/", tips: "Book at least 2 weeks in advance" },
             { title: "Louvre Museum", description: "World's largest art museum with Mona Lisa", type: "museum", price: 17, skipTheLine: true, skipTheLinePrice: 32, duration: "3-4 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/louvre-museum-timed-entrance-ticket-t395439/", tips: "Enter via Carrousel entrance to avoid crowds" },
             { title: "Musée d'Orsay", description: "Impressionist masterpieces in a former train station", type: "museum", price: 16, skipTheLine: true, skipTheLinePrice: 29, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/paris-l16/musee-d-orsay-skip-the-line-t395440/", tips: "Visit on Thursday evening for late opening" },
             { title: "Versailles Palace", description: "Royal château with stunning gardens", type: "attraction", price: 20, skipTheLine: true, skipTheLinePrice: 45, duration: "4-5 hours", bookingUrl: "https://www.getyourguide.com/versailles-l217/versailles-palace-skip-the-line-ticket-t395441/", tips: "Arrive early to see the gardens" },
