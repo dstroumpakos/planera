@@ -261,9 +261,9 @@ export default function HomeScreen() {
                       </View>
                       <View style={styles.trendingFooter}>
                         <View>
-                          <Text style={[styles.trendingPriceLabel, { color: colors.textMuted }]}>Est. total</Text>
+                          <Text style={[styles.trendingPriceLabel, { color: "#000000" }]}>Est. total</Text>
                           <Text style={[styles.trendingPrice, { color: colors.primary }]}>€{Math.round(destination.avgBudget)}</Text>
-                          <Text style={[styles.trendingPriceSubtitle, { color: colors.textMuted }]}>Based on your budget</Text>
+                          <Text style={[styles.trendingPriceSubtitle, { color: "#000000" }]}>Based on your budget</Text>
                         </View>
                         <View style={styles.trendingArrow}>
                           <Ionicons name="arrow-forward" size={16} color="#000000" />
