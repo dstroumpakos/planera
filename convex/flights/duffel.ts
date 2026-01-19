@@ -35,15 +35,25 @@ export async function createOfferRequest(params: {
   departureDate: string;
   returnDate: string;
   adults: number;
+  // Optional: Use actual passenger ages for accurate pricing
+  passengerAges?: number[];
 }) {
   const config = getDuffelConfig();
   const headers = getHeaders(config);
 
+  // Build passengers array with actual ages if provided, otherwise default to adult ages
+  let passengers: { age: number }[];
+  if (params.passengerAges && params.passengerAges.length > 0) {
+    passengers = params.passengerAges.map(age => ({ age }));
+    console.log(`👤 Using actual passenger ages: ${params.passengerAges.join(', ')}`);
+  } else {
+    passengers = Array(params.adults).fill(null).map(() => ({ age: 30 }));
+    console.log(`👤 Using default adult ages (30) for ${params.adults} passengers`);
+  }
+
   const payload = {
     data: {
-      passengers: Array(params.adults).fill(null).map(() => ({
-        age: 30,
-      })),
+      passengers,
       slices: [
         {
           origin: params.originCode,
@@ -62,6 +72,9 @@ export async function createOfferRequest(params: {
 
   try {
     console.log("🔍 Creating Duffel offer request...");
+    console.log(`   Route: ${params.originCode} → ${params.destinationCode}`);
+    console.log(`   Dates: ${params.departureDate} to ${params.returnDate}`);
+    console.log(`   Passengers: ${passengers.length} (ages: ${passengers.map(p => p.age).join(', ')})`);
     
     const response = await fetch(`${DUFFEL_API_BASE}/air/offer_requests`, {
       method: "POST",

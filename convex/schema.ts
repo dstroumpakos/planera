@@ -14,6 +14,8 @@ export default defineSchema({
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
+        // Selected traveler profiles for flight booking
+        selectedTravelerIds: v.optional(v.array(v.id("travelers"))),
         status: v.union(
             v.literal("pending"),
             v.literal("generating"),
@@ -251,4 +253,26 @@ export default defineSchema({
         .index("by_user", ["userId"])
         .index("by_trip", ["tripId"])
         .index("by_duffel_order", ["duffelOrderId"]),
+
+    // Traveler profiles for flight bookings
+    travelers: defineTable({
+        userId: v.string(),
+        // Personal info (all required for booking)
+        firstName: v.string(),
+        lastName: v.string(),
+        dateOfBirth: v.string(), // YYYY-MM-DD format
+        gender: v.union(v.literal("male"), v.literal("female")),
+        // Passport info (required for international flights)
+        passportNumber: v.string(),
+        passportIssuingCountry: v.string(), // ISO 3166-1 alpha-2 country code
+        passportExpiryDate: v.string(), // YYYY-MM-DD format
+        // Contact info (optional, can be filled at booking time)
+        email: v.optional(v.string()),
+        phoneNumber: v.optional(v.string()),
+        // Metadata
+        isDefault: v.optional(v.boolean()), // Primary traveler
+        createdAt: v.float64(),
+        updatedAt: v.optional(v.float64()),
+    })
+        .index("by_user", ["userId"]),
 });

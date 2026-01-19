@@ -73,6 +73,14 @@ export const generate = internalAction({
         console.log("  - Travelers:", trip.travelers);
         console.log("  - Budget:", trip.budget);
         console.log("  - Interests:", trip.interests);
+        console.log("  - Selected Traveler IDs:", trip.selectedTravelerIds || "none");
+        
+        // Get traveler ages for flight search (if travelers were selected)
+        let travelerAges: number[] = [];
+        if (trip.selectedTravelerIds && trip.selectedTravelerIds.length > 0) {
+            travelerAges = await ctx.runQuery(internal.trips.getTravelerAgesForTrip, { tripId });
+            console.log("  - Traveler Ages at departure:", travelerAges);
+        }
         
         if (!skipFlights && !origin) {
             console.error("❌ Trip origin is missing!");
@@ -150,6 +158,7 @@ export const generate = internalAction({
                             departureDate,
                             returnDate,
                             adults: trip.travelers,
+                            passengerAges: travelerAges.length > 0 ? travelerAges : undefined,
                         });
 
                         if (!offers || offers.length === 0) {

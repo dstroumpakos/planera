@@ -15,6 +15,7 @@ export const create = authMutation({
         skipFlights: v.optional(v.boolean()),
         skipHotel: v.optional(v.boolean()),
         preferredFlightTime: v.optional(v.string()),
+        selectedTravelerIds: v.optional(v.array(v.id("travelers"))),
     },
     returns: v.id("trips"),
     handler: async (ctx, args) => {
@@ -24,6 +25,35 @@ export const create = authMutation({
         if (isNaN(args.startDate)) throw new Error("Invalid startDate: NaN");
         if (isNaN(args.endDate)) throw new Error("Invalid endDate: NaN");
         if (isNaN(args.travelers)) throw new Error("Invalid travelers: NaN");
+
+        // If traveler IDs provided, validate they belong to this user and get passenger breakdown
+        let passengerBreakdown: { adults: number; children: number; infants: number } | null = null;
+        if (args.selectedTravelerIds && args.selectedTravelerIds.length > 0) {
+            const departureDate = new Date(args.startDate);
+            let adults = 0, children = 0, infants = 0;
+            
+            for (const travelerId of args.selectedTravelerIds) {
+                const traveler = await ctx.db.get(travelerId);
+                if (!traveler || traveler.userId !== ctx.user._id) {
+                    throw new Error("Invalid traveler selected");
+                }
+                
+                // Calculate age at departure date
+                const birthDate = new Date(traveler.dateOfBirth);
+                let age = departureDate.getFullYear() - birthDate.getFullYear();
+                const monthDiff = departureDate.getMonth() - birthDate.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && departureDate.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                
+                if (age < 2) infants++;
+                else if (age < 12) children++;
+                else adults++;
+            }
+            
+            passengerBreakdown = { adults, children, infants };
+            console.log("📊 Passenger breakdown:", passengerBreakdown);
+        }
 
         // Check if user can generate a trip
         const userPlan = await ctx.db
@@ -86,6 +116,7 @@ export const create = authMutation({
             skipFlights: args.skipFlights ?? false,
             skipHotel: args.skipHotel ?? false,
             preferredFlightTime: args.preferredFlightTime ?? "any",
+            selectedTravelerIds: args.selectedTravelerIds,
         });
 
         const flightInfo = args.skipFlights 
@@ -135,12 +166,46 @@ export const getTripDetails = internalQuery({
             skipFlights: v.optional(v.boolean()),
             skipHotel: v.optional(v.boolean()),
             preferredFlightTime: v.optional(v.string()),
+            selectedTravelerIds: v.optional(v.array(v.id("travelers"))),
             status: v.string(),
             itinerary: v.optional(v.any()),
         })
     ),
     handler: async (ctx, args) => {
         return await ctx.db.get(args.tripId);
+    },
+});
+
+// Internal query to get traveler ages for a trip's selected travelers
+export const getTravelerAgesForTrip = internalQuery({
+    args: { 
+        tripId: v.id("trips"),
+    },
+    returns: v.array(v.number()),
+    handler: async (ctx, args) => {
+        const trip = await ctx.db.get(args.tripId);
+        if (!trip || !trip.selectedTravelerIds || trip.selectedTravelerIds.length === 0) {
+            return [];
+        }
+        
+        const departureDate = new Date(trip.startDate);
+        const ages: number[] = [];
+        
+        for (const travelerId of trip.selectedTravelerIds) {
+            const traveler = await ctx.db.get(travelerId);
+            if (!traveler) continue;
+            
+            // Calculate age at departure date
+            const birthDate = new Date(traveler.dateOfBirth);
+            let age = departureDate.getFullYear() - birthDate.getFullYear();
+            const monthDiff = departureDate.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && departureDate.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            ages.push(age);
+        }
+        
+        return ages;
     },
 });
 

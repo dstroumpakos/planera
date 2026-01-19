@@ -116,6 +116,14 @@ export default function Profile() {
             action: () => router.push("/(tabs)/trips")
         },
         {
+            title: "Traveler Profiles",
+            subtitle: "Manage passport & traveler info",
+            icon: "people-outline",
+            iconBg: isDarkMode ? "#1D3D2E" : "#D1FAE5",
+            iconColor: "#059669",
+            action: () => router.push("/settings/traveler-profiles")
+        },
+        {
             title: "Travel Preferences",
             subtitle: "Dietary, Airlines, Seats",
             icon: "options-outline",
