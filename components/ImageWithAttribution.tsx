@@ -32,9 +32,8 @@ export function ImageWithAttribution({
   return (
     <View style={styles.container} pointerEvents="box-none">
       <Image source={{ uri: imageUrl }} style={styles.image} />
-      <View pointerEvents="auto">
+      <View style={styles.attributionOverlay} pointerEvents="auto">
         <TouchableOpacity 
-          style={styles.attributionOverlay}
           onPress={handleAttributionPress}
           activeOpacity={0.7}
         >
