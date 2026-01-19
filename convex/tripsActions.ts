@@ -97,10 +97,12 @@ export const generate = internalAction({
         console.log("=".repeat(80));
 
         // Check if API keys are configured
-        const { hasDuffelKey, hasOpenAIKey } = checkApiKeys();
+        const { hasDuffelKey, hasOpenAIKey, hasTripAdvisorKey, hasViatorKey } = checkApiKeys();
 
         console.log("  - Duffel API:", hasDuffelKey ? "✅ Configured" : "❌ Missing");
         console.log("  - OpenAI API:", hasOpenAIKey ? "✅ Configured" : "❌ Missing");
+        console.log("  - TripAdvisor API:", hasTripAdvisorKey ? "✅ Configured" : "❌ Missing");
+        console.log("  - Viator API:", hasViatorKey ? "✅ Configured" : "❌ Missing");
 
         if (!hasDuffelKey) {
             console.warn("⚠️ Duffel API key not configured. Using AI-generated data.");
@@ -378,6 +380,8 @@ function checkApiKeys() {
     return {
         hasDuffelKey: !!process.env.DUFFEL_ACCESS_TOKEN,
         hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        hasTripAdvisorKey: !!process.env.TRIPADVISOR_API_KEY,
+        hasViatorKey: !!process.env.VIATOR_API_KEY,
     };
 }
 
@@ -542,27 +546,296 @@ function getFallbackHotels(destination: string) {
     ];
 }
 
-// Helper function to search for activities
+// Helper function to search for activities using Viator API
 async function searchActivities(destination: string) {
-    // Return mock activity data
+    const apiKey = process.env.VIATOR_API_KEY;
+    
+    if (!apiKey) {
+        console.warn("⚠️ Viator API key not configured, using fallback activities");
+        return getFallbackActivities(destination);
+    }
+    
+    try {
+        console.log(`🎯 Searching Viator activities for: ${destination}`);
+        
+        // First, search for the destination to get its ID
+        const searchResponse = await fetch(
+            `https://api.viator.com/partner/search/freetext?text=${encodeURIComponent(destination)}&searchTypes=DESTINATION`,
+            {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json;version=2.0",
+                    "Accept-Language": "en-US",
+                    "exp-api-key": apiKey,
+                },
+            }
+        );
+        
+        if (!searchResponse.ok) {
+            console.warn(`⚠️ Viator destination search failed: ${searchResponse.status}`);
+            return getFallbackActivities(destination);
+        }
+        
+        const searchData = await searchResponse.json();
+        const destinations = searchData.destinations || [];
+        
+        if (destinations.length === 0) {
+            console.warn(`⚠️ No Viator destination found for: ${destination}`);
+            return getFallbackActivities(destination);
+        }
+        
+        const destinationId = destinations[0].ref;
+        console.log(`✅ Found Viator destination ID: ${destinationId}`);
+        
+        // Now search for products (activities) in this destination
+        const productsResponse = await fetch(
+            "https://api.viator.com/partner/products/search",
+            {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json;version=2.0",
+                    "Accept-Language": "en-US",
+                    "Content-Type": "application/json",
+                    "exp-api-key": apiKey,
+                },
+                body: JSON.stringify({
+                    filtering: {
+                        destination: destinationId,
+                    },
+                    sorting: {
+                        sort: "TRAVELER_RATING",
+                        order: "DESC",
+                    },
+                    pagination: {
+                        start: 1,
+                        count: 15,
+                    },
+                    currency: "EUR",
+                }),
+            }
+        );
+        
+        if (!productsResponse.ok) {
+            console.warn(`⚠️ Viator products search failed: ${productsResponse.status}`);
+            return getFallbackActivities(destination);
+        }
+        
+        const productsData = await productsResponse.json();
+        const products = productsData.products || [];
+        
+        console.log(`✅ Found ${products.length} Viator activities`);
+        
+        // Transform Viator products to our format
+        const activities = products.map((product: any) => ({
+            name: product.title || "Activity",
+            type: categorizeActivity(product.title, product.productCode),
+            price: product.pricing?.summary?.fromPrice || 0,
+            currency: product.pricing?.currency || "EUR",
+            rating: product.reviews?.combinedAverageRating || null,
+            reviewCount: product.reviews?.totalReviews || 0,
+            duration: product.duration?.fixedDurationInMinutes 
+                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)} hours`
+                : product.duration?.variableDurationFromMinutes
+                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round(product.duration.variableDurationToMinutes / 60)} hours`
+                    : "Varies",
+            description: product.description?.substring(0, 200) || "",
+            bookingUrl: product.productUrl || `https://www.viator.com/tours/${product.productCode}`,
+            productCode: product.productCode,
+            image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || null,
+            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || product.title?.toLowerCase().includes("skip") || false,
+            dataSource: "viator",
+        }));
+        
+        return activities;
+    } catch (error) {
+        console.error("❌ Viator API error:", error);
+        return getFallbackActivities(destination);
+    }
+}
+
+// Helper to categorize activities based on title
+function categorizeActivity(title: string, productCode: string): string {
+    const titleLower = (title || "").toLowerCase();
+    
+    if (titleLower.includes("museum") || titleLower.includes("gallery")) return "museum";
+    if (titleLower.includes("tour") || titleLower.includes("walking")) return "tour";
+    if (titleLower.includes("food") || titleLower.includes("culinary") || titleLower.includes("tasting")) return "food";
+    if (titleLower.includes("cruise") || titleLower.includes("boat")) return "cruise";
+    if (titleLower.includes("show") || titleLower.includes("concert") || titleLower.includes("performance")) return "entertainment";
+    if (titleLower.includes("adventure") || titleLower.includes("hiking") || titleLower.includes("outdoor")) return "adventure";
+    if (titleLower.includes("workshop") || titleLower.includes("class")) return "experience";
+    
+    return "attraction";
+}
+
+// Fallback activities when Viator API is unavailable
+function getFallbackActivities(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    const fallbackByCity: Record<string, any[]> = {
+        "paris": [
+            { name: "Eiffel Tower Summit Access", type: "attraction", price: 42, currency: "EUR", rating: 4.7, reviewCount: 15420, duration: "2-3 hours", description: "Skip the lines and visit all levels including the summit", bookingUrl: "https://www.viator.com/tours/Paris/Eiffel-Tower", skipTheLine: true, dataSource: "fallback" },
+            { name: "Louvre Museum Guided Tour", type: "museum", price: 65, currency: "EUR", rating: 4.8, reviewCount: 8930, duration: "3 hours", description: "Expert-led tour of the world's largest art museum", bookingUrl: "https://www.viator.com/tours/Paris/Louvre", skipTheLine: true, dataSource: "fallback" },
+            { name: "Seine River Dinner Cruise", type: "cruise", price: 89, currency: "EUR", rating: 4.6, reviewCount: 5240, duration: "2.5 hours", description: "Gourmet dinner while cruising past illuminated monuments", bookingUrl: "https://www.viator.com/tours/Paris/Seine-Cruise", skipTheLine: false, dataSource: "fallback" },
+            { name: "Montmartre Walking Tour", type: "tour", price: 25, currency: "EUR", rating: 4.9, reviewCount: 3210, duration: "2 hours", description: "Explore the artistic bohemian neighborhood", bookingUrl: "https://www.viator.com/tours/Paris/Montmartre", skipTheLine: false, dataSource: "fallback" },
+            { name: "French Cooking Class", type: "experience", price: 120, currency: "EUR", rating: 4.9, reviewCount: 1890, duration: "4 hours", description: "Learn to cook classic French dishes", bookingUrl: "https://www.viator.com/tours/Paris/Cooking", skipTheLine: false, dataSource: "fallback" },
+        ],
+        "rome": [
+            { name: "Colosseum Underground Tour", type: "attraction", price: 75, currency: "EUR", rating: 4.9, reviewCount: 12340, duration: "3 hours", description: "Exclusive access to underground chambers and arena floor", bookingUrl: "https://www.viator.com/tours/Rome/Colosseum", skipTheLine: true, dataSource: "fallback" },
+            { name: "Vatican Museums & Sistine Chapel", type: "museum", price: 59, currency: "EUR", rating: 4.7, reviewCount: 18920, duration: "3 hours", description: "Skip-the-line access to the Vatican's treasures", bookingUrl: "https://www.viator.com/tours/Rome/Vatican", skipTheLine: true, dataSource: "fallback" },
+            { name: "Trastevere Food Tour", type: "food", price: 79, currency: "EUR", rating: 4.8, reviewCount: 4560, duration: "4 hours", description: "Taste authentic Roman cuisine in the charming Trastevere district", bookingUrl: "https://www.viator.com/tours/Rome/Food-Tour", skipTheLine: false, dataSource: "fallback" },
+            { name: "Pasta Making Class", type: "experience", price: 65, currency: "EUR", rating: 4.9, reviewCount: 2340, duration: "3 hours", description: "Learn to make fresh pasta from a local chef", bookingUrl: "https://www.viator.com/tours/Rome/Pasta", skipTheLine: false, dataSource: "fallback" },
+            { name: "Rome by Night Walking Tour", type: "tour", price: 35, currency: "EUR", rating: 4.7, reviewCount: 2890, duration: "2.5 hours", description: "See Rome's monuments beautifully illuminated", bookingUrl: "https://www.viator.com/tours/Rome/Night-Tour", skipTheLine: false, dataSource: "fallback" },
+        ],
+        "barcelona": [
+            { name: "Sagrada Familia Guided Tour", type: "attraction", price: 47, currency: "EUR", rating: 4.8, reviewCount: 21340, duration: "2 hours", description: "Skip-the-line access with expert guide", bookingUrl: "https://www.viator.com/tours/Barcelona/Sagrada-Familia", skipTheLine: true, dataSource: "fallback" },
+            { name: "Park Güell Express Tour", type: "attraction", price: 24, currency: "EUR", rating: 4.6, reviewCount: 8760, duration: "1.5 hours", description: "Discover Gaudí's colorful mosaic park", bookingUrl: "https://www.viator.com/tours/Barcelona/Park-Guell", skipTheLine: true, dataSource: "fallback" },
+            { name: "Tapas & Wine Tour", type: "food", price: 89, currency: "EUR", rating: 4.9, reviewCount: 5430, duration: "4 hours", description: "Sample authentic tapas in the Gothic Quarter", bookingUrl: "https://www.viator.com/tours/Barcelona/Tapas", skipTheLine: false, dataSource: "fallback" },
+            { name: "Flamenco Show & Dinner", type: "entertainment", price: 75, currency: "EUR", rating: 4.7, reviewCount: 3210, duration: "2 hours", description: "Traditional flamenco performance with dinner", bookingUrl: "https://www.viator.com/tours/Barcelona/Flamenco", skipTheLine: false, dataSource: "fallback" },
+            { name: "Gothic Quarter Walking Tour", type: "tour", price: 20, currency: "EUR", rating: 4.8, reviewCount: 4560, duration: "2 hours", description: "Explore medieval streets and hidden squares", bookingUrl: "https://www.viator.com/tours/Barcelona/Gothic", skipTheLine: false, dataSource: "fallback" },
+        ],
+    };
+    
+    // Check if we have fallback for this city
+    for (const [city, activities] of Object.entries(fallbackByCity)) {
+        if (destLower.includes(city)) {
+            return activities;
+        }
+    }
+    
+    // Generic fallback
     return [
-        { name: "City Tour", type: "tour", price: 25 },
-        { name: "Museum Visit", type: "museum", price: 15 },
-        { name: "Local Market", type: "experience", price: 0 },
-        { name: "Sunset Viewpoint", type: "viewpoint", price: 0 },
-        { name: "Adventure Activity", type: "adventure", price: 50 },
+        { name: "City Highlights Tour", type: "tour", price: 35, currency: "EUR", rating: 4.5, reviewCount: 500, duration: "3 hours", description: "Discover the best of the city with a local guide", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
+        { name: "Main Museum Visit", type: "museum", price: 20, currency: "EUR", rating: 4.6, reviewCount: 300, duration: "2 hours", description: "Explore the city's main museum", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: true, dataSource: "fallback" },
+        { name: "Local Food Experience", type: "food", price: 65, currency: "EUR", rating: 4.7, reviewCount: 200, duration: "3 hours", description: "Taste local specialties with a foodie guide", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
+        { name: "Walking Tour", type: "tour", price: 18, currency: "EUR", rating: 4.4, reviewCount: 400, duration: "2 hours", description: "Explore the historic center on foot", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
+        { name: "Sunset Experience", type: "experience", price: 45, currency: "EUR", rating: 4.8, reviewCount: 150, duration: "2 hours", description: "Watch the sunset from the best viewpoint", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
     ];
 }
 
-// Helper function to search for restaurants
+// Helper function to search for restaurants using TripAdvisor API
 async function searchRestaurants(destination: string) {
-    // Return mock restaurant data
+    const apiKey = process.env.TRIPADVISOR_API_KEY;
+    
+    if (!apiKey) {
+        console.warn("⚠️ TripAdvisor API key not configured, using fallback restaurants");
+        return getFallbackRestaurants(destination);
+    }
+    
+    try {
+        console.log(`🍽️ Searching TripAdvisor restaurants for: ${destination}`);
+        
+        // First, search for the location to get its ID
+        const locationSearchUrl = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&searchQuery=${encodeURIComponent(destination)}&category=geos&language=en`;
+        
+        const locationResponse = await fetch(locationSearchUrl, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+        
+        if (!locationResponse.ok) {
+            console.warn(`⚠️ TripAdvisor location search failed: ${locationResponse.status}`);
+            return getFallbackRestaurants(destination);
+        }
+        
+        const locationData = await locationResponse.json();
+        const locations = locationData.data || [];
+        
+        if (locations.length === 0) {
+            console.warn(`⚠️ No TripAdvisor location found for: ${destination}`);
+            return getFallbackRestaurants(destination);
+        }
+        
+        const locationId = locations[0].location_id;
+        console.log(`✅ Found TripAdvisor location ID: ${locationId}`);
+        
+        // Now search for restaurants in this location
+        const restaurantsUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/restaurants?key=${apiKey}&language=en&currency=EUR`;
+        
+        const restaurantsResponse = await fetch(restaurantsUrl, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+        
+        if (!restaurantsResponse.ok) {
+            console.warn(`⚠️ TripAdvisor restaurants search failed: ${restaurantsResponse.status}`);
+            return getFallbackRestaurants(destination);
+        }
+        
+        const restaurantsData = await restaurantsResponse.json();
+        const restaurants = restaurantsData.data || [];
+        
+        console.log(`✅ Found ${restaurants.length} TripAdvisor restaurants`);
+        
+        // Transform TripAdvisor restaurants to our format
+        const transformedRestaurants = restaurants.slice(0, 15).map((restaurant: any) => ({
+            name: restaurant.name || "Restaurant",
+            cuisine: restaurant.cuisine?.[0]?.localized_name || "International",
+            priceRange: restaurant.price_level || "€€",
+            rating: parseFloat(restaurant.rating) || null,
+            reviewCount: parseInt(restaurant.num_reviews) || 0,
+            address: restaurant.address_obj?.street1 || restaurant.address || null,
+            tripAdvisorUrl: restaurant.web_url || `https://www.tripadvisor.com/Restaurant_Review-${restaurant.location_id}`,
+            phone: restaurant.phone || null,
+            website: restaurant.website || null,
+            rankingString: restaurant.ranking_data?.ranking_string || null,
+            image: restaurant.photo?.images?.medium?.url || null,
+            dataSource: "tripadvisor",
+        }));
+        
+        return transformedRestaurants;
+    } catch (error) {
+        console.error("❌ TripAdvisor API error:", error);
+        return getFallbackRestaurants(destination);
+    }
+}
+
+// Fallback restaurants when TripAdvisor API is unavailable
+function getFallbackRestaurants(destination: string) {
+    const destLower = destination.toLowerCase();
+    
+    const fallbackByCity: Record<string, any[]> = {
+        "paris": [
+            { name: "Le Comptoir du Panthéon", cuisine: "French", priceRange: "€€€", rating: 4.7, reviewCount: 2340, address: "10 Rue Soufflot", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187147-Paris", dataSource: "fallback" },
+            { name: "Chez Janou", cuisine: "Provençal", priceRange: "€€", rating: 4.5, reviewCount: 4560, address: "2 Rue Roger Verlomme", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187147-Paris", dataSource: "fallback" },
+            { name: "Pink Mamma", cuisine: "Italian", priceRange: "€€", rating: 4.6, reviewCount: 8920, address: "20bis Rue de Douai", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187147-Paris", dataSource: "fallback" },
+            { name: "Bouillon Chartier", cuisine: "French", priceRange: "€", rating: 4.3, reviewCount: 12340, address: "7 Rue du Faubourg Montmartre", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187147-Paris", dataSource: "fallback" },
+            { name: "Le Bouillon Pigalle", cuisine: "French Bistro", priceRange: "€€", rating: 4.4, reviewCount: 5670, address: "22 Boulevard de Clichy", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187147-Paris", dataSource: "fallback" },
+        ],
+        "rome": [
+            { name: "Roscioli Salumeria con Cucina", cuisine: "Italian", priceRange: "€€€", rating: 4.8, reviewCount: 3450, address: "Via dei Giubbonari 21", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
+            { name: "Pizzarium", cuisine: "Pizza", priceRange: "€", rating: 4.7, reviewCount: 6780, address: "Via della Meloria 43", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
+            { name: "Da Enzo al 29", cuisine: "Roman", priceRange: "€€", rating: 4.6, reviewCount: 5230, address: "Via dei Vascellari 29", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
+            { name: "Armando al Pantheon", cuisine: "Italian", priceRange: "€€€", rating: 4.5, reviewCount: 4120, address: "Salita dei Crescenzi 31", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
+            { name: "Supplì Roma", cuisine: "Roman Street Food", priceRange: "€", rating: 4.4, reviewCount: 2890, address: "Via di San Francesco a Ripa 137", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
+        ],
+        "barcelona": [
+            { name: "Cal Pep", cuisine: "Catalan", priceRange: "€€€", rating: 4.6, reviewCount: 4560, address: "Plaça de les Olles 8", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187497-Barcelona", dataSource: "fallback" },
+            { name: "Cervecería Catalana", cuisine: "Tapas", priceRange: "€€", rating: 4.5, reviewCount: 9870, address: "Carrer de Mallorca 236", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187497-Barcelona", dataSource: "fallback" },
+            { name: "La Pepita", cuisine: "Spanish", priceRange: "€€", rating: 4.7, reviewCount: 3210, address: "Carrer de Còrsega 343", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187497-Barcelona", dataSource: "fallback" },
+            { name: "El Xampanyet", cuisine: "Catalan Tapas", priceRange: "€", rating: 4.4, reviewCount: 5430, address: "Carrer de Montcada 22", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187497-Barcelona", dataSource: "fallback" },
+            { name: "Can Culleretes", cuisine: "Catalan", priceRange: "€€", rating: 4.3, reviewCount: 2890, address: "Carrer d'en Quintana 5", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187497-Barcelona", dataSource: "fallback" },
+        ],
+    };
+    
+    // Check if we have fallback for this city
+    for (const [city, restaurants] of Object.entries(fallbackByCity)) {
+        if (destLower.includes(city)) {
+            return restaurants;
+        }
+    }
+    
+    // Generic fallback
     return [
-        { name: "Local Bistro", cuisine: "French", priceRange: "€€", rating: 4.5, reviewCount: 250 },
-        { name: "Fine Dining", cuisine: "International", priceRange: "€€€€", rating: 4.8, reviewCount: 180 },
-        { name: "Street Food", cuisine: "Local", priceRange: "€", rating: 4.3, reviewCount: 420 },
-        { name: "Seafood Restaurant", cuisine: "Seafood", priceRange: "€€€", rating: 4.6, reviewCount: 310 },
-        { name: "Vegetarian Cafe", cuisine: "Vegetarian", priceRange: "€€", rating: 4.4, reviewCount: 190 },
+        { name: "Local Bistro", cuisine: "Local", priceRange: "€€", rating: 4.5, reviewCount: 250, address: "City Center", tripAdvisorUrl: `https://www.tripadvisor.com/Restaurants-${encodeURIComponent(destination)}`, dataSource: "fallback" },
+        { name: "Traditional Restaurant", cuisine: "Traditional", priceRange: "€€", rating: 4.4, reviewCount: 180, address: "Old Town", tripAdvisorUrl: `https://www.tripadvisor.com/Restaurants-${encodeURIComponent(destination)}`, dataSource: "fallback" },
+        { name: "Fine Dining", cuisine: "International", priceRange: "€€€€", rating: 4.8, reviewCount: 120, address: "Downtown", tripAdvisorUrl: `https://www.tripadvisor.com/Restaurants-${encodeURIComponent(destination)}`, dataSource: "fallback" },
+        { name: "Street Food Market", cuisine: "Street Food", priceRange: "€", rating: 4.3, reviewCount: 420, address: "Market Square", tripAdvisorUrl: `https://www.tripadvisor.com/Restaurants-${encodeURIComponent(destination)}`, dataSource: "fallback" },
+        { name: "Seafood Restaurant", cuisine: "Seafood", priceRange: "€€€", rating: 4.6, reviewCount: 310, address: "Harbor Area", tripAdvisorUrl: `https://www.tripadvisor.com/Restaurants-${encodeURIComponent(destination)}`, dataSource: "fallback" },
     ];
 }
 
