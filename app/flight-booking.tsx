@@ -15,8 +15,42 @@ interface PassengerForm {
   gender: "male" | "female";
   email: string;
   phoneNumber: string;
+  countryCode: string;
   title: "mr" | "ms" | "mrs" | "miss" | "dr";
 }
+
+// Helper to format phone to E.164 format
+const formatPhoneToE164 = (countryCode: string, phoneNumber: string): string => {
+  // Remove all non-numeric characters except leading +
+  const cleanPhone = phoneNumber.replace(/[^\d]/g, "");
+  const cleanCode = countryCode.replace(/[^\d+]/g, "");
+  
+  // Ensure country code starts with +
+  const formattedCode = cleanCode.startsWith("+") ? cleanCode : `+${cleanCode}`;
+  
+  return `${formattedCode}${cleanPhone}`;
+};
+
+// Helper to calculate age from date of birth
+const calculateAge = (dateOfBirth: string): number => {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+// Helper to validate date format and get a valid adult date
+const getDefaultAdultDOB = (): string => {
+  const today = new Date();
+  const year = today.getFullYear() - 30; // Default to 30 years old
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function FlightBookingScreen() {
   const router = useRouter();
@@ -46,6 +80,7 @@ export default function FlightBookingScreen() {
       gender: "male" as const,
       email: "",
       phoneNumber: "",
+      countryCode: "+1",
       title: "mr" as const,
     }))
   );
@@ -105,12 +140,24 @@ export default function FlightBookingScreen() {
         showAlert("Missing Information", `Please enter valid date of birth (YYYY-MM-DD) for passenger ${i + 1}`);
         return false;
       }
+      
+      // Validate age is reasonable (must be adult for now - 18+)
+      const age = calculateAge(p.dateOfBirth);
+      if (age < 18) {
+        showAlert("Invalid Age", `Passenger ${i + 1} must be at least 18 years old. Child bookings are not yet supported.`);
+        return false;
+      }
+      if (age > 120) {
+        showAlert("Invalid Date", `Please enter a valid date of birth for passenger ${i + 1}`);
+        return false;
+      }
+      
       if (!p.email.trim() || !p.email.includes("@")) {
         showAlert("Missing Information", `Please enter valid email for passenger ${i + 1}`);
         return false;
       }
-      if (!p.phoneNumber.trim()) {
-        showAlert("Missing Information", `Please enter phone number for passenger ${i + 1}`);
+      if (!p.phoneNumber.trim() || p.phoneNumber.replace(/\D/g, "").length < 7) {
+        showAlert("Missing Information", `Please enter a valid phone number (at least 7 digits) for passenger ${i + 1}`);
         return false;
       }
     }
@@ -137,12 +184,12 @@ export default function FlightBookingScreen() {
         tripId: tripId as Id<"trips">,
         passengers: passengers.map((p, index) => ({
           id: `pas_${index}`,
-          givenName: p.givenName,
-          familyName: p.familyName,
+          givenName: p.givenName.trim(),
+          familyName: p.familyName.trim(),
           dateOfBirth: p.dateOfBirth,
           gender: p.gender,
-          email: p.email,
-          phoneNumber: p.phoneNumber,
+          email: p.email.trim().toLowerCase(),
+          phoneNumber: formatPhoneToE164(p.countryCode, p.phoneNumber),
           title: p.title,
         })),
       });
@@ -359,14 +406,18 @@ export default function FlightBookingScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, dynamicStyles.secondaryText]}>Date of Birth * (YYYY-MM-DD)</Text>
+              <Text style={[styles.inputLabel, dynamicStyles.secondaryText]}>Date of Birth *</Text>
+              <Text style={[styles.inputHint, dynamicStyles.secondaryText]}>
+                Format: YYYY-MM-DD (must be 18+ years old)
+              </Text>
               <TextInput
                 style={[styles.input, dynamicStyles.input]}
                 value={passenger.dateOfBirth}
                 onChangeText={(v) => updatePassenger(index, "dateOfBirth", v)}
-                placeholder="1990-01-15"
+                placeholder={getDefaultAdultDOB()}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numbers-and-punctuation"
+                maxLength={10}
               />
             </View>
 
@@ -423,14 +474,28 @@ export default function FlightBookingScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, dynamicStyles.secondaryText]}>Phone Number *</Text>
-              <TextInput
-                style={[styles.input, dynamicStyles.input]}
-                value={passenger.phoneNumber}
-                onChangeText={(v) => updatePassenger(index, "phoneNumber", v)}
-                placeholder="+1 555 123 4567"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="phone-pad"
-              />
+              <Text style={[styles.inputHint, dynamicStyles.secondaryText]}>
+                Include country code
+              </Text>
+              <View style={styles.phoneInputRow}>
+                <TextInput
+                  style={[styles.countryCodeInput, dynamicStyles.input]}
+                  value={passenger.countryCode}
+                  onChangeText={(v) => updatePassenger(index, "countryCode", v)}
+                  placeholder="+1"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                  maxLength={4}
+                />
+                <TextInput
+                  style={[styles.phoneInput, dynamicStyles.input]}
+                  value={passenger.phoneNumber}
+                  onChangeText={(v) => updatePassenger(index, "phoneNumber", v)}
+                  placeholder="5551234567"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                />
+              </View>
             </View>
           </View>
         ))}
@@ -792,5 +857,31 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  inputHint: {
+    fontSize: 11,
+    marginBottom: 4,
+    fontStyle: "italic",
+  },
+  phoneInputRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  countryCodeInput: {
+    width: 70,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    textAlign: "center",
+  },
+  phoneInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
   },
 });
