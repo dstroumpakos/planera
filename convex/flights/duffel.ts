@@ -290,6 +290,7 @@ export async function createOrder(params: {
 }
 
 // Create a payment intent for collecting card details (Duffel Links)
+// Falls back to booking URL if Duffel Links is not enabled for this account
 export async function createPaymentIntent(params: {
   offerId: string;
   passengers: Array<{
@@ -309,33 +310,46 @@ export async function createPaymentIntent(params: {
   const config = getDuffelConfig();
   const headers = getHeaders(config);
 
-  // First get the offer to check the price
+  // First get the offer to check the price and get flight details
   const offer = await getOffer(params.offerId);
   if (!offer) {
     throw new Error("Offer not found or expired");
   }
 
+  // Extract flight details for fallback booking
+  const slices = offer.slices || [];
+  const outbound = slices[0];
+  const return_slice = slices[1];
+  
+  // Get airline info
+  const airlineCode = outbound?.segments?.[0]?.operating_carrier?.iata_code || "";
+  const airlineName = outbound?.segments?.[0]?.operating_carrier?.name || "Airline";
+  
+  // Build a booking-friendly URL
+  const originCode = outbound?.origin?.iata_code || "";
+  const destCode = outbound?.destination?.iata_code || "";
+  const depDate = outbound?.segments?.[0]?.departing_at?.split("T")[0] || "";
+  const retDate = return_slice?.segments?.[0]?.departing_at?.split("T")[0] || "";
+
   // Generate a unique reference for this booking session
   const reference = `PLN-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-  // Create a Duffel Links session for payment
-  const payload = {
-    data: {
-      offer_id: params.offerId,
-      passengers: params.passengers,
-      success_url: params.successUrl,
-      failure_url: params.cancelUrl,
-      abandonment_url: params.cancelUrl, // Required field - where to redirect if user abandons
-      reference: reference, // Required field - unique booking reference
-      markup_amount: "0",
-      markup_currency: offer.total_currency || "EUR",
-    },
-  };
-
+  // Try Duffel Links first (requires Duffel Links product to be enabled)
   try {
-    console.log("🔗 Creating Duffel Links session...");
-    console.log(`   Offer: ${params.offerId}`);
-    console.log(`   Reference: ${reference}`);
+    console.log("🔗 Attempting Duffel Links session...");
+    
+    const payload = {
+      data: {
+        offer_id: params.offerId,
+        passengers: params.passengers,
+        success_url: params.successUrl,
+        failure_url: params.cancelUrl,
+        abandonment_url: params.cancelUrl,
+        reference: reference,
+        markup_amount: "0",
+        markup_currency: offer.total_currency || "EUR",
+      },
+    };
     
     const response = await fetch(`${DUFFEL_API_BASE}/links/sessions`, {
       method: "POST",
@@ -343,62 +357,93 @@ export async function createPaymentIntent(params: {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`Duffel Links Error: ${response.status} - ${errorData}`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`✅ Duffel Links session created: ${data.data.id}`);
       
-      // Fallback: Return airline website for booking
-      const airlineUrl = offer.owner?.website_url;
-      if (airlineUrl) {
-        console.log(`⚠️ Falling back to airline website: ${airlineUrl}`);
-        return {
-          type: "redirect",
-          url: airlineUrl,
-          offer,
-        };
-      }
-      
-      throw new Error(`Failed to create payment session: ${response.status}`);
+      return {
+        type: "duffel_links",
+        url: data.data.url,
+        sessionId: data.data.id,
+        offer,
+      };
     }
 
-    const data = await response.json();
-    console.log(`✅ Duffel Links session created: ${data.data.id}`);
-    
+    // Log the error but continue to fallback
+    const errorData = await response.text();
+    console.log(`ℹ️ Duffel Links not available (${response.status}), using fallback booking`);
+    console.log(`   Error: ${errorData}`);
+  } catch (error) {
+    console.log(`ℹ️ Duffel Links error, using fallback:`, error);
+  }
+
+  // Fallback Strategy: Build the best booking URL we can
+  console.log("🔄 Building fallback booking URL...");
+  
+  // Option 1: Try airline's direct website
+  const airlineWebsite = offer.owner?.website_url;
+  if (airlineWebsite) {
+    console.log(`✅ Using airline website: ${airlineWebsite}`);
     return {
-      type: "duffel_links",
-      url: data.data.url,
-      sessionId: data.data.id,
+      type: "redirect",
+      url: airlineWebsite,
       offer,
     };
-  } catch (error) {
-    console.error("Duffel Links Error:", error);
-    
-    // Fallback to Skyscanner or airline website
-    const slices = offer?.slices || [];
-    const outbound = slices[0];
-    const return_slice = slices[1];
-    
-    if (outbound && return_slice) {
-      const originCode = outbound.origin?.iata_code;
-      const destCode = outbound.destination?.iata_code;
-      const depDate = outbound.departure_date;
-      const retDate = return_slice.departure_date;
-      
-      if (originCode && destCode && depDate && retDate) {
-        const depDateStr = depDate.slice(2).replace(/-/g, '');
-        const retDateStr = retDate.slice(2).replace(/-/g, '');
-        const skyscannerUrl = `https://www.skyscanner.com/transport/flights/${originCode}/${destCode}/${depDateStr}/${retDateStr}`;
-        console.log(`⚠️ Falling back to Skyscanner: ${skyscannerUrl}`);
-        return {
-          type: "redirect",
-          url: skyscannerUrl,
-          offer,
-        };
-      }
-    }
-    
-    throw error;
   }
+
+  // Option 2: Use Google Flights (most reliable universal option)
+  if (originCode && destCode && depDate) {
+    // Google Flights URL format
+    const googleFlightsUrl = buildGoogleFlightsUrl(originCode, destCode, depDate, retDate, params.passengers.length);
+    console.log(`✅ Using Google Flights: ${googleFlightsUrl}`);
+    return {
+      type: "redirect",
+      url: googleFlightsUrl,
+      offer,
+    };
+  }
+
+  // Option 3: Kayak as another fallback
+  if (originCode && destCode && depDate) {
+    const kayakUrl = `https://www.kayak.com/flights/${originCode}-${destCode}/${depDate}${retDate ? `/${retDate}` : ""}`;
+    console.log(`✅ Using Kayak: ${kayakUrl}`);
+    return {
+      type: "redirect",
+      url: kayakUrl,
+      offer,
+    };
+  }
+
+  // Last resort: Generic Skyscanner
+  const skyscannerUrl = `https://www.skyscanner.com/transport/flights/${originCode || "anywhere"}/${destCode || "anywhere"}/`;
+  console.log(`✅ Using Skyscanner: ${skyscannerUrl}`);
+  return {
+    type: "redirect",
+    url: skyscannerUrl,
+    offer,
+  };
+}
+
+// Helper function to build Google Flights URL
+function buildGoogleFlightsUrl(origin: string, dest: string, depDate: string, retDate: string, passengers: number): string {
+  // Google Flights URL structure
+  // Format: https://www.google.com/travel/flights?q=Flights%20to%20{dest}%20from%20{origin}%20on%20{date}
+  const baseUrl = "https://www.google.com/travel/flights";
+  
+  // Build search parameters
+  const searchQuery = `Flights from ${origin} to ${dest}`;
+  const params = new URLSearchParams({
+    q: searchQuery,
+    curr: "EUR",
+  });
+  
+  // For a cleaner deep link format
+  // Example: /flights/JFK/LHR/2024-03-15/2024-03-22
+  const flightPath = retDate 
+    ? `/flights/${origin}/${dest}/${depDate}/${retDate}`
+    : `/flights/${origin}/${dest}/${depDate}`;
+  
+  return `${baseUrl}${flightPath}?curr=EUR&hl=en`;
 }
 
 // Get order status
