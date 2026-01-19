@@ -63,6 +63,17 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
+                name="bookings"
+                options={{
+                    title: "Bookings",
+                    tabBarIcon: ({ color, focused }) => (
+                        <View style={[styles.iconContainer, focused && { backgroundColor: colors.primary }]}>
+                            <Ionicons name={focused ? "ticket" : "ticket-outline"} size={24} color={focused ? colors.tabBar : color} />
+                        </View>
+                    ),
+                }}
+            />
+            <Tabs.Screen
                 name="create"
                 options={{
                     title: "",

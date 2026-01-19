@@ -83,10 +83,8 @@ export default defineSchema({
         item: v.string(),
         url: v.string(),
         status: v.string(),
-        clickedAt: v.float64(),
-    })
-        .index("by_user", ["userId"])
-        .index("by_trip", ["tripId"]),
+        clickedAt: v.number(),
+    }).index("by_user", ["userId"]),
 
     userSettings: defineTable({
         userId: v.string(),
@@ -200,4 +198,24 @@ export default defineSchema({
         .index("by_user", ["userId"])
         .index("by_event_type", ["eventType"])
         .index("by_user_and_type", ["userId", "eventType"]),
+
+    flight_bookings: defineTable({
+        userId: v.string(),
+        tripId: v.optional(v.id("trips")),
+        duffelOrderId: v.string(),
+        duffelBookingReference: v.string(),
+        status: v.string(), // "confirmed", "cancelled", "payment_failed"
+        amount: v.number(),
+        currency: v.string(),
+        flightDetails: v.object({
+            origin: v.string(),
+            destination: v.string(),
+            airline: v.string(),
+            departureTime: v.string(),
+            arrivalTime: v.string(),
+            flightNumber: v.string(),
+        }),
+        passengerNames: v.array(v.string()),
+        bookedAt: v.number(),
+    }).index("by_user_id", ["userId"]),
 });
