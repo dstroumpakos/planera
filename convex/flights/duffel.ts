@@ -29,20 +29,18 @@ export async function createOfferRequest(params: {
 
   const payload = {
     data: {
-      type: "offer_request",
       passengers: Array(params.adults).fill(null).map(() => ({
-        type: "passenger",
         age: 30,
       })),
       slices: [
         {
-          origin_airport_iata_code: params.originCode,
-          destination_airport_iata_code: params.destinationCode,
+          origin: params.originCode,
+          destination: params.destinationCode,
           departure_date: params.departureDate,
         },
         {
-          origin_airport_iata_code: params.destinationCode,
-          destination_airport_iata_code: params.originCode,
+          origin: params.destinationCode,
+          destination: params.originCode,
           departure_date: params.returnDate,
         },
       ],
