@@ -387,25 +387,39 @@ function checkApiKeys() {
 
 // Helper function to extract IATA code from city name
 function extractIATACode(cityName: string): string {
-    // If input already looks like an IATA code (3 uppercase letters), return it
-    if (/^[A-Z]{3}$/.test(cityName.trim())) {
-        return cityName.trim();
+    if (!cityName) {
+        console.warn("⚠️ extractIATACode called with empty/null input");
+        return "";
     }
     
-    // Check if IATA code is in parentheses, e.g., "New York (JFK)" or "London - LHR"
+    console.log(`🔎 Extracting IATA code from: "${cityName}"`);
+    
+    // If input is already a 3-letter IATA code
+    if (/^[A-Z]{3}$/.test(cityName.trim().toUpperCase())) {
+        console.log(`   → Already an IATA code: ${cityName.trim().toUpperCase()}`);
+        return cityName.trim().toUpperCase();
+    }
+    
+    // Check if IATA code is in parentheses like "Paris (CDG)" or "London - LHR"
     const iataMatch = cityName.match(/\(([A-Z]{3})\)/) || cityName.match(/[-–]\s*([A-Z]{3})$/);
     if (iataMatch) {
+        console.log(`   → Found IATA in input: ${iataMatch[1]}`);
         return iataMatch[1];
     }
     
     const cityToIATA: Record<string, string> = {
+        // Europe - Major Cities
         "london": "LHR",
         "london heathrow": "LHR",
         "london gatwick": "LGW",
         "london stansted": "STN",
         "london luton": "LTN",
+        "london city": "LCY",
         "paris": "CDG",
+        "paris charles de gaulle": "CDG",
+        "paris orly": "ORY",
         "rome": "FCO",
+        "rome fiumicino": "FCO",
         "barcelona": "BCN",
         "athens": "ATH",
         "amsterdam": "AMS",
@@ -420,51 +434,14 @@ function extractIATACode(cityName: string): string {
         "warsaw": "WAW",
         "krakow": "KRK",
         "istanbul": "IST",
-        "dubai": "DXB",
-        "abu dhabi": "AUH",
-        "doha": "DOH",
-        "bangkok": "BKK",
-        "singapore": "SIN",
-        "hong kong": "HKG",
-        "tokyo": "NRT",
-        "tokyo narita": "NRT",
-        "tokyo haneda": "HND",
-        "osaka": "KIX",
-        "seoul": "ICN",
-        "new york": "JFK",
-        "new york jfk": "JFK",
-        "newark": "EWR",
-        "los angeles": "LAX",
-        "chicago": "ORD",
-        "miami": "MIA",
-        "san francisco": "SFO",
-        "boston": "BOS",
-        "washington": "IAD",
-        "washington dc": "IAD",
-        "seattle": "SEA",
-        "denver": "DEN",
-        "dallas": "DFW",
-        "atlanta": "ATL",
-        "toronto": "YYZ",
-        "vancouver": "YVR",
-        "montreal": "YUL",
-        "mexico city": "MEX",
-        "cancun": "CUN",
-        "buenos aires": "EZE",
-        "sao paulo": "GRU",
-        "rio de janeiro": "GIG",
-        "sydney": "SYD",
-        "melbourne": "MEL",
-        "brisbane": "BNE",
-        "auckland": "AKL",
-        "cape town": "CPT",
-        "johannesburg": "JNB",
-        "cairo": "CAI",
-        "marrakech": "RAK",
         "dublin": "DUB",
         "edinburgh": "EDI",
         "manchester": "MAN",
+        "birmingham": "BHX",
+        "glasgow": "GLA",
         "milan": "MXP",
+        "milan malpensa": "MXP",
+        "milan linate": "LIN",
         "florence": "FLR",
         "venice": "VCE",
         "naples": "NAP",
@@ -477,13 +454,16 @@ function extractIATACode(cityName: string): string {
         "oslo": "OSL",
         "helsinki": "HEL",
         "reykjavik": "KEF",
-        "bali": "DPS",
-        "phuket": "HKT",
-        "maldives": "MLE",
-        "mauritius": "MRU",
-        "seychelles": "SEZ",
-        "hawaii": "HNL",
-        "honolulu": "HNL",
+        "santorini": "JTR",
+        "mykonos": "JMK",
+        "crete": "HER",
+        "rhodes": "RHO",
+        "corfu": "CFU",
+        "porto": "OPO",
+        "seville": "SVQ",
+        "denver": "DEN",
+        "dallas": "DFW",
+        "atlanta": "ATL",
         "las vegas": "LAS",
         "phoenix": "PHX",
         "san diego": "SAN",
@@ -491,23 +471,223 @@ function extractIATACode(cityName: string): string {
         "new orleans": "MSY",
         "nashville": "BNA",
         "austin": "AUS",
+        "houston": "IAH",
+        "philadelphia": "PHL",
+        "minneapolis": "MSP",
+        "detroit": "DTW",
+        "orlando": "MCO",
+        "tampa": "TPA",
+        "fort lauderdale": "FLL",
+        "san jose": "SJC",
+        "salt lake city": "SLC",
+        "charlotte": "CLT",
+        "raleigh": "RDU",
+        "pittsburgh": "PIT",
+        "st louis": "STL",
+        "kansas city": "MCI",
+        "indianapolis": "IND",
+        "cleveland": "CLE",
+        "columbus": "CMH",
+        "cincinnati": "CVG",
+        "milwaukee": "MKE",
+        "baltimore": "BWI",
+        "san antonio": "SAT",
+        "sacramento": "SMF",
+        "oakland": "OAK",
+        "anchorage": "ANC",
+        
+        // Hawaii
+        "hawaii": "HNL",
+        "honolulu": "HNL",
+        "maui": "OGG",
+        "kauai": "LIH",
+        "big island": "KOA",
+        "kona": "KOA",
+        
+        // Caribbean
+        "cancun": "CUN",
+        "playa del carmen": "CUN",
+        "riviera maya": "CUN",
+        "tulum": "CUN",
+        "jamaica": "MBJ",
+        "montego bay": "MBJ",
+        "punta cana": "PUJ",
+        "santo domingo": "SDQ",
+        "puerto rico": "SJU",
+        "san juan": "SJU",
+        "aruba": "AUA",
+        "curacao": "CUR",
+        "st maarten": "SXM",
+        "barbados": "BGI",
+        "bahamas": "NAS",
+        "nassau": "NAS",
+        "turks and caicos": "PLS",
+        "cayman islands": "GCM",
+        "grand cayman": "GCM",
+        "bermuda": "BDA",
+        "virgin islands": "STT",
+        "st thomas": "STT",
+        "antigua": "ANU",
+        "st lucia": "UVF",
+        "trinidad": "POS",
+        "martinique": "FDF",
+        "guadeloupe": "PTP",
+        
+        // Mexico
+        "mexico city": "MEX",
+        "guadalajara": "GDL",
+        "monterrey": "MTY",
+        "los cabos": "SJD",
+        "cabo san lucas": "SJD",
+        "puerto vallarta": "PVR",
+        "acapulco": "ACA",
+        "oaxaca": "OAX",
+        "merida": "MID",
+        "cozumel": "CZM",
+        
+        // Canada
+        "toronto": "YYZ",
+        "vancouver": "YVR",
+        "montreal": "YUL",
+        "calgary": "YYC",
+        "edmonton": "YEG",
+        "ottawa": "YOW",
+        "quebec city": "YQB",
+        "halifax": "YHZ",
+        "winnipeg": "YWG",
+        "victoria": "YYJ",
+        
+        // Central America
+        "costa rica": "SJO",
+        "san jose costa rica": "SJO",
+        "panama city": "PTY",
+        "panama": "PTY",
+        "belize": "BZE",
+        "belize city": "BZE",
+        "guatemala city": "GUA",
+        "guatemala": "GUA",
+        "managua": "MGA",
+        "nicaragua": "MGA",
+        "honduras": "SAP",
+        "el salvador": "SAL",
+        
+        // South America
+        "buenos aires": "EZE",
+        "sao paulo": "GRU",
+        "rio de janeiro": "GIG",
+        "rio": "GIG",
+        "lima": "LIM",
+        "bogota": "BOG",
+        "medellin": "MDE",
+        "cartagena": "CTG",
+        "santiago": "SCL",
+        "quito": "UIO",
+        "guayaquil": "GYE",
+        "cusco": "CUZ",
+        "machu picchu": "CUZ",
+        "montevideo": "MVD",
+        "asuncion": "ASU",
+        "la paz": "LPB",
+        "caracas": "CCS",
+        
+        // Africa
+        "cape town": "CPT",
+        "johannesburg": "JNB",
+        "durban": "DUR",
+        "cairo": "CAI",
+        "alexandria": "HBE",
+        "luxor": "LXR",
+        "sharm el sheikh": "SSH",
+        "hurghada": "HRG",
+        "marrakech": "RAK",
+        "casablanca": "CMN",
+        "fez": "FEZ",
+        "tunis": "TUN",
+        "nairobi": "NBO",
+        "mombasa": "MBA",
+        "zanzibar": "ZNZ",
+        "dar es salaam": "DAR",
+        "addis ababa": "ADD",
+        "accra": "ACC",
+        "lagos": "LOS",
+        "dakar": "DSS",
+        "mauritius": "MRU",
+        "seychelles": "SEZ",
+        "reunion": "RUN",
+        "madagascar": "TNR",
+        "victoria falls": "VFA",
+        "windhoek": "WDH",
+        "namibia": "WDH",
+        "botswana": "GBE",
+        "gaborone": "GBE",
+        "rwanda": "KGL",
+        "kigali": "KGL",
+        "kilimanjaro": "JRO",
+        
+        // Oceania
+        "sydney": "SYD",
+        "melbourne": "MEL",
+        "brisbane": "BNE",
+        "perth": "PER",
+        "adelaide": "ADL",
+        "cairns": "CNS",
+        "gold coast": "OOL",
+        "auckland": "AKL",
+        "wellington": "WLG",
+        "christchurch": "CHC",
+        "queenstown": "ZQN",
+        "fiji": "NAN",
+        "nadi": "NAN",
+        "tahiti": "PPT",
+        "bora bora": "BOB",
+        "new caledonia": "NOU",
+        "vanuatu": "VLI",
+        "samoa": "APW",
+        
+        // Island Destinations
+        "maldives": "MLE",
+        "male": "MLE",
+        "sri lanka": "CMB",
+        "cuba": "HAV",
+        "havana": "HAV",
     };
 
     const normalized = cityName.toLowerCase().trim();
     
+    // Remove common suffixes like ", Country" or ", State"
+    const cleanedName = normalized
+        .replace(/,\s*[a-z\s]+$/i, '')  // Remove ", Country" or ", State"
+        .replace(/\s+(airport|international|intl)$/i, '')  // Remove "Airport" suffix
+        .trim();
+    
     // Try exact match first
+    if (cityToIATA[cleanedName]) {
+        console.log(`   → Exact match: ${cityToIATA[cleanedName]}`);
+        return cityToIATA[cleanedName];
+    }
+    
     if (cityToIATA[normalized]) {
+        console.log(`   → Match on normalized: ${cityToIATA[normalized]}`);
         return cityToIATA[normalized];
     }
     
     // Try partial match (city name contained in input)
     for (const [city, code] of Object.entries(cityToIATA)) {
-        if (normalized.includes(city) || city.includes(normalized)) {
+        if (cleanedName.includes(city) || city.includes(cleanedName)) {
+            console.log(`   → Partial match "${city}": ${code}`);
             return code;
         }
     }
     
-    console.warn(`⚠️ Could not find IATA code for "${cityName}", no fallback available`);
+    // Last resort: check if input contains any known city
+    for (const [city, code] of Object.entries(cityToIATA)) {
+        if (normalized.includes(city)) {
+            console.log(`   → Found city "${city}" in input: ${code}`);
+            return code;
+        }
+    }
+    
+    console.warn(`⚠️ Could not find IATA code for "${cityName}" (cleaned: "${cleanedName}")`);
     return ""; // Return empty string instead of default to trigger validation
 }
 
@@ -738,8 +918,8 @@ function getFallbackRestaurants(destination: string) {
         "rome": [
             { name: "Roscioli Salumeria con Cucina", cuisine: "Italian", priceRange: "€€€", rating: 4.8, reviewCount: 3450, address: "Via dei Giubbonari 21", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
             { name: "Pizzarium", cuisine: "Pizza", priceRange: "€", rating: 4.7, reviewCount: 6780, address: "Via della Meloria 43", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
-            { name: "Da Enzo al 29", cuisine: "Roman", priceRange: "€€", rating: 4.6, reviewCount: 5230, address: "Via dei Vascellari 29", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
-            { name: "Armando al Pantheon", cuisine: "Italian", priceRange: "€€€", rating: 4.5, reviewCount: 4120, address: "Salita dei Crescenzi 31", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
+            { name: "Da Enzo al 29", cuisine: "Roman", priceRange: "€€", rating: 4.6, reviewCount: 5230, address: "Salita dei Crescenzi 31", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
+            { name: "Armando al Pantheon", cuisine: "Italian", priceRange: "€€€", rating: 4.5, reviewCount: 4120, address: "Salita dei Vascellari 29", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
             { name: "Supplì Roma", cuisine: "Roman Street Food", priceRange: "€", rating: 4.4, reviewCount: 2890, address: "Via di San Francesco a Ripa 137", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187791-Rome", dataSource: "fallback" },
         ],
         "barcelona": [
