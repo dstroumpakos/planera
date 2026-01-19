@@ -315,20 +315,28 @@ export async function createPaymentIntent(params: {
     throw new Error("Offer not found or expired");
   }
 
+  // Generate a unique reference for this booking session
+  const reference = `PLN-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
   // Create a Duffel Links session for payment
   const payload = {
     data: {
       offer_id: params.offerId,
       passengers: params.passengers,
-      client_key: config.accessToken,
       success_url: params.successUrl,
       failure_url: params.cancelUrl,
+      abandonment_url: params.cancelUrl, // Required field - where to redirect if user abandons
+      reference: reference, // Required field - unique booking reference
       markup_amount: "0",
       markup_currency: offer.total_currency || "EUR",
     },
   };
 
   try {
+    console.log("🔗 Creating Duffel Links session...");
+    console.log(`   Offer: ${params.offerId}`);
+    console.log(`   Reference: ${reference}`);
+    
     const response = await fetch(`${DUFFEL_API_BASE}/links/sessions`, {
       method: "POST",
       headers,
@@ -342,6 +350,7 @@ export async function createPaymentIntent(params: {
       // Fallback: Return airline website for booking
       const airlineUrl = offer.owner?.website_url;
       if (airlineUrl) {
+        console.log(`⚠️ Falling back to airline website: ${airlineUrl}`);
         return {
           type: "redirect",
           url: airlineUrl,
@@ -353,6 +362,8 @@ export async function createPaymentIntent(params: {
     }
 
     const data = await response.json();
+    console.log(`✅ Duffel Links session created: ${data.data.id}`);
+    
     return {
       type: "duffel_links",
       url: data.data.url,
@@ -376,9 +387,11 @@ export async function createPaymentIntent(params: {
       if (originCode && destCode && depDate && retDate) {
         const depDateStr = depDate.slice(2).replace(/-/g, '');
         const retDateStr = retDate.slice(2).replace(/-/g, '');
+        const skyscannerUrl = `https://www.skyscanner.com/transport/flights/${originCode}/${destCode}/${depDateStr}/${retDateStr}`;
+        console.log(`⚠️ Falling back to Skyscanner: ${skyscannerUrl}`);
         return {
           type: "redirect",
-          url: `https://www.skyscanner.com/transport/flights/${originCode}/${destCode}/${depDateStr}/${retDateStr}`,
+          url: skyscannerUrl,
           offer,
         };
       }
