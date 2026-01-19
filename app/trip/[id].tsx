@@ -1120,25 +1120,9 @@ export default function TripDetails() {
                                             {flight.bookingUrl && (
                                                 <TouchableOpacity 
                                                     style={styles.bookFlightButton}
-                                                    onPress={() => {
-                                                        if (itinerary.flights.dataSource === 'duffel') {
-                                                            router.push({
-                                                                pathname: "/book-flight/passenger-details",
-                                                                params: {
-                                                                    offerId: flight.id,
-                                                                    price: flight.pricePerPerson,
-                                                                    currency: flight.currency,
-                                                                    flightDetails: JSON.stringify(flight),
-                                                                }
-                                                            });
-                                                        } else {
-                                                            Linking.openURL(flight.bookingUrl);
-                                                        }
-                                                    }}
+                                                    onPress={() => Linking.openURL(flight.bookingUrl)}
                                                 >
-                                                    <Text style={styles.bookFlightButtonText}>
-                                                        {itinerary.flights.dataSource === 'duffel' ? 'Book Now' : 'Check Availability'}
-                                                    </Text>
+                                                    <Text style={styles.bookFlightButtonText}>Book Flight</Text>
                                                     <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
                                                 </TouchableOpacity>
                                             )}
