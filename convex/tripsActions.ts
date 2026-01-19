@@ -572,11 +572,14 @@ async function searchActivities(destination: string) {
         );
         
         if (!searchResponse.ok) {
-            console.warn(`⚠️ Viator destination search failed: ${searchResponse.status}`);
+            const errorText = await searchResponse.text();
+            console.warn(`⚠️ Viator destination search failed: ${searchResponse.status}`, errorText);
             return getFallbackActivities(destination);
         }
         
         const searchData = await searchResponse.json();
+        console.log("📍 Viator destination search response:", JSON.stringify(searchData, null, 2));
+        
         const destinations = searchData.destinations || [];
         
         if (destinations.length === 0) {
@@ -616,7 +619,8 @@ async function searchActivities(destination: string) {
         );
         
         if (!productsResponse.ok) {
-            console.warn(`⚠️ Viator products search failed: ${productsResponse.status}`);
+            const errorText = await productsResponse.text();
+            console.warn(`⚠️ Viator products search failed: ${productsResponse.status}`, errorText);
             return getFallbackActivities(destination);
         }
         
@@ -625,26 +629,69 @@ async function searchActivities(destination: string) {
         
         console.log(`✅ Found ${products.length} Viator activities`);
         
+        // Log first product to see structure
+        if (products.length > 0) {
+            console.log("📦 Sample Viator product structure:", JSON.stringify(products[0], null, 2));
+        }
+        
         // Transform Viator products to our format
-        const activities = products.map((product: any) => ({
-            name: product.title || "Activity",
-            type: categorizeActivity(product.title, product.productCode),
-            price: product.pricing?.summary?.fromPrice || 0,
-            currency: product.pricing?.currency || "EUR",
-            rating: product.reviews?.combinedAverageRating || null,
-            reviewCount: product.reviews?.totalReviews || 0,
-            duration: product.duration?.fixedDurationInMinutes 
-                ? `${Math.round(product.duration.fixedDurationInMinutes / 60)} hours`
-                : product.duration?.variableDurationFromMinutes
-                    ? `${Math.round(product.duration.variableDurationFromMinutes / 60)}-${Math.round(product.duration.variableDurationToMinutes / 60)} hours`
-                    : "Varies",
-            description: product.description?.substring(0, 200) || "",
-            bookingUrl: product.productUrl || `https://www.viator.com/tours/${product.productCode}`,
-            productCode: product.productCode,
-            image: product.images?.[0]?.variants?.find((v: any) => v.width >= 400)?.url || null,
-            skipTheLine: product.flags?.includes("SKIP_THE_LINE") || product.title?.toLowerCase().includes("skip") || false,
-            dataSource: "viator",
-        }));
+        const activities = products.map((product: any) => {
+            // Extract the best image URL from Viator's image structure
+            // Viator API v2 returns images as array with variants
+            let imageUrl: string | null = null;
+            
+            if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+                const firstImage = product.images[0];
+                // Try to get a medium-sized variant (around 400-800px wide)
+                if (firstImage.variants && Array.isArray(firstImage.variants)) {
+                    // Sort variants by width and pick one around 480-720px
+                    const sortedVariants = [...firstImage.variants].sort((a: any, b: any) => (a.width || 0) - (b.width || 0));
+                    const mediumVariant = sortedVariants.find((v: any) => v.width >= 400 && v.width <= 800);
+                    const fallbackVariant = sortedVariants.find((v: any) => v.width >= 200);
+                    imageUrl = mediumVariant?.url || fallbackVariant?.url || sortedVariants[sortedVariants.length - 1]?.url || null;
+                }
+            }
+            
+            // Get the title - Viator API v2 uses 'title' field
+            const title = product.title || product.name || "Activity";
+            
+            // Extract duration in a readable format
+            let duration = "Varies";
+            if (product.duration) {
+                if (product.duration.fixedDurationInMinutes) {
+                    const hours = Math.round(product.duration.fixedDurationInMinutes / 60);
+                    duration = hours > 0 ? `${hours} hour${hours > 1 ? 's' : ''}` : `${product.duration.fixedDurationInMinutes} min`;
+                } else if (product.duration.variableDurationFromMinutes && product.duration.variableDurationToMinutes) {
+                    const fromHours = Math.round(product.duration.variableDurationFromMinutes / 60);
+                    const toHours = Math.round(product.duration.variableDurationToMinutes / 60);
+                    duration = `${fromHours}-${toHours} hours`;
+                }
+            }
+            
+            return {
+                name: title,
+                title: title, // Include both for compatibility
+                type: categorizeActivity(title, product.productCode),
+                price: product.pricing?.summary?.fromPrice || 0,
+                currency: product.pricing?.currency || "EUR",
+                rating: product.reviews?.combinedAverageRating || null,
+                reviewCount: product.reviews?.totalReviews || 0,
+                duration,
+                description: product.description?.substring(0, 300) || "",
+                bookingUrl: product.productUrl || `https://www.viator.com/tours/${product.productCode}`,
+                productCode: product.productCode,
+                image: imageUrl,
+                imageUrl: imageUrl, // Include both for compatibility
+                skipTheLine: product.flags?.includes("SKIP_THE_LINE") || title.toLowerCase().includes("skip") || false,
+                dataSource: "viator",
+            };
+        });
+        
+        console.log(`✅ Transformed ${activities.length} activities with images`);
+        // Log first transformed activity
+        if (activities.length > 0) {
+            console.log("📦 Sample transformed activity:", JSON.stringify(activities[0], null, 2));
+        }
         
         return activities;
     } catch (error) {
@@ -674,25 +721,25 @@ function getFallbackActivities(destination: string) {
     
     const fallbackByCity: Record<string, any[]> = {
         "paris": [
-            { name: "Eiffel Tower Summit Access", type: "attraction", price: 42, currency: "EUR", rating: 4.7, reviewCount: 15420, duration: "2-3 hours", description: "Skip the lines and visit all levels including the summit", bookingUrl: "https://www.viator.com/tours/Paris/Eiffel-Tower", skipTheLine: true, dataSource: "fallback" },
-            { name: "Louvre Museum Guided Tour", type: "museum", price: 65, currency: "EUR", rating: 4.8, reviewCount: 8930, duration: "3 hours", description: "Expert-led tour of the world's largest art museum", bookingUrl: "https://www.viator.com/tours/Paris/Louvre", skipTheLine: true, dataSource: "fallback" },
-            { name: "Seine River Dinner Cruise", type: "cruise", price: 89, currency: "EUR", rating: 4.6, reviewCount: 5240, duration: "2.5 hours", description: "Gourmet dinner while cruising past illuminated monuments", bookingUrl: "https://www.viator.com/tours/Paris/Seine-Cruise", skipTheLine: false, dataSource: "fallback" },
-            { name: "Montmartre Walking Tour", type: "tour", price: 25, currency: "EUR", rating: 4.9, reviewCount: 3210, duration: "2 hours", description: "Explore the artistic bohemian neighborhood", bookingUrl: "https://www.viator.com/tours/Paris/Montmartre", skipTheLine: false, dataSource: "fallback" },
-            { name: "French Cooking Class", type: "experience", price: 120, currency: "EUR", rating: 4.9, reviewCount: 1890, duration: "4 hours", description: "Learn to cook classic French dishes", bookingUrl: "https://www.viator.com/tours/Paris/Cooking", skipTheLine: false, dataSource: "fallback" },
+            { name: "Eiffel Tower Summit Access", title: "Eiffel Tower Summit Access", type: "attraction", price: 42, currency: "EUR", rating: 4.7, reviewCount: 15420, duration: "2-3 hours", description: "Skip the lines and visit all levels including the summit", bookingUrl: "https://www.viator.com/tours/Paris/Eiffel-Tower", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Louvre Museum Guided Tour", title: "Louvre Museum Guided Tour", type: "museum", price: 65, currency: "EUR", rating: 4.8, reviewCount: 8930, duration: "3 hours", description: "Expert-led tour of the world's largest art museum", bookingUrl: "https://www.viator.com/tours/Paris/Louvre", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Seine River Dinner Cruise", title: "Seine River Dinner Cruise", type: "cruise", price: 89, currency: "EUR", rating: 4.6, reviewCount: 5240, duration: "2.5 hours", description: "Gourmet dinner while cruising past illuminated monuments", bookingUrl: "https://www.viator.com/tours/Paris/Seine-Cruise", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Montmartre Walking Tour", title: "Montmartre Walking Tour", type: "tour", price: 25, currency: "EUR", rating: 4.9, reviewCount: 3210, duration: "2 hours", description: "Explore the artistic bohemian neighborhood", bookingUrl: "https://www.viator.com/tours/Paris/Montmartre", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "French Cooking Class", title: "French Cooking Class", type: "experience", price: 120, currency: "EUR", rating: 4.9, reviewCount: 1890, duration: "4 hours", description: "Learn to cook classic French dishes", bookingUrl: "https://www.viator.com/tours/Paris/Cooking", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
         ],
         "rome": [
-            { name: "Colosseum Underground Tour", type: "attraction", price: 75, currency: "EUR", rating: 4.9, reviewCount: 12340, duration: "3 hours", description: "Exclusive access to underground chambers and arena floor", bookingUrl: "https://www.viator.com/tours/Rome/Colosseum", skipTheLine: true, dataSource: "fallback" },
-            { name: "Vatican Museums & Sistine Chapel", type: "museum", price: 59, currency: "EUR", rating: 4.7, reviewCount: 18920, duration: "3 hours", description: "Skip-the-line access to the Vatican's treasures", bookingUrl: "https://www.viator.com/tours/Rome/Vatican", skipTheLine: true, dataSource: "fallback" },
-            { name: "Trastevere Food Tour", type: "food", price: 79, currency: "EUR", rating: 4.8, reviewCount: 4560, duration: "4 hours", description: "Taste authentic Roman cuisine in the charming Trastevere district", bookingUrl: "https://www.viator.com/tours/Rome/Food-Tour", skipTheLine: false, dataSource: "fallback" },
-            { name: "Pasta Making Class", type: "experience", price: 65, currency: "EUR", rating: 4.9, reviewCount: 2340, duration: "3 hours", description: "Learn to make fresh pasta from a local chef", bookingUrl: "https://www.viator.com/tours/Rome/Pasta", skipTheLine: false, dataSource: "fallback" },
-            { name: "Rome by Night Walking Tour", type: "tour", price: 35, currency: "EUR", rating: 4.7, reviewCount: 2890, duration: "2.5 hours", description: "See Rome's monuments beautifully illuminated", bookingUrl: "https://www.viator.com/tours/Rome/Night-Tour", skipTheLine: false, dataSource: "fallback" },
+            { name: "Colosseum Underground Tour", title: "Colosseum Underground Tour", type: "attraction", price: 75, currency: "EUR", rating: 4.9, reviewCount: 12340, duration: "3 hours", description: "Exclusive access to underground chambers and arena floor", bookingUrl: "https://www.viator.com/tours/Rome/Colosseum", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Vatican Museums & Sistine Chapel", title: "Vatican Museums & Sistine Chapel", type: "museum", price: 59, currency: "EUR", rating: 4.7, reviewCount: 18920, duration: "3 hours", description: "Skip-the-line access to the Vatican's treasures", bookingUrl: "https://www.viator.com/tours/Rome/Vatican", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Trastevere Food Tour", title: "Trastevere Food Tour", type: "food", price: 79, currency: "EUR", rating: 4.8, reviewCount: 4560, duration: "4 hours", description: "Taste authentic Roman cuisine in the charming Trastevere district", bookingUrl: "https://www.viator.com/tours/Rome/Food-Tour", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Pasta Making Class", title: "Pasta Making Class", type: "experience", price: 65, currency: "EUR", rating: 4.9, reviewCount: 2340, duration: "3 hours", description: "Learn to make fresh pasta from a local chef", bookingUrl: "https://www.viator.com/tours/Rome/Pasta", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Rome by Night Walking Tour", title: "Rome by Night Walking Tour", type: "tour", price: 35, currency: "EUR", rating: 4.7, reviewCount: 2890, duration: "2.5 hours", description: "See Rome's monuments beautifully illuminated", bookingUrl: "https://www.viator.com/tours/Rome/Night-Tour", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
         ],
         "barcelona": [
-            { name: "Sagrada Familia Guided Tour", type: "attraction", price: 47, currency: "EUR", rating: 4.8, reviewCount: 21340, duration: "2 hours", description: "Skip-the-line access with expert guide", bookingUrl: "https://www.viator.com/tours/Barcelona/Sagrada-Familia", skipTheLine: true, dataSource: "fallback" },
-            { name: "Park Güell Express Tour", type: "attraction", price: 24, currency: "EUR", rating: 4.6, reviewCount: 8760, duration: "1.5 hours", description: "Discover Gaudí's colorful mosaic park", bookingUrl: "https://www.viator.com/tours/Barcelona/Park-Guell", skipTheLine: true, dataSource: "fallback" },
-            { name: "Tapas & Wine Tour", type: "food", price: 89, currency: "EUR", rating: 4.9, reviewCount: 5430, duration: "4 hours", description: "Sample authentic tapas in the Gothic Quarter", bookingUrl: "https://www.viator.com/tours/Barcelona/Tapas", skipTheLine: false, dataSource: "fallback" },
-            { name: "Flamenco Show & Dinner", type: "entertainment", price: 75, currency: "EUR", rating: 4.7, reviewCount: 3210, duration: "2 hours", description: "Traditional flamenco performance with dinner", bookingUrl: "https://www.viator.com/tours/Barcelona/Flamenco", skipTheLine: false, dataSource: "fallback" },
-            { name: "Gothic Quarter Walking Tour", type: "tour", price: 20, currency: "EUR", rating: 4.8, reviewCount: 4560, duration: "2 hours", description: "Explore medieval streets and hidden squares", bookingUrl: "https://www.viator.com/tours/Barcelona/Gothic", skipTheLine: false, dataSource: "fallback" },
+            { name: "Sagrada Familia Guided Tour", title: "Sagrada Familia Guided Tour", type: "attraction", price: 47, currency: "EUR", rating: 4.8, reviewCount: 21340, duration: "2 hours", description: "Skip-the-line access with expert guide", bookingUrl: "https://www.viator.com/tours/Barcelona/Sagrada-Familia", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Park Güell Express Tour", title: "Park Güell Express Tour", type: "attraction", price: 24, currency: "EUR", rating: 4.6, reviewCount: 8760, duration: "1.5 hours", description: "Discover Gaudí's colorful mosaic park", bookingUrl: "https://www.viator.com/tours/Barcelona/Park-Guell", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Tapas & Wine Tour", title: "Tapas & Wine Tour", type: "food", price: 89, currency: "EUR", rating: 4.9, reviewCount: 5430, duration: "4 hours", description: "Sample authentic tapas in the Gothic Quarter", bookingUrl: "https://www.viator.com/tours/Barcelona/Tapas", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Flamenco Show & Dinner", title: "Flamenco Show & Dinner", type: "entertainment", price: 75, currency: "EUR", rating: 4.7, reviewCount: 3210, duration: "2 hours", description: "Traditional flamenco performance with dinner", bookingUrl: "https://www.viator.com/tours/Barcelona/Flamenco", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+            { name: "Gothic Quarter Walking Tour", title: "Gothic Quarter Walking Tour", type: "tour", price: 20, currency: "EUR", rating: 4.8, reviewCount: 4560, duration: "2 hours", description: "Explore medieval streets and hidden squares", bookingUrl: "https://www.viator.com/tours/Barcelona/Gothic", skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
         ],
     };
     
@@ -705,11 +752,11 @@ function getFallbackActivities(destination: string) {
     
     // Generic fallback
     return [
-        { name: "City Highlights Tour", type: "tour", price: 35, currency: "EUR", rating: 4.5, reviewCount: 500, duration: "3 hours", description: "Discover the best of the city with a local guide", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
-        { name: "Main Museum Visit", type: "museum", price: 20, currency: "EUR", rating: 4.6, reviewCount: 300, duration: "2 hours", description: "Explore the city's main museum", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: true, dataSource: "fallback" },
-        { name: "Local Food Experience", type: "food", price: 65, currency: "EUR", rating: 4.7, reviewCount: 200, duration: "3 hours", description: "Taste local specialties with a foodie guide", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
-        { name: "Walking Tour", type: "tour", price: 18, currency: "EUR", rating: 4.4, reviewCount: 400, duration: "2 hours", description: "Explore the historic center on foot", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
-        { name: "Sunset Experience", type: "experience", price: 45, currency: "EUR", rating: 4.8, reviewCount: 150, duration: "2 hours", description: "Watch the sunset from the best viewpoint", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback" },
+        { name: "City Highlights Tour", title: "City Highlights Tour", type: "tour", price: 35, currency: "EUR", rating: 4.5, reviewCount: 500, duration: "3 hours", description: "Discover the best of the city with a local guide", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+        { name: "Main Museum Visit", title: "Main Museum Visit", type: "museum", price: 20, currency: "EUR", rating: 4.6, reviewCount: 300, duration: "2 hours", description: "Explore the city's main museum", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
+        { name: "Local Food Experience", title: "Local Food Experience", type: "food", price: 65, currency: "EUR", rating: 4.7, reviewCount: 200, duration: "3 hours", description: "Taste local specialties with a foodie guide", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+        { name: "Walking Tour", title: "Walking Tour", type: "tour", price: 18, currency: "EUR", rating: 4.4, reviewCount: 400, duration: "2 hours", description: "Explore the historic center on foot", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
+        { name: "Sunset Experience", title: "Sunset Experience", type: "experience", price: 45, currency: "EUR", rating: 4.8, reviewCount: 150, duration: "2 hours", description: "Watch the sunset from the best viewpoint", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, skipTheLine: false, dataSource: "fallback", image: null, imageUrl: null },
     ];
 }
 
@@ -1120,9 +1167,9 @@ function getActivitiesWithPrices(destination: string) {
     
     // Generic fallback with prices
     return [
-        { title: `City Highlights Tour`, description: "Guided tour of main attractions", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
-        { title: "Main Museum", description: "Discover local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
-        { title: "Walking Tour", description: "Explore the old town", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
+        { title: `City Highlights Tour`, description: "Discover the best of the city with a local guide", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
+        { title: "Main Museum", description: "Explore local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
+        { title: "Walking Tour", description: "Explore the historic center", type: "tour", price: 12, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
         { title: "Local Market Visit", description: "Experience local life and cuisine", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "2-3 hours", bookingUrl: null, tips: "Best in the morning" },
         { title: "Sunset Viewpoint", description: "Best views of the city", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "1 hour", bookingUrl: null, tips: "Arrive 30 min before sunset" },
     ];
@@ -1332,9 +1379,9 @@ function calculateFlightDuration(originCode: string, destCode: string): number {
         FCO: { LHR: 2.5, CDG: 2.5, AMS: 2.5, MAD: 3, BCN: 2.5, VIE: 2, ZRH: 2, MUC: 2 },
         MAD: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 3, BCN: 2, VIE: 3, ZRH: 2.5, MUC: 2.5 },
         BCN: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 2.5, MAD: 2, VIE: 3, ZRH: 2.5, MUC: 2.5 },
-        VIE: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 2, MAD: 3, BCN: 3, ZRH: 1.5, MUC: 1.5 },
+        VIE: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 2, MAD: 3, BCN: 3, ZRH: 1.5, MUC: 1 },
         ZRH: { LHR: 1.5, CDG: 1.5, AMS: 1.5, FCO: 2, MAD: 2.5, BCN: 2.5, VIE: 1.5, MUC: 1 },
-        MUC: { LHR: 2, CDG: 2, AMS: 2, FCO: 2, MAD: 2.5, BCN: 2.5, VIE: 1.5, ZRH: 1 },
+        MUC: { LHR: 2, CDG: 2, AMS: 2, FCO: 2, MAD: 2.5, BCN: 2.5, VIE: 1, ZRH: 1 },
     };
 
     // Default to 2.5 hours if route not found
