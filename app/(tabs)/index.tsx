@@ -534,6 +534,7 @@ const styles = StyleSheet.create({
   },
   trendingCardContent: {
     width: "100%",
+    paddingBottom: 30,
   },
   trendingName: {
     fontSize: 24,
