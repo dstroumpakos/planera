@@ -779,7 +779,7 @@ export default function TripDetails() {
 
                     <TouchableOpacity 
                         style={styles.affiliateButton}
-                        onPress={() => openAffiliateLink('flight', `${trip.origin} to ${trip.destination}`)}
+                        onPress={() => selectedFlight.bookingUrl ? Linking.openURL(selectedFlight.bookingUrl) : openAffiliateLink('flight', `${trip.origin} to ${trip.destination}`)}
                     >
                         <Text style={styles.affiliateButtonText}>Book This Flight</Text>
                         <Ionicons name="open-outline" size={16} color="#14B8A6" />
@@ -1128,7 +1128,10 @@ export default function TripDetails() {
                                             )}
                                         </View>
                                     ))}
-                                    {(!trip.itinerary?.flights || trip.itinerary.flights.length === 0) && (
+                                    {(!trip.itinerary?.flights || 
+                                        (trip.itinerary.flights.options && trip.itinerary.flights.options.length === 0) ||
+                                        (Array.isArray(trip.itinerary.flights) && trip.itinerary.flights.length === 0)
+                                    ) && (
                                         <Text style={styles.emptyText}>No flights found.</Text>
                                     )}
                                 </>
@@ -2129,7 +2132,7 @@ const styles = StyleSheet.create({
     flightOptionStops: {
         fontSize: 11,
         color: "#64748B",
-        fontWeight: "500",
+        fontWeight: "600",
         marginTop: 4,
     },
     selectedFlightDetails: {

@@ -158,6 +158,16 @@ export const generate = internalAction({
                                 duffel.transformOfferToFlightOption(offer)
                             );
 
+                            // Sort by price and mark best price
+                            flightOptions.sort((a: any, b: any) => a.pricePerPerson - b.pricePerPerson);
+                            if (flightOptions.length > 0) {
+                                flightOptions[0].isBestPrice = true;
+                            }
+
+                            console.log(`✅ Duffel returned ${flightOptions.length} flight options`);
+                            console.log(`   Best price: €${flightOptions[0]?.pricePerPerson || 'N/A'}`);
+                            console.log(`   Sample flight: ${flightOptions[0]?.outbound?.airline} - ${flightOptions[0]?.outbound?.departure} to ${flightOptions[0]?.outbound?.arrival}`);
+
                             flights = {
                                 options: flightOptions,
                                 bestPrice: flightOptions[0]?.pricePerPerson || 0,
