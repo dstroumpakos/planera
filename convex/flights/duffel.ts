@@ -44,10 +44,13 @@ export async function createOfferRequest(params: {
           departure_date: params.returnDate,
         },
       ],
+      return_offers: true,
     },
   };
 
   try {
+    console.log("🔍 Creating Duffel offer request...");
+    
     const response = await fetch(`${DUFFEL_API_BASE}/air/offer_requests`, {
       method: "POST",
       headers,
@@ -62,29 +65,30 @@ export async function createOfferRequest(params: {
 
     const data = await response.json();
     const offerRequestId = data.data.id;
+    let offers = data.data.offers || [];
+    
+    console.log(`✅ Duffel: ${offerRequestId}, found ${offers.length} offers`);
 
-    // Poll for offers
-    let offers: any[] = [];
-    let attempts = 0;
-    const maxAttempts = 30;
+    if (offers.length === 0) {
+      console.log("⏳ No inline offers, polling...");
+      let attempts = 0;
+      const maxAttempts = 15;
 
-    while (attempts < maxAttempts) {
-      const offersResponse = await fetch(
-        `${DUFFEL_API_BASE}/air/offer_requests/${offerRequestId}/offers`,
-        { headers }
-      );
+      while (attempts < maxAttempts) {
+        const offersResponse = await fetch(
+          `${DUFFEL_API_BASE}/air/offers?offer_request_id=${offerRequestId}&limit=10&sort=total_amount`,
+          { headers }
+        );
 
-      if (!offersResponse.ok) {
-        throw new Error(`Failed to fetch offers: ${offersResponse.status}`);
+        if (offersResponse.ok) {
+          const offersData = await offersResponse.json();
+          offers = offersData.data || [];
+          if (offers.length > 0) break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        attempts++;
       }
-
-      const offersData = await offersResponse.json();
-      offers = offersData.data || [];
-
-      if (offers.length > 0) break;
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      attempts++;
     }
 
     return { offerRequestId, offers };
