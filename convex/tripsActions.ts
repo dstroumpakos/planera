@@ -154,8 +154,8 @@ export const generate = internalAction({
                             );
                         } else {
                             // Transform Duffel offers to our format
-                            const flightOptions = offers.slice(0, 5).map((offer: any) =>
-                                duffel.transformOfferToFlightOption(offer)
+                            const flightOptions = offers.slice(0, 5).map((offer: any, index: number) =>
+                                duffel.transformOfferToFlightOption(offer, trip.travelers, index)
                             );
 
                             flights = {

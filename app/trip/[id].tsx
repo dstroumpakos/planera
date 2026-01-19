@@ -912,7 +912,10 @@ export default function TripDetails() {
                         <ImageWithAttribution
                             imageUrl={destinationImage.url}
                             photographerName={destinationImage.photographer}
+                            unsplashUrl={destinationImage.attribution}
                             photographerUrl={destinationImage.photographerUrl}
+                            style={styles.mapPreviewContainer}
+                            imageStyle={styles.mapImage}
                         />
                     ) : (
                         <Image 
@@ -1535,19 +1538,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#1A1A1A",
         textAlign: "center",
-    },
-    aiBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginTop: 4,
-    },
-    aiBadgeText: {
-        fontSize: 12,
-        fontWeight: "500",
-    },
-    scrollContent: {
-        paddingBottom: 100,
     },
     iconButton: {
         width: 40,
@@ -2251,7 +2241,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         marginTop: 16,
-        marginBottom: 4,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: "#E2E8F0",
     },
     time: {
         fontSize: 16,

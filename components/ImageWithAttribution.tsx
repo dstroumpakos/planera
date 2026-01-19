@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Linking, Image } from "react-
 interface ImageWithAttributionProps {
   imageUrl: string;
   photographerName: string;
-  photographerUrl?: string;
+  photographerUrl: string;
   downloadLocation?: string;
   onDownload?: () => void;
 }
@@ -16,32 +16,34 @@ export function ImageWithAttribution({
   downloadLocation,
   onDownload,
 }: ImageWithAttributionProps) {
+  const handleAttributionPress = async () => {
+    try {
+      await Linking.openURL(photographerUrl);
+      if (onDownload && downloadLocation) {
+        onDownload();
+      }
+    } catch (error) {
+      console.error("Failed to open photographer URL:", error);
+    }
+  };
+
   return (
     <View style={styles.container} pointerEvents="box-none">
       <Image source={{ uri: imageUrl }} style={styles.image} />
-      <View style={styles.attributionOverlay} pointerEvents="auto">
+      <TouchableOpacity 
+        style={styles.attributionOverlay}
+        onPress={handleAttributionPress}
+        activeOpacity={0.7}
+      >
         <View style={styles.attributionContent}>
-          <TouchableOpacity 
-            onPress={() => {
-              if (photographerUrl) {
-                Linking.openURL(photographerUrl);
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.attributionText, styles.link]}>
-              {photographerName}
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.attributionText}>Photo by </Text>
+          <Text style={[styles.attributionText, styles.link]}>
+            {photographerName}
+          </Text>
           <Text style={styles.attributionText}> on </Text>
-          <TouchableOpacity 
-            onPress={() => Linking.openURL("https://unsplash.com")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.attributionText, styles.link]}>Unsplash</Text>
-          </TouchableOpacity>
+          <Text style={[styles.attributionText, styles.link]}>Unsplash</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }

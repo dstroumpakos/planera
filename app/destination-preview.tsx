@@ -126,6 +126,7 @@ export default function DestinationPreviewScreen() {
                         <ImageWithAttribution
                             imageUrl={image.url}
                             photographerName={image.photographer}
+                            unsplashUrl={image.attribution}
                             photographerUrl={image.photographerUrl}
                             downloadLocation={image.downloadLocation}
                             onDownload={() => {
@@ -133,6 +134,8 @@ export default function DestinationPreviewScreen() {
                                     trackDownload({ downloadLocation: image.downloadLocation }).catch(console.error);
                                 }
                             }}
+                            style={styles.heroImageContainer}
+                            imageStyle={styles.heroImage}
                         />
                     </View>
                 ) : (

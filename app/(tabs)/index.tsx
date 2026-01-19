@@ -26,21 +26,23 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
-  const userSettings = useQuery(api.users.getSettings, isAuthenticated ? {} : "skip");
-  const userPlan = useQuery(api.users.getPlan, isAuthenticated ? {} : "skip");
-  const trips = useQuery(api.trips.list, isAuthenticated ? {} : "skip");
+  const userSettings = useQuery(api.users.getSettings);
+  const userPlan = useQuery(api.users.getPlan);
+  const trips = useQuery(api.trips.list);
   const trendingDestinations = useQuery(api.trips.getTrendingDestinations);
   const getImages = useAction(api.images.getDestinationImages);
 
-  useEffect(() => {
-    if (userSettings?.profilePictureUrl) {
-      setProfileImageUrl(userSettings.profilePictureUrl);
-    }
-  }, [userSettings?.profilePictureUrl]);
+  const getProfileImageUrl = useQuery(
+    userSettings?.profilePicture 
+      ? api.users.getProfileImageUrl 
+      : "skip",
+    userSettings?.profilePicture 
+      ? { storageId: userSettings.profilePicture } 
+      : "skip"
+  );
 
   const fetchImages = useCallback(async () => {
     const imageMap: Record<string, any> = {};
-    if (!trendingDestinations) return imageMap;
     for (const destination of trendingDestinations) {
       try {
         const images = await getImages({ destination: destination.destination });
@@ -59,6 +61,12 @@ export default function HomeScreen() {
       fetchImages();
     }
   }, [trendingDestinations]);
+
+  useEffect(() => {
+    if (getProfileImageUrl) {
+      setProfileImageUrl(getProfileImageUrl);
+    }
+  }, [getProfileImageUrl]);
 
   if (authLoading) {
     return (
@@ -214,35 +222,32 @@ export default function HomeScreen() {
               contentContainerStyle={styles.trendingContent}
             >
               {trendingDestinations.map((destination: any, index: number) => (
-                <View
+                <TouchableOpacity 
                   key={index}
                   style={[styles.trendingCard, { backgroundColor: colors.lightGray }]}
+                  onPress={() => router.push({
+                    pathname: "/destination-preview",
+                    params: {
+                      destination: destination.destination,
+                      avgBudget: destination.avgBudget.toString(),
+                      avgRating: destination.avgRating.toString(),
+                      count: destination.count.toString(),
+                    }
+                  })}
+                  activeOpacity={0.9}
+                  pointerEvents="box-none"
                 >
-                  <TouchableOpacity 
-                    style={styles.trendingImageContainer}
-                    onPress={() => router.push({
-                      pathname: "/destination-preview",
-                      params: {
-                        destination: destination.destination,
-                        avgBudget: destination.avgBudget.toString(),
-                        avgRating: destination.avgRating.toString(),
-                        count: destination.count.toString(),
-                      }
-                    })}
-                    activeOpacity={0.9}
-                  >
-                    {destinationImages[destination.destination] ? (
-                      <ImageWithAttribution
-                        imageUrl={destinationImages[destination.destination].url}
-                        photographerName={destinationImages[destination.destination].photographer}
-                        photographerUrl={destinationImages[destination.destination].photographerUrl}
-                      />
-                    ) : (
-                      <View style={[styles.trendingImagePlaceholder, { backgroundColor: colors.secondary }]}>
-                        <Text style={styles.trendingEmoji}>✈️</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
+                  {destinationImages[destination.destination] ? (
+                    <ImageWithAttribution
+                      imageUrl={destinationImages[destination.destination].url}
+                      photographerName={destinationImages[destination.destination].photographer}
+                      photographerUrl={destinationImages[destination.destination].photographerUrl}
+                    />
+                  ) : (
+                    <View style={[styles.trendingImagePlaceholder, { backgroundColor: colors.secondary }]}>
+                      <Text style={styles.trendingEmoji}>✈️</Text>
+                    </View>
+                  )}
                   
                   <View style={styles.trendingOverlay}>
                     <View style={styles.ratingBadge}>
@@ -258,7 +263,7 @@ export default function HomeScreen() {
                       </View>
                       <View style={styles.trendingFooter}>
                         <View>
-                          <Text style={styles.trendingPriceLabel}>Starting from</Text>
+                          <Text style={[styles.trendingPriceLabel, { color: colors.textMuted }]}>Total Budget</Text>
                           <Text style={[styles.trendingPrice, { color: colors.primary }]}>€{Math.round(destination.avgBudget)}</Text>
                         </View>
                         <View style={styles.trendingArrow}>
@@ -267,7 +272,7 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
@@ -512,7 +517,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "space-between",
     padding: 16,
-    paddingBottom: 60,
     backgroundColor: "rgba(0,0,0,0.1)",
   },
   ratingBadge: {
@@ -566,7 +570,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     marginBottom: 4,
-    color: "#F5A623",
   },
   trendingArrow: {
     width: 40,
