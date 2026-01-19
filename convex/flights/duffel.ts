@@ -17,6 +17,18 @@ function getHeaders(config: { accessToken: string }) {
   };
 }
 
+// Helper to calculate age from date of birth
+function calculateAgeFromDOB(dateOfBirth: string): number {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export async function createOfferRequest(params: {
   originCode: string;
   destinationCode: string;
@@ -360,11 +372,17 @@ export async function createOrder(params: {
         },
       ];
 
+  // Add age to each passenger (calculated from born_on)
+  const passengersWithAge = params.passengers.map(p => ({
+    ...p,
+    age: calculateAgeFromDOB(p.born_on),
+  }));
+
   const payload = {
     data: {
       type: "instant",
       selected_offers: [params.offerId],
-      passengers: params.passengers,
+      passengers: passengersWithAge,
       payments,
       metadata: params.metadata || {},
     },
@@ -372,6 +390,7 @@ export async function createOrder(params: {
 
   try {
     console.log(`📝 Creating Duffel Order for offer ${params.offerId}...`);
+    console.log(`👤 Passengers:`, passengersWithAge.map(p => ({ name: `${p.given_name} ${p.family_name}`, dob: p.born_on, age: p.age })));
     
     const response = await fetch(`${DUFFEL_API_BASE}/air/orders`, {
       method: "POST",
