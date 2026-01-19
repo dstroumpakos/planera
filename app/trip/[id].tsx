@@ -1117,15 +1117,41 @@ export default function TripDetails() {
                                             </View>
                                             <Text style={styles.flightDuration}>{flight.return.duration} • {flight.return.stops === 0 ? 'Direct' : `${flight.return.stops} Stop(s)`}</Text>
                                             
-                                            {flight.bookingUrl && (
-                                                <TouchableOpacity 
-                                                    style={styles.bookFlightButton}
-                                                    onPress={() => Linking.openURL(flight.bookingUrl)}
-                                                >
-                                                    <Text style={styles.bookFlightButtonText}>Book Flight</Text>
-                                                    <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-                                                </TouchableOpacity>
-                                            )}
+                                            {/* Book Flight Button - Navigate to booking flow for Duffel, or open URL for fallback */}
+                                            <TouchableOpacity 
+                                                style={styles.bookFlightButton}
+                                                onPress={() => {
+                                                    // Check if this is a Duffel flight (has offer ID)
+                                                    if (flight.id && trip.itinerary?.flights?.dataSource === 'duffel') {
+                                                        // Navigate to booking screen with passenger details form
+                                                        router.push({
+                                                            pathname: '/flight-booking',
+                                                            params: {
+                                                                offerId: flight.id,
+                                                                tripId: id,
+                                                                passengers: String(trip.travelers || 1),
+                                                                flightInfo: JSON.stringify({
+                                                                    outbound: flight.outbound,
+                                                                    return: flight.return,
+                                                                    pricePerPerson: flight.pricePerPerson,
+                                                                    currency: flight.currency || 'EUR',
+                                                                }),
+                                                            },
+                                                        });
+                                                    } else if (flight.bookingUrl) {
+                                                        // Fallback: open booking URL directly
+                                                        Linking.openURL(flight.bookingUrl);
+                                                    } else {
+                                                        // No booking option available
+                                                        if (Platform.OS !== 'web') {
+                                                            Alert.alert('Booking Unavailable', 'No booking link available for this flight. Please search for this flight on your preferred booking site.');
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                <Text style={styles.bookFlightButtonText}>Book Flight</Text>
+                                                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                                            </TouchableOpacity>
                                         </View>
                                     ))}
                                     {(!trip.itinerary?.flights || 

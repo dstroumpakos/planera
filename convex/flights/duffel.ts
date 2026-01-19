@@ -205,3 +205,207 @@ export function validateConfig(): boolean {
     return false;
   }
 }
+
+// Get a specific offer by ID to verify it's still valid
+export async function getOffer(offerId: string) {
+  const config = getDuffelConfig();
+  const headers = getHeaders(config);
+
+  try {
+    const response = await fetch(`${DUFFEL_API_BASE}/air/offers/${offerId}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Duffel Get Offer Error: ${response.status} - ${errorData}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("Duffel Get Offer Error:", error);
+    return null;
+  }
+}
+
+// Create a Duffel order (booking) with passenger details
+export async function createOrder(params: {
+  offerId: string;
+  passengers: Array<{
+    id: string;
+    given_name: string;
+    family_name: string;
+    born_on: string; // YYYY-MM-DD
+    gender: "m" | "f";
+    email: string;
+    phone_number: string;
+    title: "mr" | "ms" | "mrs" | "miss" | "dr";
+  }>;
+  metadata?: Record<string, string>;
+}) {
+  const config = getDuffelConfig();
+  const headers = getHeaders(config);
+
+  const payload = {
+    data: {
+      type: "instant",
+      selected_offers: [params.offerId],
+      passengers: params.passengers,
+      payments: [
+        {
+          type: "balance",
+          currency: "EUR",
+          amount: "0", // Will be set by Duffel based on offer
+        },
+      ],
+      metadata: params.metadata || {},
+    },
+  };
+
+  try {
+    const response = await fetch(`${DUFFEL_API_BASE}/air/orders`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Duffel Create Order Error: ${response.status} - ${errorData}`);
+      throw new Error(`Failed to create order: ${response.status} - ${errorData}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("Duffel Create Order Error:", error);
+    throw error;
+  }
+}
+
+// Create a payment intent for collecting card details (Duffel Links)
+export async function createPaymentIntent(params: {
+  offerId: string;
+  passengers: Array<{
+    id: string;
+    given_name: string;
+    family_name: string;
+    born_on: string;
+    gender: "m" | "f";
+    email: string;
+    phone_number: string;
+    title: "mr" | "ms" | "mrs" | "miss" | "dr";
+  }>;
+  successUrl: string;
+  cancelUrl: string;
+  metadata?: Record<string, string>;
+}) {
+  const config = getDuffelConfig();
+  const headers = getHeaders(config);
+
+  // First get the offer to check the price
+  const offer = await getOffer(params.offerId);
+  if (!offer) {
+    throw new Error("Offer not found or expired");
+  }
+
+  // Create a Duffel Links session for payment
+  const payload = {
+    data: {
+      offer_id: params.offerId,
+      passengers: params.passengers,
+      client_key: config.accessToken,
+      success_url: params.successUrl,
+      failure_url: params.cancelUrl,
+      markup_amount: "0",
+      markup_currency: offer.total_currency || "EUR",
+    },
+  };
+
+  try {
+    const response = await fetch(`${DUFFEL_API_BASE}/links/sessions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Duffel Links Error: ${response.status} - ${errorData}`);
+      
+      // Fallback: Return airline website for booking
+      const airlineUrl = offer.owner?.website_url;
+      if (airlineUrl) {
+        return {
+          type: "redirect",
+          url: airlineUrl,
+          offer,
+        };
+      }
+      
+      throw new Error(`Failed to create payment session: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      type: "duffel_links",
+      url: data.data.url,
+      sessionId: data.data.id,
+      offer,
+    };
+  } catch (error) {
+    console.error("Duffel Links Error:", error);
+    
+    // Fallback to Skyscanner or airline website
+    const slices = offer?.slices || [];
+    const outbound = slices[0];
+    const return_slice = slices[1];
+    
+    if (outbound && return_slice) {
+      const originCode = outbound.origin?.iata_code;
+      const destCode = outbound.destination?.iata_code;
+      const depDate = outbound.departure_date;
+      const retDate = return_slice.departure_date;
+      
+      if (originCode && destCode && depDate && retDate) {
+        const depDateStr = depDate.slice(2).replace(/-/g, '');
+        const retDateStr = retDate.slice(2).replace(/-/g, '');
+        return {
+          type: "redirect",
+          url: `https://www.skyscanner.com/transport/flights/${originCode}/${destCode}/${depDateStr}/${retDateStr}`,
+          offer,
+        };
+      }
+    }
+    
+    throw error;
+  }
+}
+
+// Get order status
+export async function getOrder(orderId: string) {
+  const config = getDuffelConfig();
+  const headers = getHeaders(config);
+
+  try {
+    const response = await fetch(`${DUFFEL_API_BASE}/air/orders/${orderId}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Duffel Get Order Error: ${response.status} - ${errorData}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("Duffel Get Order Error:", error);
+    return null;
+  }
+}
