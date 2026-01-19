@@ -32,10 +32,11 @@ export function ImageWithAttribution({
     <View style={styles.container} pointerEvents="box-none">
       <Image source={{ uri: imageUrl }} style={styles.image} />
       <TouchableOpacity 
-        style={styles.attributionOverlay}
+        style={styles.touchableArea}
         onPress={handleAttributionPress}
         activeOpacity={0.7}
-      >
+      />
+      <View style={styles.attributionOverlay} pointerEvents="none">
         <View style={styles.attributionContent}>
           <Text style={styles.attributionText}>Photo by </Text>
           <Text style={[styles.attributionText, styles.link]}>
@@ -44,7 +45,7 @@ export function ImageWithAttribution({
           <Text style={styles.attributionText}> on </Text>
           <Text style={[styles.attributionText, styles.link]}>Unsplash</Text>
         </View>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
   },
   attributionOverlay: {
     position: "absolute",
-    bottom: 40,
+    bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: "rgba(0, 0, 0, 0.75)",
@@ -81,5 +82,13 @@ const styles = StyleSheet.create({
   },
   link: {
     textDecorationLine: "underline",
+  },
+  touchableArea: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "70%",
+    zIndex: 5,
   },
 });
