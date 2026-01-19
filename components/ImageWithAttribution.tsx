@@ -85,10 +85,10 @@ const styles = StyleSheet.create({
   },
   touchableArea: {
     position: "absolute",
-    top: 0,
+    top: "50%",
     left: 0,
     right: 0,
-    height: "60%",
+    bottom: "15%",
     zIndex: 5,
   },
 });
