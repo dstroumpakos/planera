@@ -350,7 +350,7 @@ export async function createOrder(params: {
   const config = getDuffelConfig();
   const headers = getHeaders(config);
 
-  // First get the offer to know the amount
+  // First get the offer to know the amount and passenger ages
   const offer = await getOffer(params.offerId);
   if (!offer) {
     throw new Error("Offer not found or expired");
@@ -372,11 +372,20 @@ export async function createOrder(params: {
         },
       ];
 
-  // Add age to each passenger (calculated from born_on)
-  const passengersWithAge = params.passengers.map(p => ({
-    ...p,
-    age: calculateAgeFromDOB(p.born_on),
-  }));
+  // Get the ages from the offer's passengers - Duffel requires these to match exactly
+  const offerPassengers = offer.passengers || [];
+  
+  // Add age to each passenger from the original offer (not calculated from DOB)
+  // Duffel validates that the age matches what was in the offer request
+  const passengersWithAge = params.passengers.map((p, index) => {
+    const offerPassenger = offerPassengers[index];
+    const age = offerPassenger?.age || 30; // Use the age from the offer
+    return {
+      ...p,
+      id: offerPassenger?.id || p.id, // Use the passenger ID from the offer
+      age,
+    };
+  });
 
   const payload = {
     data: {
@@ -390,7 +399,7 @@ export async function createOrder(params: {
 
   try {
     console.log(`📝 Creating Duffel Order for offer ${params.offerId}...`);
-    console.log(`👤 Passengers:`, passengersWithAge.map(p => ({ name: `${p.given_name} ${p.family_name}`, dob: p.born_on, age: p.age })));
+    console.log(`👤 Passengers:`, passengersWithAge.map(p => ({ name: `${p.given_name} ${p.family_name}`, dob: p.born_on, age: p.age, id: p.id })));
     
     const response = await fetch(`${DUFFEL_API_BASE}/air/orders`, {
       method: "POST",
