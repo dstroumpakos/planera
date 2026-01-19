@@ -130,7 +130,19 @@ export const generate = internalAction({
                         const returnDate = new Date(trip.endDate).toISOString().split('T')[0];
 
                         console.log(`🔍 Searching flights via Duffel: ${originCode} -> ${destCode}`);
+                        console.log(`   Origin input: "${origin}", Destination input: "${trip.destination}"`);
                         console.log(`   Departure: ${departureDate}, Return: ${returnDate}, Adults: ${trip.travelers}`);
+                        
+                        // Validate IATA codes before calling Duffel
+                        if (!originCode || !destCode) {
+                            console.warn(`⚠️ Invalid IATA codes - Origin: "${originCode}", Dest: "${destCode}". Falling back to AI flights.`);
+                            throw new Error("Invalid IATA codes");
+                        }
+                        
+                        if (originCode === destCode) {
+                            console.warn(`⚠️ Origin and destination are the same (${originCode}). Falling back to AI flights.`);
+                            throw new Error("Origin and destination are the same");
+                        }
                         
                         const { offerRequestId, offers } = await duffel.createOfferRequest({
                             originCode,
@@ -362,14 +374,31 @@ function checkApiKeys() {
 
 // Helper function to extract IATA code from city name
 function extractIATACode(cityName: string): string {
+    // If input already looks like an IATA code (3 uppercase letters), return it
+    if (/^[A-Z]{3}$/.test(cityName.trim())) {
+        return cityName.trim();
+    }
+    
+    // Check if IATA code is in parentheses, e.g., "New York (JFK)" or "London - LHR"
+    const iataMatch = cityName.match(/\(([A-Z]{3})\)/) || cityName.match(/[-–]\s*([A-Z]{3})$/);
+    if (iataMatch) {
+        return iataMatch[1];
+    }
+    
     const cityToIATA: Record<string, string> = {
         "london": "LHR",
+        "london heathrow": "LHR",
+        "london gatwick": "LGW",
+        "london stansted": "STN",
+        "london luton": "LTN",
         "paris": "CDG",
         "rome": "FCO",
         "barcelona": "BCN",
         "athens": "ATH",
         "amsterdam": "AMS",
         "berlin": "BER",
+        "munich": "MUC",
+        "frankfurt": "FRA",
         "madrid": "MAD",
         "lisbon": "LIS",
         "prague": "PRG",
@@ -379,24 +408,94 @@ function extractIATACode(cityName: string): string {
         "krakow": "KRK",
         "istanbul": "IST",
         "dubai": "DXB",
+        "abu dhabi": "AUH",
+        "doha": "DOH",
         "bangkok": "BKK",
         "singapore": "SIN",
         "hong kong": "HKG",
         "tokyo": "NRT",
+        "tokyo narita": "NRT",
+        "tokyo haneda": "HND",
+        "osaka": "KIX",
+        "seoul": "ICN",
         "new york": "JFK",
+        "new york jfk": "JFK",
+        "newark": "EWR",
         "los angeles": "LAX",
         "chicago": "ORD",
         "miami": "MIA",
         "san francisco": "SFO",
+        "boston": "BOS",
+        "washington": "IAD",
+        "washington dc": "IAD",
+        "seattle": "SEA",
+        "denver": "DEN",
+        "dallas": "DFW",
+        "atlanta": "ATL",
         "toronto": "YYZ",
+        "vancouver": "YVR",
+        "montreal": "YUL",
         "mexico city": "MEX",
+        "cancun": "CUN",
         "buenos aires": "EZE",
+        "sao paulo": "GRU",
+        "rio de janeiro": "GIG",
         "sydney": "SYD",
         "melbourne": "MEL",
+        "brisbane": "BNE",
+        "auckland": "AKL",
+        "cape town": "CPT",
+        "johannesburg": "JNB",
+        "cairo": "CAI",
+        "marrakech": "RAK",
+        "dublin": "DUB",
+        "edinburgh": "EDI",
+        "manchester": "MAN",
+        "milan": "MXP",
+        "florence": "FLR",
+        "venice": "VCE",
+        "naples": "NAP",
+        "nice": "NCE",
+        "zurich": "ZRH",
+        "geneva": "GVA",
+        "brussels": "BRU",
+        "copenhagen": "CPH",
+        "stockholm": "ARN",
+        "oslo": "OSL",
+        "helsinki": "HEL",
+        "reykjavik": "KEF",
+        "bali": "DPS",
+        "phuket": "HKT",
+        "maldives": "MLE",
+        "mauritius": "MRU",
+        "seychelles": "SEZ",
+        "hawaii": "HNL",
+        "honolulu": "HNL",
+        "las vegas": "LAS",
+        "phoenix": "PHX",
+        "san diego": "SAN",
+        "portland": "PDX",
+        "new orleans": "MSY",
+        "nashville": "BNA",
+        "austin": "AUS",
     };
 
     const normalized = cityName.toLowerCase().trim();
-    return cityToIATA[normalized] || "LHR"; // Default to London if not found
+    
+    // Try exact match first
+    if (cityToIATA[normalized]) {
+        return cityToIATA[normalized];
+    }
+    
+    // Try partial match (city name contained in input)
+    for (const [city, code] of Object.entries(cityToIATA)) {
+        if (normalized.includes(city) || city.includes(normalized)) {
+            return code;
+        }
+    }
+    
+    console.warn(`⚠️ Could not find IATA code for "${cityName}", no fallback available`);
+    return ""; // Return empty string instead of default to trigger validation
 }
 
 // Helper function to get fallback hotel data
