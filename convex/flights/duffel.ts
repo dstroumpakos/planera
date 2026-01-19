@@ -4,6 +4,7 @@ const DUFFEL_API_BASE = "https://api.duffel.com";
 
 function getDuffelConfig() {
   const token = process.env.DUFFEL_ACCESS_TOKEN;
+
   if (!token) throw new Error("DUFFEL_ACCESS_TOKEN not configured");
   return { accessToken: token };
 }
@@ -12,7 +13,7 @@ function getHeaders(config: any) {
   return {
     "Authorization": `Bearer ${config.accessToken}`,
     "Content-Type": "application/json",
-    "Duffel-Version": "v1",
+    "Duffel-Version": "v2",
   };
 }
 
