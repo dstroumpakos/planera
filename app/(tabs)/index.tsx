@@ -214,21 +214,23 @@ export default function HomeScreen() {
               contentContainerStyle={styles.trendingContent}
             >
               {trendingDestinations.map((destination: any, index: number) => (
-                <TouchableOpacity 
+                <View
                   key={index}
                   style={[styles.trendingCard, { backgroundColor: colors.lightGray }]}
-                  onPress={() => router.push({
-                    pathname: "/destination-preview",
-                    params: {
-                      destination: destination.destination,
-                      avgBudget: destination.avgBudget.toString(),
-                      avgRating: destination.avgRating.toString(),
-                      count: destination.count.toString(),
-                    }
-                  })}
-                  activeOpacity={0.9}
                 >
-                  <View style={styles.trendingImageContainer} pointerEvents="box-none">
+                  <TouchableOpacity 
+                    style={styles.trendingImageContainer}
+                    onPress={() => router.push({
+                      pathname: "/destination-preview",
+                      params: {
+                        destination: destination.destination,
+                        avgBudget: destination.avgBudget.toString(),
+                        avgRating: destination.avgRating.toString(),
+                        count: destination.count.toString(),
+                      }
+                    })}
+                    activeOpacity={0.9}
+                  >
                     {destinationImages[destination.destination] ? (
                       <ImageWithAttribution
                         imageUrl={destinationImages[destination.destination].url}
@@ -240,7 +242,7 @@ export default function HomeScreen() {
                         <Text style={styles.trendingEmoji}>✈️</Text>
                       </View>
                     )}
-                  </View>
+                  </TouchableOpacity>
                   
                   <View style={styles.trendingOverlay}>
                     <View style={styles.ratingBadge}>
@@ -265,7 +267,7 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </View>
               ))}
             </ScrollView>
           </View>
