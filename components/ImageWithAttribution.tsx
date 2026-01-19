@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Image } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface ImageWithAttributionProps {
   imageUrl: string;
@@ -36,7 +37,13 @@ export function ImageWithAttribution({
         onPress={handleAttributionPress}
         activeOpacity={0.7}
       />
-      <View style={styles.attributionOverlay} pointerEvents="none">
+      <LinearGradient
+        colors={["transparent", "rgba(0, 0, 0, 0.6)"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.attributionOverlay}
+        pointerEvents="none"
+      >
         <View style={styles.attributionContent}>
           <Text style={styles.attributionText}>Photo by </Text>
           <Text style={[styles.attributionText, styles.link]}>
@@ -45,7 +52,7 @@ export function ImageWithAttribution({
           <Text style={styles.attributionText}> on </Text>
           <Text style={[styles.attributionText, styles.link]}>Unsplash</Text>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
