@@ -242,6 +242,7 @@ export const list = authQuery({
             skipFlights: v.optional(v.boolean()),
             skipHotel: v.optional(v.boolean()),
             preferredFlightTime: v.optional(v.string()),
+            selectedTravelerIds: v.optional(v.array(v.id("travelers"))),
             status: v.string(),
             itinerary: v.optional(v.any()),
             isMultiCity: v.optional(v.boolean()),
