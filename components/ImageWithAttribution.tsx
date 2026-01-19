@@ -21,7 +21,6 @@ export function ImageWithAttribution({
       <Image source={{ uri: imageUrl }} style={styles.image} />
       <View style={styles.attributionOverlay} pointerEvents="auto">
         <View style={styles.attributionContent}>
-          <Text style={styles.attributionText}>Photo by </Text>
           <TouchableOpacity 
             onPress={() => {
               if (photographerUrl) {
