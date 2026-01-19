@@ -33,9 +33,7 @@ export default function HomeScreen() {
   const getImages = useAction(api.images.getDestinationImages);
 
   const getProfileImageUrl = useQuery(
-    userSettings?.profilePicture 
-      ? api.users.getProfileImageUrl 
-      : "skip",
+    api.users.getProfileImageUrl,
     userSettings?.profilePicture 
       ? { storageId: userSettings.profilePicture } 
       : "skip"
@@ -43,6 +41,7 @@ export default function HomeScreen() {
 
   const fetchImages = useCallback(async () => {
     const imageMap: Record<string, any> = {};
+    if (!trendingDestinations) return;
     for (const destination of trendingDestinations) {
       try {
         const images = await getImages({ destination: destination.destination });
@@ -235,7 +234,6 @@ export default function HomeScreen() {
                     }
                   })}
                   activeOpacity={0.9}
-                  pointerEvents="box-none"
                 >
                   {destinationImages[destination.destination] ? (
                     <ImageWithAttribution
@@ -263,8 +261,9 @@ export default function HomeScreen() {
                       </View>
                       <View style={styles.trendingFooter}>
                         <View>
-                          <Text style={[styles.trendingPriceLabel, { color: colors.textMuted }]}>Total Budget</Text>
+                          <Text style={[styles.trendingPriceLabel, { color: colors.textMuted }]}>Est. total</Text>
                           <Text style={[styles.trendingPrice, { color: colors.primary }]}>€{Math.round(destination.avgBudget)}</Text>
+                          <Text style={[styles.trendingPriceSubtitle, { color: colors.textMuted }]}>Based on your budget</Text>
                         </View>
                         <View style={styles.trendingArrow}>
                           <Ionicons name="arrow-forward" size={16} color="#000000" />
@@ -570,6 +569,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     marginBottom: 4,
+  },
+  trendingPriceSubtitle: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 2,
   },
   trendingArrow: {
     width: 40,
