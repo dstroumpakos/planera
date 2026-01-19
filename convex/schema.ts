@@ -200,4 +200,55 @@ export default defineSchema({
         .index("by_user", ["userId"])
         .index("by_event_type", ["eventType"])
         .index("by_user_and_type", ["userId", "eventType"]),
+
+    // Flight bookings table for storing completed Duffel orders
+    flightBookings: defineTable({
+        userId: v.string(),
+        tripId: v.id("trips"),
+        // Duffel order details
+        duffelOrderId: v.string(),
+        bookingReference: v.optional(v.string()),
+        // Payment details
+        paymentIntentId: v.optional(v.string()),
+        totalAmount: v.float64(),
+        currency: v.string(),
+        // Flight details snapshot
+        outboundFlight: v.object({
+            airline: v.string(),
+            flightNumber: v.string(),
+            departure: v.string(),
+            arrival: v.string(),
+            departureDate: v.string(),
+            origin: v.string(),
+            destination: v.string(),
+        }),
+        returnFlight: v.optional(v.object({
+            airline: v.string(),
+            flightNumber: v.string(),
+            departure: v.string(),
+            arrival: v.string(),
+            departureDate: v.string(),
+            origin: v.string(),
+            destination: v.string(),
+        })),
+        // Passengers
+        passengers: v.array(v.object({
+            givenName: v.string(),
+            familyName: v.string(),
+            email: v.string(),
+        })),
+        // Status
+        status: v.union(
+            v.literal("pending_payment"),
+            v.literal("confirmed"),
+            v.literal("cancelled"),
+            v.literal("failed")
+        ),
+        // Timestamps
+        createdAt: v.float64(),
+        confirmedAt: v.optional(v.float64()),
+    })
+        .index("by_user", ["userId"])
+        .index("by_trip", ["tripId"])
+        .index("by_duffel_order", ["duffelOrderId"]),
 });

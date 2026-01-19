@@ -1,8 +1,9 @@
 "use node";
 
 import { action } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { getOffer, createPaymentIntent } from "./flights/duffel";
+import { getOffer, createPaymentIntent, createOrder, extractFlightDetails } from "./flights/duffel";
 
 // Get flight offer details to verify it's still valid
 export const getFlightOffer = action({
@@ -41,7 +42,7 @@ export const getFlightOffer = action({
         valid: true as const,
         offer,
         pricePerPerson: Math.round(totalAmount / numPassengers),
-        totalPrice: Math.round(totalAmount),
+        totalPrice: Math.round(totalAmount * 100) / 100,
         currency: offer.total_currency || "EUR",
         expiresAt: offer.expires_at,
       };
@@ -55,7 +56,60 @@ export const getFlightOffer = action({
   },
 });
 
-// Create a booking/payment session for the flight
+// Initialize payment - creates a Payment Intent and returns client token for card collection
+export const initializePayment = action({
+  args: {
+    offerId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      success: v.literal(true),
+      paymentIntentId: v.string(),
+      clientToken: v.string(),
+      amount: v.string(),
+      currency: v.string(),
+    }),
+    v.object({
+      success: v.literal(false),
+      error: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    try {
+      // Get the offer to know the amount
+      const offer = await getOffer(args.offerId);
+      
+      if (!offer) {
+        return {
+          success: false as const,
+          error: "Flight offer not found or has expired.",
+        };
+      }
+
+      // Create a payment intent for the total amount
+      const paymentIntent = await createPaymentIntent({
+        amount: offer.total_amount,
+        currency: offer.total_currency || "GBP",
+      });
+
+      return {
+        success: true as const,
+        paymentIntentId: paymentIntent.id,
+        clientToken: paymentIntent.clientToken,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+      };
+    } catch (error) {
+      console.error("Initialize payment error:", error);
+      return {
+        success: false as const,
+        error: error instanceof Error ? error.message : "Failed to initialize payment",
+      };
+    }
+  },
+});
+
+// Create a booking after payment is confirmed (for test mode, we can skip payment)
 export const createFlightBooking = action({
   args: {
     offerId: v.string(),
@@ -78,25 +132,38 @@ export const createFlightBooking = action({
         ),
       })
     ),
+    paymentIntentId: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
       success: v.literal(true),
-      bookingType: v.string(),
-      bookingUrl: v.string(),
-      sessionId: v.optional(v.string()),
+      orderId: v.string(),
+      bookingReference: v.string(),
+      totalAmount: v.number(),
+      currency: v.string(),
     }),
     v.object({
       success: v.literal(false),
       error: v.string(),
-      fallbackUrl: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
     try {
-      // Transform passengers to Duffel format
+      // Get the offer first
+      const offer = await getOffer(args.offerId);
+      if (!offer) {
+        return {
+          success: false as const,
+          error: "Flight offer not found or has expired. Please search for new flights.",
+        };
+      }
+
+      // Get passenger IDs from the offer
+      const offerPassengerIds = offer.passengers?.map((p: any) => p.id) || [];
+
+      // Transform passengers to Duffel format, mapping to offer passenger IDs
       const duffelPassengers = args.passengers.map((p, index) => ({
-        id: `pas_${index}`,
+        id: offerPassengerIds[index] || `pas_${index}`,
         given_name: p.givenName,
         family_name: p.familyName,
         born_on: p.dateOfBirth,
@@ -106,50 +173,52 @@ export const createFlightBooking = action({
         title: p.title,
       }));
 
-      // Get the site URL for redirect
-      const siteUrl = process.env.SITE_URL || "https://planera.app";
-      const successUrl = `${siteUrl}/booking-success?tripId=${args.tripId}`;
-      const cancelUrl = `${siteUrl}/trip/${args.tripId}?booking=cancelled`;
+      console.log(`🛫 Creating booking for ${duffelPassengers.length} passengers...`);
 
-      const result = await createPaymentIntent({
+      // Create the order (booking)
+      // In test mode with Duffel Airways, balance payment works automatically
+      const order = await createOrder({
         offerId: args.offerId,
         passengers: duffelPassengers,
-        successUrl,
-        cancelUrl,
+        paymentIntentId: args.paymentIntentId,
+        metadata: {
+          tripId: args.tripId,
+          source: "planera",
+        },
       });
 
-      if (result.type === "duffel_links") {
-        return {
-          success: true as const,
-          bookingType: "duffel_links",
-          bookingUrl: result.url,
-          sessionId: result.sessionId,
-        };
-      } else {
-        // Redirect type - airline or Skyscanner
-        return {
-          success: true as const,
-          bookingType: "redirect",
-          bookingUrl: result.url,
-        };
-      }
+      // Extract flight details for storage
+      const flightDetails = extractFlightDetails(offer);
+
+      // Save the booking to the database
+      await ctx.runMutation(internal.flightBookingMutations.saveBooking, {
+        tripId: args.tripId,
+        duffelOrderId: order.id,
+        bookingReference: order.bookingReference,
+        paymentIntentId: args.paymentIntentId,
+        totalAmount: order.totalAmount,
+        currency: order.currency,
+        outboundFlight: flightDetails.outbound,
+        returnFlight: flightDetails.return,
+        passengers: args.passengers.map(p => ({
+          givenName: p.givenName,
+          familyName: p.familyName,
+          email: p.email,
+        })),
+        status: "confirmed",
+      });
+
+      console.log(`✅ Booking confirmed: ${order.bookingReference}`);
+
+      return {
+        success: true as const,
+        orderId: order.id,
+        bookingReference: order.bookingReference || "PENDING",
+        totalAmount: order.totalAmount,
+        currency: order.currency,
+      };
     } catch (error) {
       console.error("Create booking error:", error);
-      
-      // Try to provide a fallback URL
-      try {
-        const offer = await getOffer(args.offerId);
-        if (offer?.owner?.website_url) {
-          return {
-            success: false as const,
-            error: "Could not create direct booking. You can book on the airline website.",
-            fallbackUrl: offer.owner.website_url,
-          };
-        }
-      } catch {
-        // Ignore fallback errors
-      }
-
       return {
         success: false as const,
         error: error instanceof Error ? error.message : "Failed to create booking",

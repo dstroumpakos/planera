@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -36,6 +36,7 @@ export default function FlightBookingScreen() {
   const [offerValid, setOfferValid] = useState(false);
   const [offerError, setOfferError] = useState<string | null>(null);
   const [priceInfo, setPriceInfo] = useState<{ pricePerPerson: number; totalPrice: number; currency: string } | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState<{ bookingReference: string; orderId: string } | null>(null);
 
   const [passengers, setPassengers] = useState<PassengerForm[]>(
     Array(numPassengers).fill(null).map(() => ({
@@ -93,27 +94,35 @@ export default function FlightBookingScreen() {
     for (let i = 0; i < passengers.length; i++) {
       const p = passengers[i];
       if (!p.givenName.trim()) {
-        Alert.alert("Missing Information", `Please enter first name for passenger ${i + 1}`);
+        showAlert("Missing Information", `Please enter first name for passenger ${i + 1}`);
         return false;
       }
       if (!p.familyName.trim()) {
-        Alert.alert("Missing Information", `Please enter last name for passenger ${i + 1}`);
+        showAlert("Missing Information", `Please enter last name for passenger ${i + 1}`);
         return false;
       }
       if (!p.dateOfBirth || !/^\d{4}-\d{2}-\d{2}$/.test(p.dateOfBirth)) {
-        Alert.alert("Missing Information", `Please enter valid date of birth (YYYY-MM-DD) for passenger ${i + 1}`);
+        showAlert("Missing Information", `Please enter valid date of birth (YYYY-MM-DD) for passenger ${i + 1}`);
         return false;
       }
       if (!p.email.trim() || !p.email.includes("@")) {
-        Alert.alert("Missing Information", `Please enter valid email for passenger ${i + 1}`);
+        showAlert("Missing Information", `Please enter valid email for passenger ${i + 1}`);
         return false;
       }
       if (!p.phoneNumber.trim()) {
-        Alert.alert("Missing Information", `Please enter phone number for passenger ${i + 1}`);
+        showAlert("Missing Information", `Please enter phone number for passenger ${i + 1}`);
         return false;
       }
     }
     return true;
+  };
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS !== "web") {
+      Alert.alert(title, message);
+    } else {
+      alert(`${title}: ${message}`);
+    }
   };
 
   const handleBookFlight = async () => {
@@ -121,6 +130,8 @@ export default function FlightBookingScreen() {
 
     setSubmitting(true);
     try {
+      // For test mode with Duffel Airways, we can directly create the booking
+      // The balance payment will be used automatically in sandbox
       const result = await createBooking({
         offerId,
         tripId: tripId as Id<"trips">,
@@ -137,26 +148,17 @@ export default function FlightBookingScreen() {
       });
 
       if (result.success) {
-        // Open the booking URL
-        await Linking.openURL(result.bookingUrl);
-        router.back();
+        // Show success state
+        setBookingSuccess({
+          bookingReference: result.bookingReference,
+          orderId: result.orderId,
+        });
       } else {
-        if (result.fallbackUrl) {
-          Alert.alert(
-            "Booking Issue",
-            result.error + "\n\nWould you like to book on the airline website?",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Open Website", onPress: () => Linking.openURL(result.fallbackUrl!) },
-            ]
-          );
-        } else {
-          Alert.alert("Booking Error", result.error);
-        }
+        showAlert("Booking Error", result.error);
       }
     } catch (error) {
       console.error("Book flight error:", error);
-      Alert.alert("Error", "Failed to process booking. Please try again.");
+      showAlert("Error", "Failed to process booking. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -169,6 +171,54 @@ export default function FlightBookingScreen() {
     card: { backgroundColor: colors.card, borderColor: colors.border },
     input: { backgroundColor: colors.card, borderColor: colors.border, color: colors.text },
   };
+
+  // Success screen
+  if (bookingSuccess) {
+    return (
+      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+        <View style={styles.successContainer}>
+          <View style={styles.successIcon}>
+            <Ionicons name="checkmark-circle" size={80} color="#10B981" />
+          </View>
+          <Text style={[styles.successTitle, dynamicStyles.text]}>Booking Confirmed!</Text>
+          <Text style={[styles.successSubtitle, dynamicStyles.secondaryText]}>
+            Your flight has been booked successfully
+          </Text>
+          
+          <View style={[styles.confirmationCard, dynamicStyles.card]}>
+            <Text style={[styles.confirmationLabel, dynamicStyles.secondaryText]}>Booking Reference</Text>
+            <Text style={[styles.confirmationValue, dynamicStyles.text]}>{bookingSuccess.bookingReference}</Text>
+            
+            <View style={styles.confirmationDivider} />
+            
+            <Text style={[styles.confirmationLabel, dynamicStyles.secondaryText]}>Order ID</Text>
+            <Text style={[styles.confirmationValueSmall, dynamicStyles.secondaryText]}>{bookingSuccess.orderId}</Text>
+          </View>
+
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={20} color={colors.primary} />
+            <Text style={[styles.infoText, dynamicStyles.secondaryText]}>
+              A confirmation email will be sent to all passengers. Please check your inbox.
+            </Text>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.backToTripButton} 
+            onPress={() => router.replace(`/trip/${tripId}`)}
+          >
+            <Text style={styles.backToTripButtonText}>Back to Trip</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.viewBookingsButton} 
+            onPress={() => router.replace("/(tabs)/trips")}
+          >
+            <Text style={[styles.viewBookingsButtonText, { color: colors.primary }]}>View My Trips</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (
@@ -216,6 +266,14 @@ export default function FlightBookingScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Test Mode Banner */}
+        <View style={styles.testModeBanner}>
+          <Ionicons name="flask" size={20} color="#F59E0B" />
+          <Text style={styles.testModeText}>
+            Test Mode: Using Duffel Airways sandbox. No real charges.
+          </Text>
+        </View>
+
         {/* Flight Summary */}
         {flightInfo && (
           <View style={[styles.flightSummary, dynamicStyles.card]}>
@@ -236,7 +294,7 @@ export default function FlightBookingScreen() {
               <View style={styles.priceRow}>
                 <Text style={[styles.priceLabel, dynamicStyles.text]}>Total Price</Text>
                 <Text style={styles.priceValue}>
-                  €{priceInfo.totalPrice} ({numPassengers} passenger{numPassengers > 1 ? "s" : ""})
+                  {priceInfo.currency === "GBP" ? "£" : "€"}{priceInfo.totalPrice.toFixed(2)} ({numPassengers} passenger{numPassengers > 1 ? "s" : ""})
                 </Text>
               </View>
             )}
@@ -378,9 +436,9 @@ export default function FlightBookingScreen() {
         ))}
 
         <View style={styles.disclaimer}>
-          <Ionicons name="information-circle" size={20} color={colors.textSecondary} />
+          <Ionicons name="shield-checkmark" size={20} color="#10B981" />
           <Text style={[styles.disclaimerText, dynamicStyles.secondaryText]}>
-            By proceeding, you'll be redirected to complete your payment securely. Please ensure all passenger details match their travel documents exactly.
+            This is a test booking using Duffel's sandbox environment. Your booking will be processed instantly with no real payment required.
           </Text>
         </View>
 
@@ -391,7 +449,7 @@ export default function FlightBookingScreen() {
         <View style={styles.footerPrice}>
           <Text style={[styles.footerPriceLabel, dynamicStyles.secondaryText]}>Total</Text>
           <Text style={[styles.footerPriceValue, dynamicStyles.text]}>
-            €{priceInfo?.totalPrice || 0}
+            {priceInfo?.currency === "GBP" ? "£" : "€"}{priceInfo?.totalPrice.toFixed(2) || "0.00"}
           </Text>
         </View>
         <TouchableOpacity
@@ -403,8 +461,8 @@ export default function FlightBookingScreen() {
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <>
-              <Text style={styles.bookButtonText}>Continue to Payment</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Text style={styles.bookButtonText}>Confirm Booking</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
             </>
           )}
         </TouchableOpacity>
@@ -466,16 +524,102 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 24,
   },
+  successContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
+  },
+  successIcon: {
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  confirmationCard: {
+    width: "100%",
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  confirmationLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  confirmationValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  confirmationValueSmall: {
+    fontSize: 12,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  },
+  confirmationDivider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.1)",
+    marginVertical: 16,
+  },
+  infoBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: 12,
+    marginBottom: 24,
+    width: "100%",
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   backToTripButton: {
     backgroundColor: "#1A1A1A",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
     borderRadius: 12,
+    marginBottom: 12,
+    width: "100%",
+    alignItems: "center",
   },
   backToTripButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  viewBookingsButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  viewBookingsButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  testModeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.3)",
+  },
+  testModeText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#B45309",
+    fontWeight: "500",
   },
   flightSummary: {
     borderRadius: 16,
@@ -604,7 +748,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
     padding: 12,
-    backgroundColor: "rgba(0,0,0,0.03)",
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
     borderRadius: 12,
   },
   disclaimerText: {
@@ -635,7 +779,7 @@ const styles = StyleSheet.create({
   bookButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#10B981",
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
