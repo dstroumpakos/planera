@@ -67,7 +67,7 @@ export async function createOfferRequest(params: {
     const offerRequestId = data.data.id;
     let offers = data.data.offers || [];
     
-    console.log(`✅ Duffel: ${offerRequestId}, found ${offers.length} offers`);
+    console.log(`✅ Duffel: ${offerRequestId}, found ${offers.length} total offers`);
 
     if (offers.length === 0) {
       console.log("⏳ No inline offers, polling...");
@@ -76,7 +76,7 @@ export async function createOfferRequest(params: {
 
       while (attempts < maxAttempts) {
         const offersResponse = await fetch(
-          `${DUFFEL_API_BASE}/air/offers?offer_request_id=${offerRequestId}&limit=10&sort=total_amount`,
+          `${DUFFEL_API_BASE}/air/offers?offer_request_id=${offerRequestId}&limit=50&sort=total_amount`,
           { headers }
         );
 
@@ -91,7 +91,16 @@ export async function createOfferRequest(params: {
       }
     }
 
-    return { offerRequestId, offers };
+    // Filter for Duffel Airways (ZZ) test offers only - enables safe end-to-end booking flow in sandbox
+    const duffelAirwaysOffers = offers.filter((offer: any) => {
+      const ownerIataCode = offer.owner?.iata_code;
+      const ownerName = offer.owner?.name;
+      return ownerIataCode === "ZZ" || ownerName === "Duffel Airways";
+    });
+
+    console.log(`✈️ Filtered to ${duffelAirwaysOffers.length} Duffel Airways (ZZ) test offers`);
+
+    return { offerRequestId, offers: duffelAirwaysOffers };
   } catch (error) {
     console.error("Duffel API Error:", error);
     throw error;
