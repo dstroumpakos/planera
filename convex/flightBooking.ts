@@ -130,6 +130,10 @@ export const createFlightBooking = action({
           v.literal("miss"),
           v.literal("dr")
         ),
+        // Passport information (required for international flights)
+        passportNumber: v.optional(v.string()),
+        passportIssuingCountry: v.optional(v.string()), // ISO 3166-1 alpha-2 country code
+        passportExpiryDate: v.optional(v.string()), // YYYY-MM-DD
       })
     ),
     paymentIntentId: v.optional(v.string()),
@@ -171,9 +175,14 @@ export const createFlightBooking = action({
         email: p.email,
         phone_number: p.phoneNumber,
         title: p.title,
+        // Include passport information if provided
+        passport_number: p.passportNumber,
+        passport_issuing_country: p.passportIssuingCountry,
+        passport_expiry_date: p.passportExpiryDate,
       }));
 
       console.log(`🛫 Creating booking for ${duffelPassengers.length} passengers...`);
+      console.log(`📄 Passport info provided: ${duffelPassengers.filter(p => p.passport_number).length}/${duffelPassengers.length}`);
 
       // Create the order (booking)
       // In test mode with Duffel Airways, balance payment works automatically

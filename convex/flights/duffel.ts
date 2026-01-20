@@ -356,6 +356,10 @@ export async function createOrder(params: {
     email: string;
     phone_number: string;
     title: "mr" | "ms" | "mrs" | "miss" | "dr";
+    // Passport information
+    passport_number?: string;
+    passport_issuing_country?: string; // ISO 3166-1 alpha-2 country code
+    passport_expiry_date?: string; // YYYY-MM-DD
   }>;
   paymentIntentId?: string;
   metadata?: Record<string, string>;
@@ -388,16 +392,37 @@ export async function createOrder(params: {
   // Get the ages from the offer's passengers - Duffel requires these to match exactly
   const offerPassengers = offer.passengers || [];
   
-  // Add age to each passenger from the original offer (not calculated from DOB)
-  // Duffel validates that the age matches what was in the offer request
+  // Add age and identity documents to each passenger
   const passengersWithAge = params.passengers.map((p, index) => {
     const offerPassenger = offerPassengers[index];
     const age = offerPassenger?.age || 30; // Use the age from the offer
-    return {
-      ...p,
-      id: offerPassenger?.id || p.id, // Use the passenger ID from the offer
+    
+    // Build passenger object with optional identity documents
+    const passengerData: any = {
+      id: offerPassenger?.id || p.id,
+      given_name: p.given_name,
+      family_name: p.family_name,
+      born_on: p.born_on,
+      gender: p.gender,
+      email: p.email,
+      phone_number: p.phone_number,
+      title: p.title,
       age,
     };
+    
+    // Add identity documents if passport info is provided
+    if (p.passport_number && p.passport_issuing_country && p.passport_expiry_date) {
+      passengerData.identity_documents = [
+        {
+          type: "passport",
+          unique_identifier: p.passport_number,
+          issuing_country_code: p.passport_issuing_country,
+          expires_on: p.passport_expiry_date,
+        },
+      ];
+    }
+    
+    return passengerData;
   });
 
   const payload = {
@@ -412,7 +437,13 @@ export async function createOrder(params: {
 
   try {
     console.log(`📝 Creating Duffel Order for offer ${params.offerId}...`);
-    console.log(`👤 Passengers:`, passengersWithAge.map(p => ({ name: `${p.given_name} ${p.family_name}`, dob: p.born_on, age: p.age, id: p.id })));
+    console.log(`👤 Passengers:`, passengersWithAge.map(p => ({ 
+      name: `${p.given_name} ${p.family_name}`, 
+      dob: p.born_on, 
+      age: p.age, 
+      id: p.id,
+      hasPassport: !!p.identity_documents,
+    })));
     
     const response = await fetch(`${DUFFEL_API_BASE}/air/orders`, {
       method: "POST",

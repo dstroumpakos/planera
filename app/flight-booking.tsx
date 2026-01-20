@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +17,10 @@ interface PassengerForm {
   phoneNumber: string;
   countryCode: string;
   title: "mr" | "ms" | "mrs" | "miss" | "dr";
+  // Passport fields
+  passportNumber: string;
+  passportIssuingCountry: string;
+  passportExpiryDate: string;
 }
 
 // Helper to format phone to E.164 format
@@ -61,9 +65,15 @@ export default function FlightBookingScreen() {
   const tripId = params.tripId as string;
   const numPassengers = parseInt(params.passengers as string) || 1;
   const flightInfo = params.flightInfo ? JSON.parse(params.flightInfo as string) : null;
+  // Get traveler IDs from params (comma-separated)
+  const travelerIdsParam = params.travelerIds as string;
+  const travelerIds = travelerIdsParam ? travelerIdsParam.split(",") as Id<"travelers">[] : [];
 
   const getFlightOffer = useAction(api.flightBooking.getFlightOffer);
   const createBooking = useAction(api.flightBooking.createFlightBooking);
+  
+  // Fetch saved traveler profiles if IDs are provided
+  const savedTravelers = useQuery(api.travelers.list);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -71,6 +81,7 @@ export default function FlightBookingScreen() {
   const [offerError, setOfferError] = useState<string | null>(null);
   const [priceInfo, setPriceInfo] = useState<{ pricePerPerson: number; totalPrice: number; currency: string } | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<{ bookingReference: string; orderId: string } | null>(null);
+  const [formInitialized, setFormInitialized] = useState(false);
 
   const [passengers, setPassengers] = useState<PassengerForm[]>(
     Array(numPassengers).fill(null).map(() => ({
@@ -82,8 +93,62 @@ export default function FlightBookingScreen() {
       phoneNumber: "",
       countryCode: "+1",
       title: "mr" as const,
+      passportNumber: "",
+      passportIssuingCountry: "",
+      passportExpiryDate: "",
     }))
   );
+
+  // Pre-fill passenger data from saved traveler profiles
+  useEffect(() => {
+    if (formInitialized || !savedTravelers) return;
+    
+    // Find matching travelers by ID or use default travelers
+    const travelersToUse = travelerIds.length > 0
+      ? travelerIds.map(id => savedTravelers.find(t => t._id === id)).filter(Boolean)
+      : savedTravelers.filter(t => t.isDefault).slice(0, numPassengers);
+    
+    if (travelersToUse.length > 0) {
+      setPassengers(prev => {
+        const updated = [...prev];
+        travelersToUse.forEach((traveler, index) => {
+          if (traveler && index < updated.length) {
+            // Extract country code from phone if available
+            let countryCode = "+1";
+            let phoneNumber = "";
+            if (traveler.phoneNumber) {
+              const phoneMatch = traveler.phoneNumber.match(/^(\+\d{1,4})(.*)$/);
+              if (phoneMatch) {
+                countryCode = phoneMatch[1];
+                phoneNumber = phoneMatch[2];
+              } else {
+                phoneNumber = traveler.phoneNumber;
+              }
+            }
+            
+            // Determine title based on gender
+            const title = traveler.gender === "female" ? "ms" : "mr";
+            
+            updated[index] = {
+              givenName: traveler.firstName,
+              familyName: traveler.lastName,
+              dateOfBirth: traveler.dateOfBirth,
+              gender: traveler.gender,
+              email: traveler.email || "",
+              phoneNumber,
+              countryCode,
+              title: title as "mr" | "ms" | "mrs" | "miss" | "dr",
+              passportNumber: traveler.passportNumber,
+              passportIssuingCountry: traveler.passportIssuingCountry,
+              passportExpiryDate: traveler.passportExpiryDate,
+            };
+          }
+        });
+        return updated;
+      });
+      setFormInitialized(true);
+    }
+  }, [savedTravelers, travelerIds, numPassengers, formInitialized]);
 
   // Verify offer is still valid
   useEffect(() => {
@@ -160,6 +225,36 @@ export default function FlightBookingScreen() {
         showAlert("Missing Information", `Please enter a valid phone number (at least 7 digits) for passenger ${i + 1}`);
         return false;
       }
+      
+      // Validate passport fields
+      if (!p.passportNumber.trim()) {
+        showAlert("Missing Information", `Please enter passport number for passenger ${i + 1}`);
+        return false;
+      }
+      if (!p.passportIssuingCountry.trim() || p.passportIssuingCountry.length !== 2) {
+        showAlert("Missing Information", `Please enter passport country code (2 letters, e.g., US, GB) for passenger ${i + 1}`);
+        return false;
+      }
+      if (!p.passportExpiryDate || !/^\d{4}-\d{2}-\d{2}$/.test(p.passportExpiryDate)) {
+        showAlert("Missing Information", `Please enter valid passport expiry date (YYYY-MM-DD) for passenger ${i + 1}`);
+        return false;
+      }
+      
+      // Check passport hasn't expired
+      const expiryDate = new Date(p.passportExpiryDate);
+      const today = new Date();
+      if (expiryDate < today) {
+        showAlert("Invalid Passport", `Passport for passenger ${i + 1} has expired. Please update your passport details.`);
+        return false;
+      }
+      
+      // Check passport is valid for at least 6 months from today
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+      if (expiryDate < sixMonthsFromNow) {
+        showAlert("Passport Warning", `Passport for passenger ${i + 1} expires within 6 months. Many countries require passports valid for at least 6 months.`);
+        // Don't block the booking, just warn
+      }
     }
     return true;
   };
@@ -191,6 +286,10 @@ export default function FlightBookingScreen() {
           email: p.email.trim().toLowerCase(),
           phoneNumber: formatPhoneToE164(p.countryCode, p.phoneNumber),
           title: p.title,
+          // Passport information
+          passportNumber: p.passportNumber.trim().toUpperCase(),
+          passportIssuingCountry: p.passportIssuingCountry.trim().toUpperCase(),
+          passportExpiryDate: p.passportExpiryDate,
         })),
       });
 
@@ -495,6 +594,59 @@ export default function FlightBookingScreen() {
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="phone-pad"
                 />
+              </View>
+            </View>
+
+            {/* Passport Information Section */}
+            <View style={styles.passportSection}>
+              <View style={styles.passportHeader}>
+                <Ionicons name="document-text" size={20} color={colors.primary} />
+                <Text style={[styles.passportHeaderText, dynamicStyles.text]}>Passport Information</Text>
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, dynamicStyles.secondaryText]}>Passport Number *</Text>
+                <TextInput
+                  style={[styles.input, dynamicStyles.input]}
+                  value={passenger.passportNumber}
+                  onChangeText={(v) => updatePassenger(index, "passportNumber", v.toUpperCase())}
+                  placeholder="AB1234567"
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="characters"
+                />
+              </View>
+
+              <View style={styles.row}>
+                <View style={styles.halfInput}>
+                  <Text style={[styles.inputLabel, dynamicStyles.secondaryText]}>Issuing Country *</Text>
+                  <Text style={[styles.inputHint, dynamicStyles.secondaryText]}>
+                    2-letter code (e.g., US, GB)
+                  </Text>
+                  <TextInput
+                    style={[styles.input, dynamicStyles.input]}
+                    value={passenger.passportIssuingCountry}
+                    onChangeText={(v) => updatePassenger(index, "passportIssuingCountry", v.toUpperCase())}
+                    placeholder="US"
+                    placeholderTextColor={colors.textSecondary}
+                    maxLength={2}
+                    autoCapitalize="characters"
+                  />
+                </View>
+                <View style={styles.halfInput}>
+                  <Text style={[styles.inputLabel, dynamicStyles.secondaryText]}>Expiry Date *</Text>
+                  <Text style={[styles.inputHint, dynamicStyles.secondaryText]}>
+                    YYYY-MM-DD
+                  </Text>
+                  <TextInput
+                    style={[styles.input, dynamicStyles.input]}
+                    value={passenger.passportExpiryDate}
+                    onChangeText={(v) => updatePassenger(index, "passportExpiryDate", v)}
+                    placeholder="2030-12-31"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numbers-and-punctuation"
+                    maxLength={10}
+                  />
+                </View>
               </View>
             </View>
           </View>
@@ -807,6 +959,22 @@ const styles = StyleSheet.create({
   genderOptionTextSelected: {
     color: "#FFFFFF",
     fontWeight: "500",
+  },
+  passportSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.1)",
+  },
+  passportHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  passportHeaderText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   disclaimer: {
     flexDirection: "row",
