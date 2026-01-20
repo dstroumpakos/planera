@@ -6,6 +6,8 @@ import { useState, useRef, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme, LIGHT_COLORS } from "@/lib/ThemeContext";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const { width } = Dimensions.get("window");
 
@@ -338,6 +340,28 @@ export default function Index() {
         </KeyboardAvoidingView>
     );
 
+    // Add this component to handle authenticated redirect logic
+    function AuthenticatedRedirect() {
+        const settings = useQuery(api.users.getSettings);
+        
+        // Still loading settings
+        if (settings === undefined) {
+            return (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            );
+        }
+        
+        // If onboarding not completed, redirect to onboarding
+        if (!settings.onboardingCompleted) {
+            return <Redirect href="/onboarding" />;
+        }
+        
+        // Otherwise go to tabs
+        return <Redirect href="/(tabs)" />;
+    }
+
     return (
         <View style={styles.container}>
             <AuthLoading>
@@ -355,7 +379,7 @@ export default function Index() {
             </Unauthenticated>
 
             <Authenticated>
-                <Redirect href="/(tabs)" />
+                <AuthenticatedRedirect />
             </Authenticated>
         </View>
     );

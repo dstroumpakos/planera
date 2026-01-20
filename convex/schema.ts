@@ -116,6 +116,7 @@ export default defineSchema({
         emailNotifications: v.optional(v.boolean()),
         dealAlerts: v.optional(v.boolean()),
         tripReminders: v.optional(v.boolean()),
+        onboardingCompleted: v.optional(v.boolean()),
     }).index("by_user", ["userId"]),
 
     insights: defineTable({
@@ -275,4 +276,25 @@ export default defineSchema({
         updatedAt: v.optional(v.float64()),
     })
         .index("by_user", ["userId"]),
+
+    users: defineTable({
+      email: v.string(),
+      name: v.optional(v.string()),
+      pictureUrl: v.optional(v.string()),
+      // Travel preferences
+      homeAirport: v.optional(v.string()),
+      defaultBudget: v.optional(v.number()), // Deprecated, but keeping for schema compatibility if needed
+      defaultTravelers: v.optional(v.number()),
+      interests: v.optional(v.array(v.string())),
+      flightTimePreference: v.optional(v.string()),
+      skipFlights: v.optional(v.boolean()),
+      skipHotels: v.optional(v.boolean()),
+      // App settings
+      pushNotifications: v.optional(v.boolean()),
+      emailNotifications: v.optional(v.boolean()),
+      currency: v.optional(v.string()),
+      language: v.optional(v.string()),
+      theme: v.optional(v.string()), // "light", "dark", "system"
+      onboardingCompleted: v.optional(v.boolean()),
+    }).index("by_email", ["email"]),
 });

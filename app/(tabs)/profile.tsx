@@ -17,6 +17,12 @@ export default function Profile() {
     const userPlan = useQuery(api.users.getPlan);
     const userSettings = useQuery(api.users.getSettings);
     
+    // Get profile image URL if profilePicture storage ID exists
+    const profileImageUrl = useQuery(
+        api.users.getProfileImageUrl,
+        userSettings?.profilePicture ? { storageId: userSettings.profilePicture } : "skip"
+    );
+    
     const generateUploadUrl = useMutation(api.users.generateUploadUrl);
     const saveProfilePicture = useMutation(api.users.saveProfilePicture);
     
@@ -233,9 +239,9 @@ export default function Profile() {
                 <View style={styles.profileSection}>
                     <View style={styles.avatarContainer}>
                         <TouchableOpacity onPress={handlePickImage} disabled={uploading}>
-                            {userSettings?.profilePictureUrl ? (
+                            {profileImageUrl ? (
                                 <Image 
-                                    source={{ uri: userSettings.profilePictureUrl }} 
+                                    source={{ uri: profileImageUrl }} 
                                     style={styles.avatarImage}
                                 />
                             ) : (

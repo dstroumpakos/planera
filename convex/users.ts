@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
-import { action } from "./_generated/server";
 
 export const getPlan = authQuery({
     args: {},
@@ -192,56 +191,158 @@ export const useTripCredit = authMutation({
 
 export const getSettings = authQuery({
     args: {},
-    returns: v.any(),
+    returns: v.object({
+      homeAirport: v.optional(v.string()),
+      defaultBudget: v.optional(v.number()),
+      defaultTravelers: v.optional(v.number()),
+      interests: v.optional(v.array(v.string())),
+      flightTimePreference: v.optional(v.string()),
+      skipFlights: v.optional(v.boolean()),
+      skipHotels: v.optional(v.boolean()),
+      pushNotifications: v.optional(v.boolean()),
+      emailNotifications: v.optional(v.boolean()),
+      currency: v.optional(v.string()),
+      language: v.optional(v.string()),
+      theme: v.optional(v.string()),
+      onboardingCompleted: v.optional(v.boolean()),
+      // Additional fields used by other parts of the app
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      dateOfBirth: v.optional(v.string()),
+      profilePicture: v.optional(v.id("_storage")),
+      profilePictureUrl: v.optional(v.union(v.string(), v.null())),
+      darkMode: v.optional(v.boolean()),
+      dealAlerts: v.optional(v.boolean()),
+      tripReminders: v.optional(v.boolean()),
+    }),
     handler: async (ctx) => {
         const settings = await ctx.db
             .query("userSettings")
             .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
             .unique();
 
-        // Extract name from email if user.name is not available
-        let userName = ctx.user.name || "";
-        if (!userName && ctx.user.email) {
-            userName = ctx.user.email.split("@")[0];
-        }
-
-        // Get profile picture URL if exists
-        let profilePictureUrl = null;
-        if (settings?.profilePicture) {
-            profilePictureUrl = await ctx.storage.getUrl(settings.profilePicture);
-        }
-
         if (!settings) {
-            // Return default settings
+            // Return defaults if no settings exist yet
             return {
-                name: userName,
-                email: ctx.user.email || "",
-                phone: "",
-                dateOfBirth: "",
-                profilePicture: null,
-                profilePictureUrl: null,
-                darkMode: false,
-                preferredAirlines: [],
-                seatPreference: "window",
-                mealPreference: "none",
-                hotelStarRating: 4,
-                budgetRange: "mid-range",
-                travelStyle: "relaxation",
-                language: "en",
-                currency: "USD",
-                pushNotifications: true,
-                emailNotifications: true,
-                dealAlerts: true,
-                tripReminders: true,
+                homeAirport: undefined,
+                defaultBudget: undefined,
+                defaultTravelers: undefined,
+                interests: undefined,
+                flightTimePreference: undefined,
+                skipFlights: undefined,
+                skipHotels: undefined,
+                pushNotifications: undefined,
+                emailNotifications: undefined,
+                currency: undefined,
+                language: undefined,
+                theme: undefined,
+                onboardingCompleted: undefined,
+                name: undefined,
+                email: undefined,
+                phone: undefined,
+                dateOfBirth: undefined,
+                profilePicture: undefined,
+                profilePictureUrl: undefined,
+                darkMode: undefined,
+                dealAlerts: undefined,
+                tripReminders: undefined,
             };
         }
 
+        // Get profile picture URL if exists
+        let profilePictureUrl: string | null | undefined = undefined;
+        if (settings.profilePicture) {
+            profilePictureUrl = await ctx.storage.getUrl(settings.profilePicture);
+        }
+
         return {
-            ...settings,
-            name: settings.name || userName,
+            homeAirport: settings.homeAirport,
+            defaultBudget: undefined, // Not stored in userSettings
+            defaultTravelers: settings.defaultTravelers,
+            interests: settings.defaultInterests,
+            flightTimePreference: settings.defaultPreferredFlightTime,
+            skipFlights: settings.defaultSkipFlights,
+            skipHotels: settings.defaultSkipHotel,
+            pushNotifications: settings.pushNotifications,
+            emailNotifications: settings.emailNotifications,
+            currency: settings.currency,
+            language: settings.language,
+            theme: undefined,
+            onboardingCompleted: settings.onboardingCompleted,
+            name: settings.name,
+            email: settings.email,
+            phone: settings.phone,
+            dateOfBirth: settings.dateOfBirth,
+            profilePicture: settings.profilePicture,
             profilePictureUrl,
+            darkMode: settings.darkMode,
+            dealAlerts: settings.dealAlerts,
+            tripReminders: settings.tripReminders,
         };
     },
+});
+
+export const completeOnboarding = authMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const settings = await ctx.db
+        .query("userSettings")
+        .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+        .unique();
+
+    if (settings) {
+      await ctx.db.patch(settings._id, {
+        onboardingCompleted: true,
+      });
+    } else {
+      await ctx.db.insert("userSettings", {
+        userId: ctx.user._id,
+        onboardingCompleted: true,
+      });
+    }
+    return null;
+  },
+});
+
+// Save travel preferences directly to userSettings table
+export const saveTravelPreferences = authMutation({
+  args: {
+    homeAirport: v.optional(v.string()),
+    defaultBudget: v.optional(v.number()),
+    defaultTravelers: v.optional(v.number()),
+    interests: v.optional(v.array(v.string())),
+    flightTimePreference: v.optional(v.string()),
+    skipFlights: v.optional(v.boolean()),
+    skipHotels: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const settings = await ctx.db
+        .query("userSettings")
+        .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+        .unique();
+
+    const updateData = {
+      homeAirport: args.homeAirport,
+      defaultTravelers: args.defaultTravelers,
+      defaultInterests: args.interests,
+      defaultPreferredFlightTime: args.flightTimePreference,
+      defaultSkipFlights: args.skipFlights,
+      defaultSkipHotel: args.skipHotels,
+    };
+
+    if (settings) {
+      await ctx.db.patch(settings._id, updateData);
+    } else {
+      await ctx.db.insert("userSettings", {
+        userId: ctx.user._id,
+        ...updateData,
+      });
+    }
+    return null;
+  },
 });
 
 export const updatePersonalInfo = authMutation({
