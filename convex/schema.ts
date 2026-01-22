@@ -255,6 +255,132 @@ export default defineSchema({
         .index("by_trip", ["tripId"])
         .index("by_duffel_order", ["duffelOrderId"]),
 
+    // Flight booking drafts - stores in-progress booking selections before payment
+    flightBookingDrafts: defineTable({
+        userId: v.string(),
+        tripId: v.id("trips"),
+        // Selected offer
+        offerId: v.string(),
+        offerExpiresAt: v.optional(v.string()),
+        // Pricing
+        basePriceCents: v.int64(), // Base price in cents
+        currency: v.string(),
+        // Passengers with their details
+        passengers: v.array(v.object({
+            passengerId: v.string(), // Duffel passenger ID from offer
+            travelerId: v.optional(v.id("travelers")), // Link to our traveler profile
+            type: v.union(v.literal("adult"), v.literal("child"), v.literal("infant")),
+            givenName: v.string(),
+            familyName: v.string(),
+            dateOfBirth: v.string(), // YYYY-MM-DD
+            gender: v.union(v.literal("male"), v.literal("female")),
+            title: v.union(
+                v.literal("mr"),
+                v.literal("ms"),
+                v.literal("mrs"),
+                v.literal("miss"),
+                v.literal("dr")
+            ),
+            email: v.optional(v.string()),
+            phoneCountryCode: v.optional(v.string()),
+            phoneNumber: v.optional(v.string()),
+            passportNumber: v.optional(v.string()),
+            passportIssuingCountry: v.optional(v.string()),
+            passportExpiryDate: v.optional(v.string()),
+        })),
+        // Baggage selections (per passenger, per segment)
+        selectedBags: v.optional(v.array(v.object({
+            passengerId: v.string(),
+            segmentId: v.string(),
+            serviceId: v.string(), // Duffel service ID
+            quantity: v.int64(),
+            priceCents: v.int64(),
+            currency: v.string(),
+            type: v.string(), // "checked", "carry_on"
+            weight: v.optional(v.object({
+                amount: v.float64(),
+                unit: v.string(),
+            })),
+        }))),
+        // Seat selections (per passenger, per segment)
+        selectedSeats: v.optional(v.array(v.object({
+            passengerId: v.string(),
+            segmentId: v.string(),
+            serviceId: v.string(), // Duffel service ID
+            seatDesignator: v.string(), // e.g., "12A"
+            priceCents: v.int64(),
+            currency: v.string(),
+        }))),
+        // Policy acknowledgment
+        policyAcknowledged: v.boolean(),
+        policyAcknowledgedAt: v.optional(v.float64()),
+        // Offer conditions (cached from Duffel)
+        conditions: v.optional(v.object({
+            changeBeforeDeparture: v.optional(v.object({
+                allowed: v.boolean(),
+                penaltyAmount: v.optional(v.string()),
+                penaltyCurrency: v.optional(v.string()),
+            })),
+            refundBeforeDeparture: v.optional(v.object({
+                allowed: v.boolean(),
+                penaltyAmount: v.optional(v.string()),
+                penaltyCurrency: v.optional(v.string()),
+            })),
+        })),
+        // Baggage info (cached from Duffel)
+        includedBaggage: v.optional(v.array(v.object({
+            segmentId: v.string(),
+            passengerId: v.string(),
+            cabin: v.optional(v.object({
+                quantity: v.int64(),
+                type: v.optional(v.string()),
+            })),
+            checked: v.optional(v.object({
+                quantity: v.int64(),
+                weight: v.optional(v.object({
+                    amount: v.float64(),
+                    unit: v.string(),
+                })),
+            })),
+        }))),
+        // Available services (bags, seats) - cached from Duffel
+        availableServices: v.optional(v.object({
+            bags: v.optional(v.array(v.object({
+                id: v.string(),
+                passengerId: v.string(),
+                segmentIds: v.array(v.string()),
+                type: v.string(),
+                maxQuantity: v.int64(),
+                priceCents: v.int64(),
+                currency: v.string(),
+                weight: v.optional(v.object({
+                    amount: v.float64(),
+                    unit: v.string(),
+                })),
+            }))),
+            seatsAvailable: v.boolean(),
+        })),
+        // Pricing breakdown
+        extrasTotalCents: v.optional(v.int64()),
+        totalPriceCents: v.int64(),
+        // Status
+        status: v.union(
+            v.literal("draft"),
+            v.literal("extras_selected"),
+            v.literal("ready_for_payment"),
+            v.literal("completed"),
+            v.literal("expired")
+        ),
+        // Timestamps
+        createdAt: v.float64(),
+        updatedAt: v.float64(),
+        expiresAt: v.optional(v.float64()),
+    })
+        .index("by_user", ["userId"])
+        .index("by_trip", ["tripId"])
+        .index("by_offer", ["offerId"])
+        .index("by_status", ["status"]),
+
     // Traveler profiles for flight bookings
     travelers: defineTable({
         userId: v.string(),
