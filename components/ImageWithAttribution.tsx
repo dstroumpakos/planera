@@ -44,24 +44,22 @@ export function ImageWithAttribution({
 
   return (
     <View style={styles.container}>
-      {/* Image with optional press handler - excludes bottom attribution area */}
+      <Image source={{ uri: imageUrl }} style={styles.image} />
+
       <Pressable
         style={styles.imageTouchArea}
         onPress={onImagePress}
         disabled={!onImagePress}
-      >
-        <Image source={{ uri: imageUrl }} style={styles.image} />
-      </Pressable>
+      />
 
-      {/* Attribution overlay - pointer events enabled */}
       <LinearGradient
         colors={["transparent", "rgba(0, 0, 0, 0.6)"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.attributionOverlay}
-        pointerEvents="box-none"
+        pointerEvents="auto"
       >
-        <View style={styles.attributionContent} pointerEvents="box-none">
+        <View style={styles.attributionContent}>
           <Text style={styles.attributionText}>Photo by </Text>
           <Pressable
             onPress={handlePhotographerPress}
@@ -111,10 +109,18 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   imageTouchArea: {
-    width: "100%",
-    height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 60,
   },
   attributionOverlay: {
     position: "absolute",
@@ -124,6 +130,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     zIndex: 10,
+    elevation: 10,
   },
   attributionContent: {
     flexDirection: "row",
