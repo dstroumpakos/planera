@@ -269,6 +269,7 @@ export default defineSchema({
         passportExpiryDate: v.string(), // YYYY-MM-DD format
         // Contact info (optional, can be filled at booking time)
         email: v.optional(v.string()),
+        phoneCountryCode: v.optional(v.string()), // e.g. "+1", "+44"
         phoneNumber: v.optional(v.string()),
         // Metadata
         isDefault: v.optional(v.boolean()), // Primary traveler

@@ -19,6 +19,7 @@ interface TravelerForm {
   passportIssuingCountry: string;
   passportExpiryDate: string;
   email: string;
+  phoneCountryCode: string;
   phoneNumber: string;
 }
 
@@ -31,6 +32,7 @@ const emptyForm: TravelerForm = {
   passportIssuingCountry: "",
   passportExpiryDate: "",
   email: "",
+  phoneCountryCode: "+1",
   phoneNumber: "",
 };
 
@@ -71,6 +73,7 @@ export default function TravelerProfiles() {
       passportIssuingCountry: traveler.passportIssuingCountry,
       passportExpiryDate: traveler.passportExpiryDate,
       email: traveler.email || "",
+      phoneCountryCode: traveler.phoneCountryCode || "+1",
       phoneNumber: traveler.phoneNumber || "",
     });
     setShowModal(true);
@@ -159,6 +162,7 @@ export default function TravelerProfiles() {
           passportIssuingCountry: form.passportIssuingCountry,
           passportExpiryDate: form.passportExpiryDate,
           email: form.email.trim() || undefined,
+          phoneCountryCode: form.phoneCountryCode.trim() || undefined,
           phoneNumber: form.phoneNumber.trim() || undefined,
         });
       } else {
@@ -171,6 +175,7 @@ export default function TravelerProfiles() {
           passportIssuingCountry: form.passportIssuingCountry,
           passportExpiryDate: form.passportExpiryDate,
           email: form.email.trim() || undefined,
+          phoneCountryCode: form.phoneCountryCode.trim() || undefined,
           phoneNumber: form.phoneNumber.trim() || undefined,
         });
       }
@@ -469,14 +474,26 @@ export default function TravelerProfiles() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                value={form.phoneNumber}
-                onChangeText={(text) => setForm({ ...form, phoneNumber: text })}
-                placeholder="+1 555 123 4567"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="phone-pad"
-              />
+              <View style={styles.phoneInputContainer}>
+                <TextInput
+                  style={styles.phoneCountryCode}
+                  value={form.phoneCountryCode}
+                  onChangeText={(text) => setForm({ ...form, phoneCountryCode: text })}
+                  placeholder="+1"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                  maxLength={3}
+                />
+                <TextInput
+                  style={styles.phoneNumber}
+                  value={form.phoneNumber}
+                  onChangeText={(text) => setForm({ ...form, phoneNumber: text })}
+                  placeholder="555 555 5555"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+              </View>
             </View>
 
             <View style={{ height: 40 }} />
@@ -842,5 +859,31 @@ const createStyles = (colors: any, isDarkMode: boolean) => StyleSheet.create({
   pickerOptionText: {
     fontSize: 16,
     color: colors.text,
+  },
+  // Phone input styles
+  phoneInputContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  phoneCountryCode: {
+    width: 80,
+    backgroundColor: isDarkMode ? "#1F1F1F" : "#F9FAFB",
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+    textAlign: "center",
+  },
+  phoneNumber: {
+    flex: 1,
+    backgroundColor: isDarkMode ? "#1F1F1F" : "#F9FAFB",
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

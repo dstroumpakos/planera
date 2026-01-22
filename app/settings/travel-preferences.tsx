@@ -15,7 +15,6 @@ export default function TravelPreferences() {
 
     const [homeAirport, setHomeAirport] = useState("");
     const [defaultBudget, setDefaultBudget] = useState("2000");
-    const [defaultTravelers, setDefaultTravelers] = useState("1");
     const [defaultInterests, setDefaultInterests] = useState<string[]>([]);
     const [defaultSkipFlights, setDefaultSkipFlights] = useState(false);
     const [defaultSkipHotel, setDefaultSkipHotel] = useState(false);
@@ -28,7 +27,6 @@ export default function TravelPreferences() {
         if (settings) {
             setHomeAirport(settings.homeAirport || "");
             setDefaultBudget(settings.defaultBudget?.toString() || "2000");
-            setDefaultTravelers(settings.defaultTravelers?.toString() || "1");
             setDefaultInterests(settings.defaultInterests || []);
             setDefaultSkipFlights(settings.defaultSkipFlights || false);
             setDefaultSkipHotel(settings.defaultSkipHotel || false);
@@ -163,35 +161,19 @@ export default function TravelPreferences() {
                     )}
                 </View>
 
-                {/* Default Budget & Travelers */}
-                <View style={styles.row}>
-                    <View style={[styles.section, { flex: 1, marginRight: 8 }]}>
-                        <Text style={styles.sectionTitle}>Default Budget ($)</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="cash-outline" size={20} color="#1A1A1A" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="2000"
-                                value={defaultBudget}
-                                onChangeText={setDefaultBudget}
-                                keyboardType="numeric"
-                                placeholderTextColor="#9B9B9B"
-                            />
-                        </View>
-                    </View>
-                    <View style={[styles.section, { flex: 1, marginLeft: 8 }]}>
-                        <Text style={styles.sectionTitle}>Travelers</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="people-outline" size={20} color="#1A1A1A" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="1"
-                                value={defaultTravelers}
-                                onChangeText={setDefaultTravelers}
-                                keyboardType="numeric"
-                                placeholderTextColor="#9B9B9B"
-                            />
-                        </View>
+                {/* Default Budget */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Default Budget ($)</Text>
+                    <View style={styles.inputContainer}>
+                        <Ionicons name="cash-outline" size={20} color="#1A1A1A" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="2000"
+                            value={defaultBudget}
+                            onChangeText={setDefaultBudget}
+                            keyboardType="numeric"
+                            placeholderTextColor="#9B9B9B"
+                        />
                     </View>
                 </View>
 

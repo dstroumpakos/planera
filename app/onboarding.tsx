@@ -21,6 +21,7 @@ interface TravelerForm {
   passportIssuingCountry: string;
   passportExpiryDate: string;
   email: string;
+  phoneCountryCode: string;
   phoneNumber: string;
 }
 
@@ -33,6 +34,7 @@ const emptyForm: TravelerForm = {
   passportIssuingCountry: "",
   passportExpiryDate: "",
   email: "",
+  phoneCountryCode: "+1",
   phoneNumber: "",
 };
 
@@ -57,7 +59,6 @@ export default function Onboarding() {
   // Travel preferences
   const [homeAirport, setHomeAirport] = useState("");
   const [defaultBudget, setDefaultBudget] = useState("2000");
-  const [defaultTravelers, setDefaultTravelers] = useState("1");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [flightTimePreference, setFlightTimePreference] = useState("any");
   const [skipFlights, setSkipFlights] = useState(false);
@@ -74,12 +75,6 @@ export default function Onboarding() {
   
   // Query existing travelers
   const existingTravelers = useQuery(api.travelers.list);
-
-  // Update default travelers count based on profiles
-  useEffect(() => {
-    const count = 1 + additionalTravelers.length;
-    setDefaultTravelers(count.toString());
-  }, [additionalTravelers]);
 
   const hapticFeedback = () => {
     if (Platform.OS !== "web") {
@@ -185,6 +180,7 @@ export default function Onboarding() {
         passportIssuingCountry: myProfile.passportIssuingCountry,
         passportExpiryDate: myProfile.passportExpiryDate,
         email: myProfile.email.trim() || undefined,
+        phoneCountryCode: myProfile.phoneCountryCode.trim() || undefined,
         phoneNumber: myProfile.phoneNumber.trim() || undefined,
         isDefault: true,
       });
@@ -230,6 +226,7 @@ export default function Onboarding() {
         passportIssuingCountry: travelerForm.passportIssuingCountry,
         passportExpiryDate: travelerForm.passportExpiryDate,
         email: travelerForm.email.trim() || undefined,
+        phoneCountryCode: travelerForm.phoneCountryCode.trim() || undefined,
         phoneNumber: travelerForm.phoneNumber.trim() || undefined,
         isDefault: false,
       });
@@ -273,7 +270,6 @@ export default function Onboarding() {
       await saveTravelPreferences({
         homeAirport,
         defaultBudget: parseInt(defaultBudget) || undefined,
-        defaultTravelers: parseInt(defaultTravelers) || 1,
         interests: selectedInterests,
         flightTimePreference,
         skipFlights,
@@ -624,18 +620,27 @@ export default function Onboarding() {
               
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={myProfile.phoneNumber}
-                  onChangeText={(text) => setMyProfile({ ...myProfile, phoneNumber: text })}
-                  placeholder="+1 555 123 4567"
-                  placeholderTextColor="#9B9B9B"
-                  keyboardType="phone-pad"
-                />
+                <View style={styles.phoneInputRow}>
+                  <TextInput
+                    style={styles.phoneCountryCode}
+                    value={myProfile.phoneCountryCode}
+                    onChangeText={(text) => setMyProfile({ ...myProfile, phoneCountryCode: text })}
+                    placeholder="+1"
+                    placeholderTextColor="#9B9B9B"
+                    keyboardType="phone-pad"
+                    maxLength={5}
+                  />
+                  <TextInput
+                    style={styles.phoneNumberInput}
+                    value={myProfile.phoneNumber}
+                    onChangeText={(text) => setMyProfile({ ...myProfile, phoneNumber: text })}
+                    placeholder="555 123 4567"
+                    placeholderTextColor="#9B9B9B"
+                    keyboardType="phone-pad"
+                  />
+                </View>
               </View>
             </View>
-            
-            <View style={{ height: 100 }} />
           </ScrollView>
           
           <View style={styles.footer}>
@@ -927,6 +932,44 @@ export default function Onboarding() {
                 />
               </View>
               
+              <Text style={[styles.sectionLabel, { marginTop: 24 }]}>CONTACT (OPTIONAL)</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  value={travelerForm.email}
+                  onChangeText={(text) => setTravelerForm({ ...travelerForm, email: text })}
+                  placeholder="email@example.com"
+                  placeholderTextColor="#9B9B9B"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <View style={styles.phoneInputRow}>
+                  <TextInput
+                    style={styles.phoneCountryCode}
+                    value={travelerForm.phoneCountryCode}
+                    onChangeText={(text) => setTravelerForm({ ...travelerForm, phoneCountryCode: text })}
+                    placeholder="+1"
+                    placeholderTextColor="#9B9B9B"
+                    keyboardType="phone-pad"
+                    maxLength={5}
+                  />
+                  <TextInput
+                    style={styles.phoneNumberInput}
+                    value={travelerForm.phoneNumber}
+                    onChangeText={(text) => setTravelerForm({ ...travelerForm, phoneNumber: text })}
+                    placeholder="555 123 4567"
+                    placeholderTextColor="#9B9B9B"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+              
               <View style={{ height: 40 }} />
             </ScrollView>
             
@@ -1068,37 +1111,21 @@ export default function Onboarding() {
               </View>
             </View>
             
-            {/* Budget and Travelers */}
+            {/* Budget */}
             <View style={styles.formSection}>
               <Text style={styles.sectionLabel}>DEFAULTS</Text>
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>Budget ($)</Text>
-                  <View style={styles.inputWithIconContainer}>
-                    <Ionicons name="cash-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.inputWithIcon}
-                      placeholder="2000"
-                      value={defaultBudget}
-                      onChangeText={setDefaultBudget}
-                      keyboardType="numeric"
-                      placeholderTextColor="#9B9B9B"
-                    />
-                  </View>
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>Travelers</Text>
-                  <View style={styles.inputWithIconContainer}>
-                    <Ionicons name="people-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.inputWithIcon}
-                      placeholder="1"
-                      value={defaultTravelers}
-                      onChangeText={setDefaultTravelers}
-                      keyboardType="numeric"
-                      placeholderTextColor="#9B9B9B"
-                    />
-                  </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Budget ($)</Text>
+                <View style={styles.inputWithIconContainer}>
+                  <Ionicons name="cash-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.inputWithIcon}
+                    placeholder="2000"
+                    value={defaultBudget}
+                    onChangeText={setDefaultBudget}
+                    keyboardType="numeric"
+                    placeholderTextColor="#9B9B9B"
+                  />
                 </View>
               </View>
             </View>
@@ -1714,7 +1741,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F0",
+    borderBottomColor: "#F5F5F3",
   },
   pickerOptionActive: {
     backgroundColor: "#FFFDF5",
@@ -1980,5 +2007,31 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#E8E6E1",
     marginHorizontal: 14,
+  },
+  // Phone input styles
+  phoneInputRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  phoneCountryCode: {
+    width: 80,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#E8E6E1",
+    textAlign: "center",
+  },
+  phoneNumberInput: {
+    flex: 1,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#E8E6E1",
   },
 });

@@ -113,18 +113,9 @@ export default function FlightBookingScreen() {
         const updated = [...prev];
         travelersToUse.forEach((traveler, index) => {
           if (traveler && index < updated.length) {
-            // Extract country code from phone if available
-            let countryCode = "+1";
-            let phoneNumber = "";
-            if (traveler.phoneNumber) {
-              const phoneMatch = traveler.phoneNumber.match(/^(\+\d{1,4})(.*)$/);
-              if (phoneMatch) {
-                countryCode = phoneMatch[1];
-                phoneNumber = phoneMatch[2];
-              } else {
-                phoneNumber = traveler.phoneNumber;
-              }
-            }
+            // Use phoneCountryCode and phoneNumber directly from traveler profile
+            const countryCode = traveler.phoneCountryCode || "+1";
+            const phoneNumber = traveler.phoneNumber || "";
             
             // Determine title based on gender
             const title = traveler.gender === "female" ? "ms" : "mr";
