@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, Linking, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 interface ImageWithAttributionProps {
@@ -8,6 +8,7 @@ interface ImageWithAttributionProps {
   photographerUrl?: string;
   downloadLocation?: string;
   onDownload?: () => void;
+  onImagePress?: () => void;
 }
 
 export function ImageWithAttribution({
@@ -16,8 +17,9 @@ export function ImageWithAttribution({
   photographerUrl,
   downloadLocation,
   onDownload,
+  onImagePress,
 }: ImageWithAttributionProps) {
-  const handleAttributionPress = async () => {
+  const handlePhotographerPress = async () => {
     if (!photographerUrl) return;
     try {
       await Linking.openURL(photographerUrl);
@@ -29,28 +31,71 @@ export function ImageWithAttribution({
     }
   };
 
+  const handleUnsplashPress = async () => {
+    try {
+      const unsplashUrl = photographerUrl
+        ? `https://unsplash.com?utm_source=planera&utm_medium=referral`
+        : "https://unsplash.com";
+      await Linking.openURL(unsplashUrl);
+    } catch (error) {
+      console.error("Failed to open Unsplash URL:", error);
+    }
+  };
+
   return (
-    <View style={styles.container} pointerEvents="box-none">
-      <Image source={{ uri: imageUrl }} style={styles.image} />
-      <TouchableOpacity 
-        style={styles.touchableArea}
-        onPress={handleAttributionPress}
-        activeOpacity={0.7}
-      />
+    <View style={styles.container}>
+      {/* Image with optional press handler - excludes bottom attribution area */}
+      <Pressable
+        style={styles.imageTouchArea}
+        onPress={onImagePress}
+        disabled={!onImagePress}
+      >
+        <Image source={{ uri: imageUrl }} style={styles.image} />
+      </Pressable>
+
+      {/* Attribution overlay - pointer events enabled */}
       <LinearGradient
         colors={["transparent", "rgba(0, 0, 0, 0.6)"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.attributionOverlay}
-        pointerEvents="none"
+        pointerEvents="box-none"
       >
-        <View style={styles.attributionContent}>
+        <View style={styles.attributionContent} pointerEvents="box-none">
           <Text style={styles.attributionText}>Photo by </Text>
-          <Text style={[styles.attributionText, styles.link]}>
-            {photographerName}
-          </Text>
+          <Pressable
+            onPress={handlePhotographerPress}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          >
+            {({ pressed }) => (
+              <Text
+                style={[
+                  styles.attributionText,
+                  styles.link,
+                  pressed && styles.linkPressed,
+                ]}
+              >
+                {photographerName}
+              </Text>
+            )}
+          </Pressable>
           <Text style={styles.attributionText}> on </Text>
-          <Text style={[styles.attributionText, styles.link]}>Unsplash</Text>
+          <Pressable
+            onPress={handleUnsplashPress}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          >
+            {({ pressed }) => (
+              <Text
+                style={[
+                  styles.attributionText,
+                  styles.link,
+                  pressed && styles.linkPressed,
+                ]}
+              >
+                Unsplash
+              </Text>
+            )}
+          </Pressable>
         </View>
       </LinearGradient>
     </View>
@@ -64,6 +109,10 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   image: {
+    width: "100%",
+    height: "100%",
+  },
+  imageTouchArea: {
     width: "100%",
     height: "100%",
   },
@@ -89,12 +138,7 @@ const styles = StyleSheet.create({
   link: {
     textDecorationLine: "underline",
   },
-  touchableArea: {
-    position: "absolute",
-    top: "40%",
-    left: 0,
-    right: 0,
-    bottom: "20%",
-    zIndex: 5,
+  linkPressed: {
+    opacity: 0.7,
   },
 });
