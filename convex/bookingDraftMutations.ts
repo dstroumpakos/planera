@@ -303,6 +303,23 @@ export const getBookingDraft = query({
         seatDesignator: v.string(),
         priceDisplay: v.string(),
       })),
+      // Included baggage info
+      includedBaggage: v.array(v.object({
+        passengerId: v.string(),
+        cabinBags: v.number(),
+        checkedBags: v.number(),
+        checkedWeight: v.optional(v.string()),
+      })),
+      // Available bags for purchase
+      availableBags: v.array(v.object({
+        id: v.string(),
+        passengerId: v.string(),
+        type: v.string(),
+        maxQuantity: v.number(),
+        priceDisplay: v.string(),
+        weight: v.optional(v.string()),
+      })),
+      seatsAvailable: v.boolean(),
       policyAcknowledged: v.boolean(),
       canChange: v.boolean(),
       canRefund: v.boolean(),
@@ -367,6 +384,44 @@ export const getBookingDraft = query({
       ? Math.max(0, Math.floor((draft.expiresAt - Date.now()) / 1000 / 60))
       : undefined;
 
+    // Format included baggage per passenger
+    const includedBaggageMap = new Map<string, { cabinBags: number; checkedBags: number; checkedWeight?: string }>();
+    if (draft.includedBaggage) {
+      for (const bag of draft.includedBaggage) {
+        const existing = includedBaggageMap.get(bag.passengerId) || { cabinBags: 0, checkedBags: 0 };
+        if (bag.cabin) {
+          existing.cabinBags += Number(bag.cabin.quantity);
+        }
+        if (bag.checked) {
+          existing.checkedBags += Number(bag.checked.quantity);
+          if (bag.checked.weight) {
+            existing.checkedWeight = `${bag.checked.weight.amount}${bag.checked.weight.unit}`;
+          }
+        }
+        includedBaggageMap.set(bag.passengerId, existing);
+      }
+    }
+
+    const includedBaggage = draft.passengers.map(p => {
+      const bagInfo = includedBaggageMap.get(p.passengerId) || { cabinBags: 0, checkedBags: 0 };
+      return {
+        passengerId: p.passengerId,
+        cabinBags: bagInfo.cabinBags,
+        checkedBags: bagInfo.checkedBags,
+        checkedWeight: bagInfo.checkedWeight,
+      };
+    });
+
+    // Format available bags for purchase
+    const availableBags = (draft.availableServices?.bags || []).map(bag => ({
+      id: bag.id,
+      passengerId: bag.passengerId,
+      type: bag.type,
+      maxQuantity: Number(bag.maxQuantity),
+      priceDisplay: formatPrice(bag.priceCents, bag.currency),
+      weight: bag.weight ? `${bag.weight.amount}${bag.weight.unit}` : undefined,
+    }));
+
     return {
       _id: draft._id,
       tripId: draft.tripId,
@@ -391,6 +446,9 @@ export const getBookingDraft = query({
         seatDesignator: s.seatDesignator,
         priceDisplay: formatPrice(s.priceCents, s.currency),
       })),
+      includedBaggage,
+      availableBags,
+      seatsAvailable: draft.availableServices?.seatsAvailable ?? false,
       policyAcknowledged: draft.policyAcknowledged,
       canChange,
       canRefund,

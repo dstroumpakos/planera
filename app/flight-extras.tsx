@@ -60,6 +60,16 @@ interface SeatSelection {
   currency: string;
 }
 
+interface BagSelection {
+  passengerId: string;
+  serviceId: string;
+  quantity: number;
+  type: string;
+  priceCents: number;
+  currency: string;
+  weight?: string;
+}
+
 export default function FlightExtrasScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -74,6 +84,7 @@ export default function FlightExtrasScreen() {
   const [seatMaps, setSeatMaps] = useState<any[] | null>(null);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState<SeatSelection[]>([]);
+  const [selectedBags, setSelectedBags] = useState<BagSelection[]>([]);
   const [seatModalVisible, setSeatModalVisible] = useState(false);
   const [activeSegmentIndex, setActiveSegmentIndex] = useState(0);
   const [activePassengerIndex, setActivePassengerIndex] = useState(0);
@@ -219,54 +230,254 @@ export default function FlightExtrasScreen() {
     });
   };
 
+  const handleBagQuantityChange = async (
+    bag: { id: string; passengerId: string; type: string; maxQuantity: number; priceDisplay: string; weight?: string },
+    delta: number
+  ) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    // Parse price from display string
+    const priceMatch = bag.priceDisplay.match(/([A-Z]+)\s+([\d.]+)/);
+    const currency = priceMatch?.[1] || "EUR";
+    const priceCents = Math.round(parseFloat(priceMatch?.[2] || "0") * 100);
+
+    setSelectedBags(prev => {
+      const existingIndex = prev.findIndex(
+        b => b.serviceId === bag.id && b.passengerId === bag.passengerId
+      );
+      
+      if (existingIndex >= 0) {
+        const newQuantity = prev[existingIndex].quantity + delta;
+        if (newQuantity <= 0) {
+          // Remove the bag
+          return prev.filter((_, i) => i !== existingIndex);
+        } else if (newQuantity <= bag.maxQuantity) {
+          // Update quantity
+          const updated = [...prev];
+          updated[existingIndex] = { ...updated[existingIndex], quantity: newQuantity };
+          return updated;
+        }
+        return prev; // Don't exceed max
+      } else if (delta > 0) {
+        // Add new bag selection
+        return [...prev, {
+          passengerId: bag.passengerId,
+          serviceId: bag.id,
+          quantity: 1,
+          type: bag.type,
+          priceCents,
+          currency,
+          weight: bag.weight,
+        }];
+      }
+      return prev;
+    });
+  };
+
+  const handleSaveBagSelections = async () => {
+    try {
+      await updateBaggage({
+        draftId,
+        selectedBags: selectedBags.map(b => ({
+          passengerId: b.passengerId,
+          segmentId: "all", // Bags usually apply to entire journey
+          serviceId: b.serviceId,
+          quantity: BigInt(b.quantity),
+          priceCents: BigInt(b.priceCents),
+          currency: b.currency,
+          type: b.type,
+          weight: b.weight ? { amount: parseFloat(b.weight), unit: "kg" } : undefined,
+        })),
+      });
+    } catch (error) {
+      console.error("Error saving bag selections:", error);
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", "Failed to save bag selections");
+      }
+    }
+  };
+
+  // Save bags when they change
+  useEffect(() => {
+    if (selectedBags.length >= 0 && draft) {
+      const timer = setTimeout(() => {
+        handleSaveBagSelections();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedBags]);
+
   const renderBagsTab = () => {
-    // In a real implementation, you would show available bag options
-    // For now, show included baggage and note that extras may not be available
+    const getSelectedQuantity = (bagId: string, passengerId: string) => {
+      const selection = selectedBags.find(
+        b => b.serviceId === bagId && b.passengerId === passengerId
+      );
+      return selection?.quantity || 0;
+    };
+
+    const getPassengerName = (passengerId: string) => {
+      const passenger = draft?.passengers.find(p => p.passengerId === passengerId);
+      return passenger?.name || "Passenger";
+    };
+
     return (
       <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        {/* Included Baggage Section */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Included Baggage</Text>
           <Text style={styles.sectionDescription}>
-            Your fare includes the following baggage allowance per passenger:
+            Your fare includes the following baggage allowance:
           </Text>
 
           <View style={styles.baggageList}>
-            <View style={styles.baggageItem}>
-              <View style={styles.baggageIconContainer}>
-                <Ionicons name="bag-handle-outline" size={24} color={colors.primary} />
+            {draft?.includedBaggage && draft.includedBaggage.length > 0 ? (
+              draft.includedBaggage.map((bagInfo, index) => {
+                const passenger = draft.passengers.find(p => p.passengerId === bagInfo.passengerId);
+                return (
+                  <View key={index} style={styles.passengerBaggageCard}>
+                    <View style={styles.passengerBaggageHeader}>
+                      <Ionicons name="person" size={16} color={colors.textSecondary} />
+                      <Text style={styles.passengerBaggageName}>{passenger?.name || "Passenger"}</Text>
+                    </View>
+                    
+                    <View style={styles.includedBaggageRow}>
+                      {bagInfo.cabinBags > 0 && (
+                        <View style={styles.baggageChip}>
+                          <Ionicons name="bag-handle-outline" size={16} color={colors.success} />
+                          <Text style={styles.baggageChipText}>
+                            {bagInfo.cabinBags} cabin bag{bagInfo.cabinBags > 1 ? "s" : ""}
+                          </Text>
+                        </View>
+                      )}
+                      {bagInfo.checkedBags > 0 && (
+                        <View style={styles.baggageChip}>
+                          <Ionicons name="briefcase-outline" size={16} color={colors.success} />
+                          <Text style={styles.baggageChipText}>
+                            {bagInfo.checkedBags} checked bag{bagInfo.checkedBags > 1 ? "s" : ""}
+                            {bagInfo.checkedWeight && ` (${bagInfo.checkedWeight})`}
+                          </Text>
+                        </View>
+                      )}
+                      {bagInfo.cabinBags === 0 && bagInfo.checkedBags === 0 && (
+                        <Text style={styles.noBaggageText}>No baggage included</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.baggageItem}>
+                <View style={styles.baggageIconContainer}>
+                  <Ionicons name="bag-handle-outline" size={24} color={colors.primary} />
+                </View>
+                <View style={styles.baggageInfo}>
+                  <Text style={styles.baggageTitle}>Carry-on Bag</Text>
+                  <Text style={styles.baggageDescription}>
+                    1 cabin bag (max 8kg) + 1 personal item
+                  </Text>
+                </View>
+                <View style={styles.includedBadge}>
+                  <Text style={styles.includedBadgeText}>Included</Text>
+                </View>
               </View>
-              <View style={styles.baggageInfo}>
-                <Text style={styles.baggageTitle}>Carry-on Bag</Text>
-                <Text style={styles.baggageDescription}>
-                  1 cabin bag (max 8kg) + 1 personal item
-                </Text>
-              </View>
-              <View style={styles.includedBadge}>
-                <Text style={styles.includedBadgeText}>Included</Text>
-              </View>
-            </View>
-
-            <View style={styles.baggageItem}>
-              <View style={styles.baggageIconContainer}>
-                <Ionicons name="briefcase-outline" size={24} color={colors.primary} />
-              </View>
-              <View style={styles.baggageInfo}>
-                <Text style={styles.baggageTitle}>Checked Bag</Text>
-                <Text style={styles.baggageDescription}>
-                  Check your fare details for checked baggage allowance
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
         </View>
 
-        <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-          <Text style={styles.infoText}>
-            Additional baggage options may be available during check-in or at the airport.
-            Prices and availability vary by route and airline.
-          </Text>
-        </View>
+        {/* Available Extra Bags Section */}
+        {draft?.availableBags && draft.availableBags.length > 0 && (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Add Extra Baggage</Text>
+            <Text style={styles.sectionDescription}>
+              Purchase additional checked bags for your journey:
+            </Text>
+
+            <View style={styles.extraBagsList}>
+              {draft.availableBags.map((bag, index) => {
+                const quantity = getSelectedQuantity(bag.id, bag.passengerId);
+                return (
+                  <View key={index} style={styles.extraBagItem}>
+                    <View style={styles.extraBagInfo}>
+                      <View style={styles.extraBagHeader}>
+                        <Ionicons name="briefcase" size={20} color={colors.primary} />
+                        <Text style={styles.extraBagTitle}>
+                          {bag.type === "checked" ? "Checked Bag" : bag.type}
+                        </Text>
+                      </View>
+                      <Text style={styles.extraBagPassenger}>
+                        For: {getPassengerName(bag.passengerId)}
+                      </Text>
+                      {bag.weight && (
+                        <Text style={styles.extraBagWeight}>Up to {bag.weight}</Text>
+                      )}
+                      <Text style={styles.extraBagPrice}>{bag.priceDisplay}</Text>
+                    </View>
+                    
+                    <View style={styles.quantitySelector}>
+                      <TouchableOpacity
+                        style={[
+                          styles.quantityButton,
+                          quantity === 0 && styles.quantityButtonDisabled
+                        ]}
+                        onPress={() => handleBagQuantityChange(bag, -1)}
+                        disabled={quantity === 0}
+                      >
+                        <Ionicons
+                          name="remove"
+                          size={20}
+                          color={quantity === 0 ? colors.border : colors.text}
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.quantityText}>{quantity}</Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.quantityButton,
+                          quantity >= bag.maxQuantity && styles.quantityButtonDisabled
+                        ]}
+                        onPress={() => handleBagQuantityChange(bag, 1)}
+                        disabled={quantity >= bag.maxQuantity}
+                      >
+                        <Ionicons
+                          name="add"
+                          size={20}
+                          color={quantity >= bag.maxQuantity ? colors.border : colors.text}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {selectedBags.length > 0 && (
+              <View style={styles.bagsSummary}>
+                <Text style={styles.bagsSummaryTitle}>Selected Extras:</Text>
+                {selectedBags.map((bag, index) => (
+                  <View key={index} style={styles.bagsSummaryItem}>
+                    <Text style={styles.bagsSummaryText}>
+                      {bag.quantity}x {bag.type === "checked" ? "Checked Bag" : bag.type}
+                    </Text>
+                    <Text style={styles.bagsSummaryPrice}>
+                      {bag.currency} {((bag.priceCents * bag.quantity) / 100).toFixed(2)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {(!draft?.availableBags || draft.availableBags.length === 0) && (
+          <View style={styles.infoCard}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+            <Text style={styles.infoText}>
+              Additional baggage options may be available during check-in or at the airport.
+              Prices and availability vary by route and airline.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     );
   };
@@ -1208,5 +1419,144 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  // Baggage selection styles
+  passengerBaggageCard: {
+    padding: 12,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  passengerBaggageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  passengerBaggageName: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: colors.text,
+  },
+  includedBaggageRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  baggageChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 16,
+  },
+  baggageChipText: {
+    fontSize: 13,
+    color: colors.success,
+    fontWeight: "500",
+  },
+  noBaggageText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontStyle: "italic",
+  },
+  extraBagsList: {
+    gap: 12,
+  },
+  extraBagItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  extraBagInfo: {
+    flex: 1,
+  },
+  extraBagHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  extraBagTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  extraBagPassenger: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  extraBagWeight: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  extraBagPrice: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.primary,
+  },
+  quantitySelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 4,
+  },
+  quantityButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quantityButtonDisabled: {
+    opacity: 0.4,
+  },
+  quantityText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.text,
+    minWidth: 24,
+    textAlign: "center",
+  },
+  bagsSummary: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  bagsSummaryTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: 8,
+  },
+  bagsSummaryItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  bagsSummaryText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  bagsSummaryPrice: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.text,
   },
 });
