@@ -735,7 +735,7 @@ export default function CreateTripScreen() {
 
                 {/* Budget Section */}
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
-                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>BUDGET (EUR)</Text>
+                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>BUDGET (EUR) <Text style={{ color: colors.error }}>*</Text></Text>
                     <View style={[styles.budgetInputContainer, { backgroundColor: colors.secondary }]}>
                         <Text style={[styles.currencySymbol, { color: colors.text }]}>€</Text>
                         <TextInput

@@ -1448,7 +1448,7 @@ export default function TripDetails() {
                         )}
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Budget (€)</Text>
+                            <Text style={styles.label}>Budget (€) <Text style={{ color: '#EF4444' }}>*</Text></Text>
                             <TextInput
                                 style={styles.input}
                                 value={editForm.budget.toString()}
