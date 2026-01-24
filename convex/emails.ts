@@ -511,30 +511,39 @@ export const sendFlightConfirmationEmail = internalAction({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    console.log(`📧 [EMAIL] Starting confirmation email for booking: ${args.bookingId}`);
+    
     try {
       // Get the booking
+      console.log(`📧 [EMAIL] Fetching booking data...`);
       const booking = await ctx.runQuery(getBookingForEmailRef, {
         bookingId: args.bookingId,
       });
 
       if (!booking) {
+        console.error(`📧 [EMAIL] ❌ Booking not found: ${args.bookingId}`);
         return { success: false, error: "Booking not found" };
       }
+      
+      console.log(`📧 [EMAIL] Booking found - Reference: ${booking.bookingReference}, Passengers: ${booking.passengers?.length || 0}`);
 
       // Idempotency check - don't send if already sent
       if (booking.confirmationEmailSentAt) {
-        console.log(`📧 Confirmation email already sent for booking ${args.bookingId}`);
+        console.log(`📧 [EMAIL] ⚠️ Email already sent at ${new Date(booking.confirmationEmailSentAt).toISOString()} - skipping`);
         return { success: true, alreadySent: true };
       }
 
       // Find the primary passenger email (first passenger with email)
       const primaryPassenger = booking.passengers.find((p: { email?: string }) => p.email);
       if (!primaryPassenger || !primaryPassenger.email) {
-        console.error("No passenger email found for booking", args.bookingId);
+        console.error(`📧 [EMAIL] ❌ No passenger email found for booking ${args.bookingId}`);
         return { success: false, error: "No passenger email found" };
       }
+      
+      console.log(`📧 [EMAIL] Primary passenger: ${primaryPassenger.givenName} ${primaryPassenger.familyName} <${primaryPassenger.email}>`);
 
       // Generate email content
+      console.log(`📧 [EMAIL] Generating email content...`);
       const { html, text } = generateFlightConfirmationEmail({
         bookingReference: booking.bookingReference || "PENDING",
         passengerName: `${primaryPassenger.givenName} ${primaryPassenger.familyName}`,
@@ -551,25 +560,32 @@ export const sendFlightConfirmationEmail = internalAction({
         })),
       });
 
+      const emailSubject = `Flight Confirmation - ${booking.outboundFlight.origin} to ${booking.outboundFlight.destination} | ${booking.bookingReference || "Planera"}`;
+      console.log(`📧 [EMAIL] Sending email with subject: "${emailSubject}"`);
+      
       // Send the email
       const result = await ctx.runAction(sendEmailRef, {
         to: primaryPassenger.email,
-        subject: `Flight Confirmation - ${booking.outboundFlight.origin} to ${booking.outboundFlight.destination} | ${booking.bookingReference || "Planera"}`,
+        subject: emailSubject,
         html,
         text,
       });
+
+      console.log(`📧 [EMAIL] Send result:`, JSON.stringify(result));
 
       if (result.success) {
         // Mark email as sent (idempotency)
         await ctx.runMutation(markConfirmationEmailSentRef, {
           bookingId: args.bookingId,
         });
-        console.log(`✅ Confirmation email sent to ${primaryPassenger.email}`);
+        console.log(`📧 [EMAIL] ✅ Confirmation email sent successfully to ${primaryPassenger.email}`);
+      } else {
+        console.error(`📧 [EMAIL] ❌ Failed to send email: ${result.error}`);
       }
 
       return result;
     } catch (error) {
-      console.error("Send confirmation email error:", error);
+      console.error("📧 [EMAIL] ❌ Exception in sendFlightConfirmationEmail:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

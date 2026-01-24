@@ -569,13 +569,15 @@ export const completeBooking = action({
       });
 
       // Send confirmation email (fire-and-forget, don't block the booking)
+      console.log(`📧 Triggering confirmation email for booking ${bookingId}...`);
       try {
-        await ctx.runAction(internal.emails.sendFlightConfirmationEmail, {
+        const emailResult = await ctx.runAction(internal.emails.sendFlightConfirmationEmail, {
           bookingId,
         });
+        console.log(`📧 Email result:`, JSON.stringify(emailResult));
       } catch (emailError) {
         // Log but don't fail the booking if email fails
-        console.error("Failed to send confirmation email:", emailError);
+        console.error("❌ Failed to send confirmation email:", emailError);
       }
 
       // Update draft status
