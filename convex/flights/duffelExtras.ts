@@ -147,6 +147,15 @@ export async function getOfferWithExtras(offerId: string): Promise<OfferExtras |
     const data = await response.json();
     const offer = data.data;
 
+    // DEBUG: Log what Duffel returns for available services
+    console.log(`📦 Duffel available_services count: ${offer.available_services?.length || 0}`);
+    if (offer.available_services && offer.available_services.length > 0) {
+      console.log(`📦 Service types: ${offer.available_services.map((s: any) => s.type).join(', ')}`);
+    } else {
+      console.log(`⚠️ NO EXTRAS AVAILABLE - This is common in Duffel test mode!`);
+      console.log(`   Test mode airlines often don't provide baggage/seat services.`);
+    }
+
     // Extract conditions (change/refund policies)
     const conditions: OfferConditions = {
       changeBeforeDeparture: offer.conditions?.change_before_departure ? {
