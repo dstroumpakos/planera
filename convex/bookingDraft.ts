@@ -466,7 +466,74 @@ export const completeBooking = action({
       const offer = await getOffer(draft.offerId);
       const flightDetails = offer ? extractFlightDetails(offer) : null;
 
-      // Save the completed booking
+      // Build policies from draft conditions
+      const policies = draft.conditions ? {
+        canChange: draft.conditions.changeBeforeDeparture?.allowed ?? false,
+        canRefund: draft.conditions.refundBeforeDeparture?.allowed ?? false,
+        changePolicy: draft.conditions.changeBeforeDeparture?.allowed 
+          ? (draft.conditions.changeBeforeDeparture.penaltyAmount 
+            ? `Changes allowed with ${draft.conditions.changeBeforeDeparture.penaltyCurrency || ''} ${draft.conditions.changeBeforeDeparture.penaltyAmount} fee`
+            : "Changes allowed for free")
+          : "Changes not allowed",
+        refundPolicy: draft.conditions.refundBeforeDeparture?.allowed
+          ? (draft.conditions.refundBeforeDeparture.penaltyAmount
+            ? `Refunds allowed with ${draft.conditions.refundBeforeDeparture.penaltyCurrency || ''} ${draft.conditions.refundBeforeDeparture.penaltyAmount} fee`
+            : "Full refund available")
+          : "Non-refundable",
+        changePenaltyAmount: draft.conditions.changeBeforeDeparture?.penaltyAmount,
+        changePenaltyCurrency: draft.conditions.changeBeforeDeparture?.penaltyCurrency,
+        refundPenaltyAmount: draft.conditions.refundBeforeDeparture?.penaltyAmount,
+        refundPenaltyCurrency: draft.conditions.refundBeforeDeparture?.penaltyCurrency,
+      } : undefined;
+
+      // Build included baggage summary
+      const includedBaggage = draft.includedBaggage?.map(bag => {
+        const passenger = draft.passengers.find(p => p.passengerId === bag.passengerId);
+        return {
+          passengerId: bag.passengerId,
+          passengerName: passenger ? `${passenger.givenName} ${passenger.familyName}` : undefined,
+          cabinBags: bag.cabin?.quantity ? BigInt(bag.cabin.quantity) : undefined,
+          checkedBags: bag.checked?.quantity ? BigInt(bag.checked.quantity) : undefined,
+          checkedBagWeight: bag.checked?.weight,
+        };
+      });
+
+      // Build paid baggage summary
+      const paidBaggage = draft.selectedBags?.map(bag => {
+        const passenger = draft.passengers.find(p => p.passengerId === bag.passengerId);
+        return {
+          passengerId: bag.passengerId,
+          passengerName: passenger ? `${passenger.givenName} ${passenger.familyName}` : undefined,
+          type: bag.type,
+          quantity: BigInt(bag.quantity),
+          priceCents: BigInt(bag.priceCents),
+          currency: bag.currency,
+          weight: bag.weight,
+        };
+      });
+
+      // Build seat selections summary
+      const seatSelections = draft.selectedSeats?.map(seat => {
+        const passenger = draft.passengers.find(p => p.passengerId === seat.passengerId);
+        return {
+          passengerId: seat.passengerId,
+          passengerName: passenger ? `${passenger.givenName} ${passenger.familyName}` : undefined,
+          segmentId: seat.segmentId,
+          flightNumber: undefined, // Could be extracted from offer if needed
+          seatDesignator: seat.seatDesignator,
+          priceCents: BigInt(seat.priceCents),
+          currency: seat.currency,
+        };
+      });
+
+      // Parse departure date for timestamp
+      let departureTimestamp: number | undefined;
+      if (flightDetails?.outbound?.departureDate) {
+        const [year, month, day] = flightDetails.outbound.departureDate.split("-").map(Number);
+        departureTimestamp = new Date(year, month - 1, day).getTime();
+      }
+
+      // Save the completed booking with all details
       await ctx.runMutation(internal.flightBookingMutations.saveBooking, {
         tripId: draft.tripId,
         duffelOrderId: order.id,
@@ -474,6 +541,8 @@ export const completeBooking = action({
         paymentIntentId: args.paymentIntentId,
         totalAmount: order.totalAmount,
         currency: order.currency,
+        basePriceCents: draft.basePriceCents,
+        extrasTotalCents: draft.extrasTotalCents,
         outboundFlight: flightDetails?.outbound || {
           airline: "Unknown",
           flightNumber: "",
@@ -488,8 +557,15 @@ export const completeBooking = action({
           givenName: p.givenName,
           familyName: p.familyName,
           email: p.email || "",
+          type: p.type,
+          dateOfBirth: p.dateOfBirth,
         })),
+        policies,
+        includedBaggage,
+        paidBaggage,
+        seatSelections,
         status: "confirmed",
+        departureTimestamp,
       });
 
       // Update draft status

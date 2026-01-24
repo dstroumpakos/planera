@@ -215,31 +215,94 @@ export default defineSchema({
         paymentIntentId: v.optional(v.string()),
         totalAmount: v.float64(),
         currency: v.string(),
+        // Base price before extras
+        basePriceCents: v.optional(v.int64()),
+        // Extras total
+        extrasTotalCents: v.optional(v.int64()),
         // Flight details snapshot
         outboundFlight: v.object({
             airline: v.string(),
+            airlineLogo: v.optional(v.string()),
             flightNumber: v.string(),
             departure: v.string(),
             arrival: v.string(),
             departureDate: v.string(),
+            departureAirport: v.optional(v.string()),
+            arrivalAirport: v.optional(v.string()),
             origin: v.string(),
             destination: v.string(),
+            duration: v.optional(v.string()),
+            cabinClass: v.optional(v.string()),
+            aircraft: v.optional(v.string()),
         }),
         returnFlight: v.optional(v.object({
             airline: v.string(),
+            airlineLogo: v.optional(v.string()),
             flightNumber: v.string(),
             departure: v.string(),
             arrival: v.string(),
             departureDate: v.string(),
+            departureAirport: v.optional(v.string()),
+            arrivalAirport: v.optional(v.string()),
             origin: v.string(),
             destination: v.string(),
+            duration: v.optional(v.string()),
+            cabinClass: v.optional(v.string()),
+            aircraft: v.optional(v.string()),
         })),
-        // Passengers
+        // Passengers with full details
         passengers: v.array(v.object({
             givenName: v.string(),
             familyName: v.string(),
             email: v.string(),
+            type: v.optional(v.union(v.literal("adult"), v.literal("child"), v.literal("infant"))),
+            dateOfBirth: v.optional(v.string()),
         })),
+        // Cancellation & Change policies (from Duffel conditions)
+        policies: v.optional(v.object({
+            canChange: v.boolean(),
+            canRefund: v.boolean(),
+            changePolicy: v.string(),
+            refundPolicy: v.string(),
+            changePenaltyAmount: v.optional(v.string()),
+            changePenaltyCurrency: v.optional(v.string()),
+            refundPenaltyAmount: v.optional(v.string()),
+            refundPenaltyCurrency: v.optional(v.string()),
+        })),
+        // Included baggage (what comes with the ticket)
+        includedBaggage: v.optional(v.array(v.object({
+            passengerId: v.string(),
+            passengerName: v.optional(v.string()),
+            cabinBags: v.optional(v.int64()),
+            checkedBags: v.optional(v.int64()),
+            checkedBagWeight: v.optional(v.object({
+                amount: v.float64(),
+                unit: v.string(),
+            })),
+        }))),
+        // Paid extra baggage
+        paidBaggage: v.optional(v.array(v.object({
+            passengerId: v.string(),
+            passengerName: v.optional(v.string()),
+            type: v.string(), // "checked" or "carry_on"
+            quantity: v.int64(),
+            priceCents: v.int64(),
+            currency: v.string(),
+            weight: v.optional(v.object({
+                amount: v.float64(),
+                unit: v.string(),
+            })),
+        }))),
+        // Seat selections
+        seatSelections: v.optional(v.array(v.object({
+            passengerId: v.string(),
+            passengerName: v.optional(v.string()),
+            segmentId: v.string(),
+            flightNumber: v.optional(v.string()),
+            seatDesignator: v.string(),
+            priceCents: v.int64(),
+            currency: v.string(),
+        }))),
         // Status
         status: v.union(
             v.literal("pending_payment"),
@@ -250,6 +313,8 @@ export default defineSchema({
         // Timestamps
         createdAt: v.float64(),
         confirmedAt: v.optional(v.float64()),
+        // For tracking if flight has departed
+        departureTimestamp: v.optional(v.float64()),
     })
         .index("by_user", ["userId"])
         .index("by_trip", ["tripId"])

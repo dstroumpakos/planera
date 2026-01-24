@@ -114,6 +114,14 @@ export default function Profile() {
 
     const menuItems = [
         {
+            title: "My Flights",
+            subtitle: "View booked flights & policies",
+            icon: "airplane-outline",
+            iconBg: isDarkMode ? "#1E3A5F" : "#DBEAFE",
+            iconColor: "#2563EB",
+            action: () => router.push("/settings/my-flights")
+        },
+        {
             title: "Saved Trips",
             subtitle: `${completedTrips} upcoming, ${tripCount - completedTrips} past`,
             icon: "bookmark-outline",
