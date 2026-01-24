@@ -170,10 +170,10 @@ export default function CreateTripScreen() {
                 origin: userSettings.homeAirport || prev.origin,
                 budget: userSettings.defaultBudget || prev.budget,
                 travelers: userSettings.defaultTravelers || prev.travelers,
-                interests: userSettings.defaultInterests && userSettings.defaultInterests.length > 0 ? userSettings.defaultInterests : prev.interests,
-                skipFlights: userSettings.defaultSkipFlights ?? prev.skipFlights,
-                skipHotel: userSettings.defaultSkipHotel ?? prev.skipHotel,
-                preferredFlightTime: (userSettings.defaultPreferredFlightTime as any) || prev.preferredFlightTime,
+                interests: userSettings.interests && userSettings.interests.length > 0 ? userSettings.interests : prev.interests,
+                skipFlights: userSettings.skipFlights ?? prev.skipFlights,
+                skipHotel: userSettings.skipHotels ?? prev.skipHotel,
+                preferredFlightTime: (userSettings.flightTimePreference as any) || prev.preferredFlightTime,
             }));
         }
     }, [userSettings]);

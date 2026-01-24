@@ -27,10 +27,11 @@ export default function TravelPreferences() {
         if (settings) {
             setHomeAirport(settings.homeAirport || "");
             setDefaultBudget(settings.defaultBudget?.toString() || "2000");
-            setDefaultInterests(settings.defaultInterests || []);
-            setDefaultSkipFlights(settings.defaultSkipFlights || false);
-            setDefaultSkipHotel(settings.defaultSkipHotel || false);
-            setDefaultPreferredFlightTime(settings.defaultPreferredFlightTime || "any");
+            // Use the mapped field names from getSettings
+            setDefaultInterests(settings.interests || []);
+            setDefaultSkipFlights(settings.skipFlights || false);
+            setDefaultSkipHotel(settings.skipHotels || false);
+            setDefaultPreferredFlightTime(settings.flightTimePreference || "any");
         }
     }, [settings]);
 

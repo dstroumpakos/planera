@@ -17,7 +17,6 @@ const COLORS = LIGHT_COLORS;
 export default function Index() {
     const { colors } = useTheme();
     const [currentStep, setCurrentStep] = useState(0); // 0: splash, 1: onboarding, 2: auth
-    const [onboardingPage, setOnboardingPage] = useState(0);
     const [isEmailAuth, setIsEmailAuth] = useState(false);
     const [isSignUp, setIsSignUp] = useState(true);
     const [email, setEmail] = useState("");
@@ -137,7 +136,7 @@ export default function Index() {
         </View>
     );
 
-    // Onboarding Screen
+    // Onboarding Screen - Just show features before auth
     const renderOnboarding = () => (
         <View style={styles.onboardingContainer}>
             <Text style={styles.onboardingBrand}>PLANERA</Text>
@@ -162,17 +161,11 @@ export default function Index() {
             </View>
             
             <View style={styles.onboardingBottom}>
-                <View style={styles.dotsContainer}>
-                    <View style={[styles.dot, styles.dotInactive]} />
-                    <View style={[styles.dot, styles.dotActive]} />
-                    <View style={[styles.dot, styles.dotInactive]} />
-                </View>
-                
                 <TouchableOpacity 
                     style={styles.nextButton}
                     onPress={() => setCurrentStep(2)}
                 >
-                    <Text style={styles.nextButtonText}>Next</Text>
+                    <Text style={styles.nextButtonText}>Continue</Text>
                     <Ionicons name="arrow-forward" size={20} color={colors.text} />
                 </TouchableOpacity>
             </View>
@@ -487,7 +480,7 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         letterSpacing: 3,
         textAlign: "center",
-        marginBottom: 32,
+        marginBottom: 24,
     },
     onboardingContent: {
         flex: 1,
