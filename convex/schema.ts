@@ -315,6 +315,8 @@ export default defineSchema({
         confirmedAt: v.optional(v.float64()),
         // For tracking if flight has departed
         departureTimestamp: v.optional(v.float64()),
+        // Email confirmation tracking (for idempotency)
+        confirmationEmailSentAt: v.optional(v.float64()),
     })
         .index("by_user", ["userId"])
         .index("by_trip", ["tripId"])

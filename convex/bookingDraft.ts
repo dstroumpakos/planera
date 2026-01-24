@@ -534,7 +534,7 @@ export const completeBooking = action({
       }
 
       // Save the completed booking with all details
-      await ctx.runMutation(internal.flightBookingMutations.saveBooking, {
+      const bookingId = await ctx.runMutation(internal.flightBookingMutations.saveBooking, {
         tripId: draft.tripId,
         duffelOrderId: order.id,
         bookingReference: order.bookingReference,
@@ -567,6 +567,16 @@ export const completeBooking = action({
         status: "confirmed",
         departureTimestamp,
       });
+
+      // Send confirmation email (fire-and-forget, don't block the booking)
+      try {
+        await ctx.runAction(internal.emails.sendFlightConfirmationEmail, {
+          bookingId,
+        });
+      } catch (emailError) {
+        // Log but don't fail the booking if email fails
+        console.error("Failed to send confirmation email:", emailError);
+      }
 
       // Update draft status
       await ctx.runMutation(internal.bookingDraftMutations.updateDraftStatus, {
