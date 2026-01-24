@@ -6,9 +6,28 @@
  */
 
 import { internalAction } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { makeFunctionReference } from "convex/server";
+
+// Create typed function references to avoid circular dependency issues
+const getBookingForEmailRef = makeFunctionReference<
+  "query",
+  { bookingId: Id<"flightBookings"> },
+  any
+>("emailHelpers:getBookingForEmail");
+
+const markConfirmationEmailSentRef = makeFunctionReference<
+  "mutation",
+  { bookingId: Id<"flightBookings"> },
+  null
+>("emailHelpers:markConfirmationEmailSent");
+
+const sendEmailRef = makeFunctionReference<
+  "action",
+  { to: string; subject: string; html: string; text?: string },
+  { success: boolean; messageId?: string; error?: string }
+>("emails:sendEmail");
 
 // Gmail API constants
 const GMAIL_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -494,7 +513,7 @@ export const sendFlightConfirmationEmail = internalAction({
   handler: async (ctx, args) => {
     try {
       // Get the booking
-      const booking = await ctx.runQuery(internal.emailHelpers.getBookingForEmail, {
+      const booking = await ctx.runQuery(getBookingForEmailRef, {
         bookingId: args.bookingId,
       });
 
@@ -533,7 +552,7 @@ export const sendFlightConfirmationEmail = internalAction({
       });
 
       // Send the email
-      const result = await ctx.runAction(internal.emails.sendEmail, {
+      const result = await ctx.runAction(sendEmailRef, {
         to: primaryPassenger.email,
         subject: `Flight Confirmation - ${booking.outboundFlight.origin} to ${booking.outboundFlight.destination} | ${booking.bookingReference || "Planera"}`,
         html,
@@ -542,7 +561,7 @@ export const sendFlightConfirmationEmail = internalAction({
 
       if (result.success) {
         // Mark email as sent (idempotency)
-        await ctx.runMutation(internal.emailHelpers.markConfirmationEmailSent, {
+        await ctx.runMutation(markConfirmationEmailSentRef, {
           bookingId: args.bookingId,
         });
         console.log(`✅ Confirmation email sent to ${primaryPassenger.email}`);
