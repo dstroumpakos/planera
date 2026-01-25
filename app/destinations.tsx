@@ -15,6 +15,7 @@ import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useConvexAuth } from "convex/react";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/ThemeContext";
 
 export default function DestinationsScreen() {
@@ -128,7 +129,7 @@ export default function DestinationsScreen() {
           filteredDestinations.map((destination, index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.destinationCard, { backgroundColor: colors.card }]}
+              style={styles.destinationCard}
               onPress={() => router.push({
                 pathname: "/destination-preview",
                 params: {
@@ -152,52 +153,60 @@ export default function DestinationsScreen() {
                     <Text style={styles.placeholderEmoji}>✈️</Text>
                   </View>
                 )}
-              </View>
-              
-              <View style={styles.cardContent}>
-                <View style={styles.cardHeader}>
-                  <Text style={[styles.destinationName, { color: colors.text }]} numberOfLines={1}>
-                    {destination.destination}
-                  </Text>
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={14} color={colors.primary} />
-                    <Text style={[styles.ratingText, { color: colors.text }]}>
-                      {destination.avgRating.toFixed(1)}
+                
+                {/* Gradient Overlay */}
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.8)"]}
+                  style={styles.cardGradient}
+                />
+                
+                {/* Content Overlay */}
+                <View style={styles.cardOverlay}>
+                  {/* Header: Title and Rating */}
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.destinationName} numberOfLines={1}>
+                      {destination.destination}
                     </Text>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={14} color="#FFD700" />
+                      <Text style={styles.ratingText}>
+                        {destination.avgRating.toFixed(1)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
 
-                <View style={styles.cardStats}>
-                  <View style={styles.statItem}>
-                    <Ionicons name="people-outline" size={16} color={colors.textMuted} />
-                    <Text style={[styles.statText, { color: colors.textMuted }]}>
-                      {destination.count} {destination.count === 1 ? "trip" : "trips"}
-                    </Text>
+                  {/* Stats Row */}
+                  <View style={styles.cardStats}>
+                    <View style={styles.statItem}>
+                      <Ionicons name="airplane-outline" size={14} color="rgba(255,255,255,0.8)" />
+                      <Text style={styles.statText}>
+                        {destination.count} {destination.count === 1 ? "trip" : "trips"}
+                      </Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                      <Ionicons name="wallet-outline" size={14} color="rgba(255,255,255,0.8)" />
+                      <Text style={styles.statText}>
+                        ~${Math.round(destination.avgBudget).toLocaleString()}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.statItem}>
-                    <Ionicons name="cash-outline" size={16} color={colors.textMuted} />
-                    <Text style={[styles.statText, { color: colors.textMuted }]}>
-                      ~${Math.round(destination.avgBudget).toLocaleString()}
-                    </Text>
-                  </View>
-                </View>
 
-                {destination.interests.length > 0 && (
-                  <View style={styles.interestsContainer}>
-                    {destination.interests.slice(0, 3).map((interest, i) => (
-                      <View 
-                        key={i} 
-                        style={[styles.interestTag, { backgroundColor: colors.secondary }]}
-                      >
-                        <Text style={[styles.interestText, { color: colors.text }]}>{interest}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                <View style={styles.cardFooter}>
-                  <Text style={[styles.exploreText, { color: colors.primary }]}>View Details</Text>
-                  <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                  {/* Interests */}
+                  {destination.interests.length > 0 && (
+                    <View style={styles.interestsContainer}>
+                      {destination.interests.slice(0, 3).map((interest, i) => (
+                        <View key={i} style={styles.interestTag}>
+                          <Text style={styles.interestText}>{interest}</Text>
+                        </View>
+                      ))}
+                      {destination.interests.length > 3 && (
+                        <View style={styles.interestTag}>
+                          <Text style={styles.interestText}>+{destination.interests.length - 3}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
               </View>
             </TouchableOpacity>
@@ -297,9 +306,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardImageContainer: {
-    height: 180,
+    height: 220,
     width: "100%",
     overflow: "hidden",
+    position: "relative",
   },
   imagePlaceholder: {
     flex: 1,
@@ -309,7 +319,18 @@ const styles = StyleSheet.create({
   placeholderEmoji: {
     fontSize: 48,
   },
-  cardContent: {
+  cardGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "70%",
+  },
+  cardOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     padding: 16,
   },
   cardHeader: {
@@ -319,59 +340,60 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   destinationName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     flex: 1,
     marginRight: 12,
+    color: "#FFFFFF",
   },
   ratingBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   ratingText: {
     fontSize: 14,
     fontWeight: "600",
+    color: "#FFFFFF",
   },
   cardStats: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 12,
+    alignItems: "center",
+    marginBottom: 10,
   },
   statItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
+  statDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    marginHorizontal: 12,
+  },
   statText: {
     fontSize: 13,
+    color: "rgba(255,255,255,0.9)",
   },
   interestsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
   },
   interestTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.2)",
   },
   interestText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "500",
-  },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 4,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.05)",
-  },
-  exploreText: {
-    fontSize: 14,
-    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
