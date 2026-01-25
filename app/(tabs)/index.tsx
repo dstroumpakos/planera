@@ -210,7 +210,7 @@ export default function HomeScreen() {
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending Now</Text>
-              <TouchableOpacity onPress={() => {}}>
+              <TouchableOpacity onPress={() => router.push("/destinations")}>
                 <Text style={[styles.viewAllText, { color: colors.textMuted }]}>View All</Text>
               </TouchableOpacity>
             </View>
