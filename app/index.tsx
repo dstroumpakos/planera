@@ -546,8 +546,8 @@ const styles = StyleSheet.create({
     authScrollContent: {
         flexGrow: 1,
         paddingHorizontal: 24,
-        paddingTop: 20,
-        paddingBottom: 40,
+        paddingTop: 0,
+        paddingBottom: 24,
     },
     authBrand: {
         fontSize: 14,
@@ -558,12 +558,12 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     authHeroContainer: {
-        marginBottom: 24,
+        marginBottom: 12,
         alignItems: "center",
     },
     authHeroImageFile: {
-        width: 400,
-        height: 400,
+        width: 280,
+        height: 280,
         borderRadius: 20,
     },
     authTitle: {
@@ -571,13 +571,13 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         color: COLORS.text,
         textAlign: "center",
-        marginBottom: 8,
+        marginBottom: 4,
     },
     authSubtitle: {
         fontSize: 16,
         color: COLORS.textSecondary,
         textAlign: "center",
-        marginBottom: 32,
+        marginBottom: 20,
         lineHeight: 24,
     },
     authOptionsContainer: {
