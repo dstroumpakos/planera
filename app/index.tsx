@@ -168,7 +168,6 @@ export default function Index() {
             style={styles.authKeyboard}
         >
             <ScrollView contentContainerStyle={styles.authScrollContent}>
-                <Text style={styles.authBrand}>PLANERA</Text>
                 
                 {/* Hero Image */}
                 <View style={styles.authHeroContainer}>
@@ -563,8 +562,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     authHeroImageFile: {
-        width: 200,
-        height: 200,
+        width: 300,
+        height: 300,
         borderRadius: 20,
     },
     authTitle: {
