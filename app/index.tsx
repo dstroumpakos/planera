@@ -172,7 +172,7 @@ export default function Index() {
                 {/* Hero Image */}
                 <View style={styles.authHeroContainer}>
                     <Image 
-                        source={require("@/assets/images/ai-file-js2anf.png")}
+                        source={require("@/assets/images/logo-a-9d8eag.png")}
                         style={styles.authHeroImageFile}
                         resizeMode="contain"
                     />
