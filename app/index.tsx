@@ -97,10 +97,10 @@ export default function Index() {
             <View style={styles.splashContent}>
                 <View style={styles.logoContainer}>
                     <View style={styles.logoIconWrapper}>
-                        <Ionicons name="globe-outline" size={48} color={colors.primary} />
-                        <View style={styles.logoSparkle}>
-                            <Ionicons name="sparkles" size={16} color={colors.primary} />
-                        </View>
+                        <Image 
+                            source={require("@/assets/images/appicon-1024x1024-01-s9s9iw.png")} 
+                            style={styles.logoImage}
+                        />
                     </View>
                 </View>
                 <Text style={styles.splashTitle}>PLANERA</Text>
@@ -395,6 +395,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 16,
         elevation: 8,
+        overflow: "hidden",
+    },
+    logoImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 24,
     },
     logoSparkle: {
         position: "absolute",
