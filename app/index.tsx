@@ -172,23 +172,11 @@ export default function Index() {
                 
                 {/* Hero Image */}
                 <View style={styles.authHeroContainer}>
-                    <View style={styles.authHeroImage}>
-                        <View style={styles.wavesContainer}>
-                            {[...Array(8)].map((_, i) => (
-                                <View 
-                                    key={i} 
-                                    style={[
-                                        styles.wave, 
-                                        { 
-                                            top: i * 35,
-                                            backgroundColor: i % 2 === 0 ? '#7BA3A3' : '#8FB5B5',
-                                            opacity: 0.7 + (i * 0.03)
-                                        }
-                                    ]} 
-                                />
-                            ))}
-                        </View>
-                    </View>
+                    <Image 
+                        source={require("@/assets/images/ai-file-js2anf.png")}
+                        style={styles.authHeroImageFile}
+                        resizeMode="contain"
+                    />
                 </View>
                 
                 <Text style={styles.authTitle}>Unlock Smart Travel</Text>
@@ -572,23 +560,12 @@ const styles = StyleSheet.create({
     },
     authHeroContainer: {
         marginBottom: 24,
+        alignItems: "center",
     },
-    authHeroImage: {
+    authHeroImageFile: {
+        width: 200,
         height: 200,
         borderRadius: 20,
-        overflow: "hidden",
-        backgroundColor: "#5A8A8A",
-    },
-    wavesContainer: {
-        flex: 1,
-        position: "relative",
-    },
-    wave: {
-        position: "absolute",
-        left: -20,
-        right: -20,
-        height: 60,
-        borderRadius: 30,
     },
     authTitle: {
         fontSize: 28,
