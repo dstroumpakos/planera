@@ -147,6 +147,7 @@ export default function DestinationsScreen() {
                     imageUrl={destinationImages[destination.destination].url}
                     photographerName={destinationImages[destination.destination].photographer}
                     photographerUrl={destinationImages[destination.destination].photographerUrl}
+                    position="top"
                   />
                 ) : (
                   <View style={[styles.imagePlaceholder, { backgroundColor: colors.secondary }]}>

@@ -439,8 +439,30 @@ export const getAllDestinations = query({
             return [];
         }
 
-        // Group by destination and aggregate data
+        // Helper function to normalize destination names
+        // Extracts city name and formats it properly
+        const normalizeDestination = (dest: string): string => {
+            // Remove extra whitespace and trim
+            let normalized = dest.trim();
+            
+            // Extract city name (before comma if present)
+            if (normalized.includes(",")) {
+                normalized = normalized.split(",")[0].trim();
+            }
+            
+            // Capitalize first letter of each word
+            normalized = normalized
+                .toLowerCase()
+                .split(" ")
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ");
+            
+            return normalized;
+        };
+
+        // Group by normalized destination and aggregate data
         const destinationMap: Record<string, {
+            displayName: string;
             count: number;
             budgets: number[];
             allInterests: string[];
@@ -448,8 +470,11 @@ export const getAllDestinations = query({
         }> = {};
 
         completedTrips.forEach((trip) => {
-            if (!destinationMap[trip.destination]) {
-                destinationMap[trip.destination] = {
+            const normalizedDest = normalizeDestination(trip.destination);
+            
+            if (!destinationMap[normalizedDest]) {
+                destinationMap[normalizedDest] = {
+                    displayName: normalizedDest,
                     count: 0,
                     budgets: [],
                     allInterests: [],
@@ -457,27 +482,27 @@ export const getAllDestinations = query({
                 };
             }
 
-            destinationMap[trip.destination].count += 1;
+            destinationMap[normalizedDest].count += 1;
             
             // Parse budget if it's a string
             const budgetNum = typeof trip.budget === "string" 
                 ? parseFloat(trip.budget) 
                 : trip.budget;
             if (!isNaN(budgetNum)) {
-                destinationMap[trip.destination].budgets.push(budgetNum);
+                destinationMap[normalizedDest].budgets.push(budgetNum);
             }
 
             // Collect interests
-            destinationMap[trip.destination].allInterests.push(...trip.interests);
+            destinationMap[normalizedDest].allInterests.push(...trip.interests);
             
             // Add a default rating
-            destinationMap[trip.destination].ratings.push(4.5 + Math.random() * 0.5);
+            destinationMap[normalizedDest].ratings.push(4.5 + Math.random() * 0.5);
         });
 
         // Convert to array and sort by count (most popular first)
         const allDestinations = Object.entries(destinationMap)
-            .map(([destination, data]) => ({
-                destination,
+            .map(([_, data]) => ({
+                destination: data.displayName,
                 count: data.count,
                 avgBudget: data.budgets.length > 0 
                     ? data.budgets.reduce((a, b) => a + b, 0) / data.budgets.length 
