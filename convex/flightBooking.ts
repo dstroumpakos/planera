@@ -200,7 +200,7 @@ export const createFlightBooking = action({
       const flightDetails = extractFlightDetails(offer);
 
       // Save the booking to the database
-      await ctx.runMutation(internal.flightBookingMutations.saveBooking, {
+      const bookingId = await ctx.runMutation(internal.flightBookingMutations.saveBooking, {
         tripId: args.tripId,
         duffelOrderId: order.id,
         bookingReference: order.bookingReference,
@@ -218,6 +218,17 @@ export const createFlightBooking = action({
       });
 
       console.log(`✅ Booking confirmed: ${order.bookingReference}`);
+
+      // Send confirmation email asynchronously
+      try {
+        console.log(`📧 Triggering confirmation email for booking ${bookingId}...`);
+        await ctx.runAction(internal.emails.sendFlightConfirmationEmail, {
+          bookingId,
+        });
+      } catch (emailError) {
+        // Log error but don't fail the booking
+        console.error(`⚠️ Failed to send confirmation email:`, emailError);
+      }
 
       return {
         success: true as const,
