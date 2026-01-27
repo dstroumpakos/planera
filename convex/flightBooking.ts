@@ -3,7 +3,16 @@
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { makeFunctionReference } from "convex/server";
 import { getOffer, createPaymentIntent, createOrder, extractFlightDetails } from "./flights/duffel";
+import { Id } from "./_generated/dataModel";
+
+// Create typed function reference for booking links to avoid circular reference
+const createBookingLinkRef = makeFunctionReference<
+  "mutation",
+  { bookingId: Id<"flightBookings">; expiresInDays?: number },
+  { token: string; expiresAt: number }
+>("bookingLinks:createBookingLink");
 
 // Get flight offer details to verify it's still valid
 export const getFlightOffer = action({
@@ -145,6 +154,7 @@ export const createFlightBooking = action({
       bookingReference: v.string(),
       totalAmount: v.number(),
       currency: v.string(),
+      bookingUrl: v.optional(v.string()),
     }),
     v.object({
       success: v.literal(false),
@@ -219,11 +229,26 @@ export const createFlightBooking = action({
 
       console.log(`✅ Booking confirmed: ${order.bookingReference}`);
 
+      // Create a secure booking link for email and sharing
+      let bookingUrl: string | undefined;
+      try {
+        console.log(`🔗 Creating secure booking link for booking ${bookingId}...`);
+        const linkResult: { token: string; expiresAt: number } = await ctx.runMutation(createBookingLinkRef, {
+          bookingId,
+          expiresInDays: 365, // 1 year expiration for booking links
+        });
+        bookingUrl = `https://planeraai.app/booking/?token=${linkResult.token}`;
+        console.log(`🔗 Booking link created: ${bookingUrl}`);
+      } catch (linkError) {
+        console.error(`⚠️ Failed to create booking link:`, linkError);
+      }
+
       // Send confirmation email asynchronously via Postmark
       try {
         console.log(`📧 Triggering Postmark receipt email for booking ${bookingId}...`);
         await ctx.runAction(internal.postmark.sendBookingReceiptEmail, {
           bookingId,
+          bookingUrl,
         });
       } catch (emailError) {
         // Log error but don't fail the booking
@@ -236,6 +261,7 @@ export const createFlightBooking = action({
         bookingReference: order.bookingReference || "PENDING",
         totalAmount: order.totalAmount,
         currency: order.currency,
+        bookingUrl,
       };
     } catch (error) {
       console.error("Create booking error:", error);

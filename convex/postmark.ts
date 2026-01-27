@@ -247,6 +247,7 @@ export const sendTemplateEmail = internalAction({
 export const sendBookingReceiptEmail = internalAction({
   args: {
     bookingId: v.id("flightBookings"),
+    bookingUrl: v.optional(v.string()),
   },
   returns: v.object({
     success: v.boolean(),
@@ -254,9 +255,13 @@ export const sendBookingReceiptEmail = internalAction({
     messageId: v.optional(v.string()),
     error: v.optional(v.string()),
     templateModel: v.optional(v.any()),
+    bookingUrl: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     console.log(`📧 [POSTMARK] Starting receipt email for booking: ${args.bookingId}`);
+    if (args.bookingUrl) {
+      console.log(`📧 [POSTMARK] Using booking URL: ${args.bookingUrl}`);
+    }
 
     try {
       // Get the booking
@@ -275,7 +280,7 @@ export const sendBookingReceiptEmail = internalAction({
       // Idempotency check
       if (booking.confirmationEmailSentAt) {
         console.log(`📧 [POSTMARK] ⚠️ Email already sent - skipping`);
-        return { success: true, alreadySent: true };
+        return { success: true, alreadySent: true, bookingUrl: args.bookingUrl };
       }
 
       // Find primary passenger email
@@ -291,6 +296,9 @@ export const sendBookingReceiptEmail = internalAction({
       const isRoundTrip = !!booking.returnFlight;
       const outbound = booking.outboundFlight;
       const returnFlight = booking.returnFlight;
+
+      // Use secure booking URL if provided, otherwise fallback to legacy URL
+      const viewBookingUrl = args.bookingUrl || `https://planeraai.app/bookings/${args.bookingId}`;
 
       const templateModel: ReceiptTemplateModel = {
         // Product info
@@ -323,10 +331,10 @@ export const sendBookingReceiptEmail = internalAction({
         passenger_name: `${primaryPassenger.givenName} ${primaryPassenger.familyName}`.toUpperCase(),
         total_paid: formatCurrency(booking.totalAmount, booking.currency),
 
-        // Action URLs
-        view_booking_url: `https://planeraai.app/bookings/${args.bookingId}`,
-        download_pdf_url: `https://planeraai.app/bookings/${args.bookingId}/pdf`,
-        add_to_calendar_url: `https://planeraai.app/bookings/${args.bookingId}/calendar`,
+        // Action URLs - use secure booking URL
+        view_booking_url: viewBookingUrl,
+        download_pdf_url: `${viewBookingUrl}&action=pdf`,
+        add_to_calendar_url: `${viewBookingUrl}&action=calendar`,
 
         // Company info
         company_name: "Planera",
@@ -368,6 +376,7 @@ export const sendBookingReceiptEmail = internalAction({
       return {
         ...result,
         templateModel,
+        bookingUrl: args.bookingUrl,
       };
     } catch (error) {
       console.error("📧 [POSTMARK] ❌ Exception:", error);
