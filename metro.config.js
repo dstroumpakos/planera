@@ -5,20 +5,46 @@ const defaultConfig = getDefaultConfig(__dirname);
 
 defaultConfig.resolver.unstable_enablePackageExports = true;
 
-// Resolve better-auth's dynamic import issues for React Native
-// better-auth uses dynamic imports with vite/webpack pragmas that Hermes can't parse
+// Fix better-auth dynamic imports that break Hermes/iOS builds
+// better-auth uses `yield import(/* @vite-ignore */ ...)` and `yield import(/* webpackIgnore: true */ ...)`
+// which Hermes cannot parse. We need to:
+// 1. Block the problematic files from being bundled on native platforms
+// 2. Provide empty shims for the excluded modules
+
+// Block problematic files that contain web-only dynamic import syntax
+// These patterns match files in better-auth that use vite/webpack pragmas
+defaultConfig.resolver.blockList = [
+    // Block the social provider implementation files that use dynamic imports
+    /node_modules\/better-auth\/dist\/.*social-providers.*\.js$/,
+    /node_modules\/better-auth\/dist\/.*dynamic.*\.js$/,
+];
+
+// Resolve modules that might have web-only code to their React Native alternatives
+const originalResolveRequest = defaultConfig.resolver.resolveRequest;
 defaultConfig.resolver.resolveRequest = (context, moduleName, platform) => {
-    // Intercept problematic dynamic import patterns from better-auth
-    // These modules use web-only dynamic imports that break iOS builds
-    if (moduleName.includes("@vite-ignore") || moduleName.includes("webpackIgnore")) {
-        return { type: "empty" };
+    // For native platforms, redirect problematic imports to empty modules
+    if (platform !== "web") {
+        // If trying to import a module that doesn't exist or has web-only code,
+        // return an empty module
+        if (
+            moduleName.includes("@vite-ignore") || 
+            moduleName.includes("webpackIgnore")
+        ) {
+            return {
+                filePath: require.resolve("./shims/empty.js"),
+                type: "sourceFile",
+            };
+        }
     }
     
     // Use default resolution for everything else
+    if (originalResolveRequest) {
+        return originalResolveRequest(context, moduleName, platform);
+    }
     return context.resolveRequest(context, moduleName, platform);
 };
 
-// Ensure these packages are properly transformed
+// Ensure proper transformation settings
 defaultConfig.transformer = {
     ...defaultConfig.transformer,
     getTransformOptions: async () => ({

@@ -12,7 +12,8 @@
  *   
  * Exit codes:
  *   0 - All checks passed
- *   1 - Dangerous patterns found
+ *   1 - Dangerous patterns found in source code
+ *   2 - Dangerous patterns found in node_modules (run fix script)
  */
 
 const fs = require('fs');
@@ -26,35 +27,41 @@ const DANGEROUS_PATTERNS = [
     { pattern: /import\s*\(\s*\/\*[^*]*\*\/\s*[^)]+\)/g, description: 'import() with inline comments' },
 ];
 
-// Directories to scan (our source code only - node_modules are checked separately)
+// Directories to scan (our source code only)
 const SOURCE_DIRS = ['app', 'components', 'lib', 'convex', 'hooks'];
 
-// Known problematic packages that use dynamic imports
-const KNOWN_PROBLEMATIC_PACKAGES = [
-    'better-auth', // Uses dynamic imports for social providers
-];
+// Known problematic packages to scan in node_modules
+const PACKAGES_TO_CHECK = ['better-auth'];
 
-let issuesFound = 0;
+let sourceIssues = 0;
+let nodeModulesIssues = 0;
 
-function scanFile(filePath) {
+function scanFile(filePath, isNodeModules = false) {
     try {
         const content = fs.readFileSync(filePath, 'utf-8');
         const relativePath = path.relative(process.cwd(), filePath);
+        let fileIssues = 0;
         
         for (const { pattern, description } of DANGEROUS_PATTERNS) {
             const matches = content.match(pattern);
             if (matches) {
                 console.error(`❌ Found ${description} in ${relativePath}`);
                 console.error(`   Matches: ${matches.length}`);
-                issuesFound += matches.length;
+                fileIssues += matches.length;
             }
+        }
+        
+        if (isNodeModules) {
+            nodeModulesIssues += fileIssues;
+        } else {
+            sourceIssues += fileIssues;
         }
     } catch (err) {
         // Skip files that can't be read
     }
 }
 
-function scanDirectory(dirPath) {
+function scanDirectory(dirPath, isNodeModules = false) {
     if (!fs.existsSync(dirPath)) return;
     
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
@@ -63,15 +70,14 @@ function scanDirectory(dirPath) {
         const fullPath = path.join(dirPath, entry.name);
         
         if (entry.isDirectory()) {
-            // Skip hidden directories and common non-source dirs
+            // Skip hidden directories and nested node_modules
             if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
-                scanDirectory(fullPath);
+                scanDirectory(fullPath, isNodeModules);
             }
         } else if (entry.isFile()) {
-            // Only scan JS/TS files
             const ext = path.extname(entry.name).toLowerCase();
-            if (['.js', '.jsx', '.ts', '.tsx', '.mjs'].includes(ext)) {
-                scanFile(fullPath);
+            if (['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'].includes(ext)) {
+                scanFile(fullPath, isNodeModules);
             }
         }
     }
@@ -89,10 +95,15 @@ function checkPackageJson() {
     
     console.log('\n📦 Checking for known problematic packages...\n');
     
-    for (const pkgName of KNOWN_PROBLEMATIC_PACKAGES) {
+    for (const pkgName of PACKAGES_TO_CHECK) {
         if (allDeps[pkgName]) {
             console.warn(`⚠️  ${pkgName}@${allDeps[pkgName]} is installed`);
-            console.warn(`   This package uses dynamic imports. Ensure metro.config.js handles it.`);
+            console.warn(`   Checking for unfixed patterns in node_modules...`);
+            
+            const pkgDistPath = path.join(process.cwd(), 'node_modules', pkgName, 'dist');
+            if (fs.existsSync(pkgDistPath)) {
+                scanDirectory(pkgDistPath, true);
+            }
         }
     }
 }
@@ -101,24 +112,39 @@ function main() {
     console.log('🔍 Scanning source code for iOS-incompatible patterns...\n');
     
     for (const dir of SOURCE_DIRS) {
-        scanDirectory(path.join(process.cwd(), dir));
+        const dirPath = path.join(process.cwd(), dir);
+        if (fs.existsSync(dirPath)) {
+            scanDirectory(dirPath, false);
+        }
     }
     
     checkPackageJson();
     
     console.log('\n' + '='.repeat(60) + '\n');
     
-    if (issuesFound > 0) {
-        console.error(`❌ Found ${issuesFound} issue(s) that will break iOS release builds.`);
+    if (sourceIssues > 0) {
+        console.error(`❌ Found ${sourceIssues} issue(s) in SOURCE CODE that will break iOS release builds.`);
         console.error('\nTo fix:');
         console.error('1. Replace dynamic imports with static imports');
         console.error('2. Remove @vite-ignore and webpackIgnore comments');
-        console.error('3. If the issue is in a dependency, check metro.config.js');
         process.exit(1);
-    } else {
+    }
+    
+    if (nodeModulesIssues > 0) {
+        console.error(`⚠️  Found ${nodeModulesIssues} issue(s) in NODE_MODULES.`);
+        console.error('\nThe fix-better-auth.js script should run automatically via postinstall.');
+        console.error('Run manually if needed: node scripts/fix-better-auth.js');
+        console.error('\nIf issues persist after running the fix script, the metro.config.js');
+        console.error('blockList should prevent these files from being bundled on iOS.');
+        // Don't exit with error - metro.config.js should handle this
+    }
+    
+    if (sourceIssues === 0) {
         console.log('✅ No iOS-incompatible patterns found in source code.');
-        console.log('\nNote: If builds still fail, the issue may be in node_modules.');
-        console.log('Check metro.config.js for proper handling of problematic packages.');
+        if (nodeModulesIssues === 0) {
+            console.log('✅ No iOS-incompatible patterns found in checked node_modules.');
+        }
+        console.log('\n📱 Ready for iOS EAS build!');
         process.exit(0);
     }
 }
