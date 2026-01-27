@@ -274,268 +274,134 @@ function generateFlightConfirmationEmail(booking: {
   const airlineName = booking.outboundFlight.airline;
   const isRoundTrip = !!booking.returnFlight;
 
-  // Render flight card
-  const renderFlightCard = (label: string, flight: typeof booking.outboundFlight) => `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #1a1a1a; border-radius: 16px; margin-bottom: 12px; border: 1px solid #2a2a2a;">
-      <tr>
-        <td style="padding: 20px;">
-          <!-- Flight Label & Date -->
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 16px;">
-            <tr>
-              <td>
-                <span style="font-size: 11px; font-weight: 600; color: #666666; text-transform: uppercase; letter-spacing: 1px;">${label}</span>
-              </td>
-              <td align="right">
-                <span style="font-size: 13px; color: #888888;">${formatEmailDate(flight.departureDate)}</span>
-              </td>
-            </tr>
-          </table>
-          
-          <!-- Flight Times Row -->
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-            <tr>
-              <!-- Departure -->
-              <td width="35%" valign="top">
-                <div style="font-size: 26px; font-weight: 700; color: #ffffff; line-height: 1.1;">${flight.departure}</div>
-                <div style="font-size: 20px; font-weight: 600; color: #ffffff; margin-top: 4px;">${flight.origin}</div>
-                ${flight.departureAirport ? `<div style="font-size: 12px; color: #666666; margin-top: 2px;">${flight.departureAirport}</div>` : ''}
-              </td>
-              
-              <!-- Arrow/Plane -->
-              <td width="30%" align="center" valign="middle" style="padding: 0 8px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
-                  <tr>
-                    <td align="center">
-                      <div style="width: 100%; height: 1px; background: linear-gradient(90deg, transparent 0%, #444444 20%, #444444 80%, transparent 100%); position: relative;">
-                      </div>
-                      <div style="margin-top: -6px;">
-                        <span style="font-size: 12px; color: #666666;">→</span>
-                      </div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-              
-              <!-- Arrival -->
-              <td width="35%" align="right" valign="top">
-                <div style="font-size: 26px; font-weight: 700; color: #ffffff; line-height: 1.1;">${flight.arrival}</div>
-                <div style="font-size: 20px; font-weight: 600; color: #ffffff; margin-top: 4px;">${flight.destination}</div>
-                ${flight.arrivalAirport ? `<div style="font-size: 12px; color: #666666; margin-top: 2px;">${flight.arrivalAirport}</div>` : ''}
-              </td>
-            </tr>
-          </table>
-          
-          <!-- Flight Info Badges -->
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top: 16px;">
-            <tr>
-              <td>
-                <span style="display: inline-block; background-color: #262626; color: #888888; font-size: 11px; font-weight: 500; padding: 6px 10px; border-radius: 6px; margin-right: 8px;">Direct</span>
-                <span style="display: inline-block; background-color: #262626; color: #888888; font-size: 11px; font-weight: 500; padding: 6px 10px; border-radius: 6px; margin-right: 8px;">${flight.airline}</span>
-                <span style="display: inline-block; background-color: #262626; color: #888888; font-size: 11px; font-weight: 500; padding: 6px 10px; border-radius: 6px;">${flight.flightNumber}</span>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  `;
+  // Generate passengers HTML
+  const passengersHtml = booking.passengers
+    .map(p => `<p>👤 <strong>${p.givenName.toUpperCase()} ${p.familyName.toUpperCase()}</strong></p>`)
+    .join("");
 
-  const outboundHtml = renderFlightCard("Outbound", booking.outboundFlight);
-  const returnHtml = booking.returnFlight ? renderFlightCard("Return", booking.returnFlight) : "";
+  // Return flight card HTML
+  const returnFlightHtml = booking.returnFlight
+    ? `
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;">
+        <strong>Return · ${formatEmailDate(booking.returnFlight.departureDate)}</strong>
+        <p style="margin:8px 0 0;">
+          <strong>${booking.returnFlight.departure} ${booking.returnFlight.origin}</strong> → <strong>${booking.returnFlight.arrival} ${booking.returnFlight.destination}</strong><br/>
+          Direct · ${booking.returnFlight.airline} · ${booking.returnFlight.flightNumber}
+        </p>
+      </div>
+    `
+    : "";
 
-  // Passengers HTML
-  const passengersHtml = booking.passengers.map(p => 
-    `<tr>
-      <td style="padding: 14px 0; border-bottom: 1px solid #2a2a2a;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-          <tr>
-            <td style="padding-right: 12px;">
-              <span style="font-size: 16px; color: #666666;">👤</span>
-            </td>
-            <td>
-              <span style="font-size: 15px; font-weight: 500; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">${p.givenName} ${p.familyName}</span>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>`
-  ).join("");
-
-  const html = `
-<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Booking Confirmed</title>
-  <!--[if mso]>
-  <style type="text/css">
-    body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
-  </style>
-  <![endif]-->
+<meta charset="UTF-8" />
+<title>Booking Confirmed</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  
-  <!-- Wrapper -->
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0a0a0a;">
-    <tr>
-      <td align="center" style="padding: 40px 16px;">
-        
-        <!-- Container -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 480px;">
-          
-          <!-- 1. Header (Success State) -->
-          <tr>
-            <td align="center" style="padding-bottom: 32px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td align="center" style="padding-bottom: 16px;">
-                    <div style="width: 56px; height: 56px; background-color: rgba(34, 197, 94, 0.1); border-radius: 50%; display: inline-block; line-height: 56px; text-align: center;">
-                      <span style="font-size: 24px; line-height: 56px;">✓</span>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center">
-                    <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px;">Booking Confirmed</h1>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding-top: 8px;">
-                    <p style="margin: 0; font-size: 15px; color: #666666;">Your flight has been successfully booked</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- 2. Booking Reference Card -->
-          <tr>
-            <td style="padding-bottom: 16px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #1a1a1a; border-radius: 20px; border: 1px solid #2a2a2a;">
-                <tr>
-                  <td style="padding: 28px 24px;" align="center">
-                    <div style="font-size: 11px; font-weight: 600; color: #666666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Airline Booking Reference</div>
-                    <div style="font-size: 36px; font-weight: 700; color: #ffffff; letter-spacing: 6px; font-family: 'SF Mono', Monaco, 'Courier New', monospace; margin-bottom: 12px;">${booking.bookingReference}</div>
-                    <div style="font-size: 14px; color: #888888; font-weight: 500;">${airlineName}</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- 3. Check-in Info Callout -->
-          <tr>
-            <td style="padding-bottom: 32px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: rgba(59, 130, 246, 0.08); border-radius: 14px; border: 1px solid rgba(59, 130, 246, 0.15);">
-                <tr>
-                  <td style="padding: 18px 20px;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td valign="top" style="padding-right: 14px; padding-top: 2px;">
-                          <span style="font-size: 18px; color: #3b82f6;">ℹ️</span>
-                        </td>
-                        <td>
-                          <div style="font-size: 14px; font-weight: 600; color: #60a5fa; margin-bottom: 6px;">Check-in Required</div>
-                          <div style="font-size: 13px; color: #93c5fd; line-height: 1.5;">Check-in is completed on the <strong style="color: #bfdbfe;">${airlineName}</strong> website or mobile app using your booking reference (PNR) and last name.</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- 4. Flight Itinerary Section -->
-          <tr>
-            <td style="padding-bottom: 24px;">
-              <div style="font-size: 13px; font-weight: 600; color: #888888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; padding-left: 4px;">${isRoundTrip ? "Round Trip" : "One Way"} Flight Itinerary</div>
-              ${outboundHtml}
-              ${returnHtml}
-            </td>
-          </tr>
-          
-          <!-- 5. Passengers Card -->
-          <tr>
-            <td style="padding-bottom: 24px;">
-              <div style="font-size: 13px; font-weight: 600; color: #888888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; padding-left: 4px;">Passengers</div>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #1a1a1a; border-radius: 16px; border: 1px solid #2a2a2a;">
-                <tr>
-                  <td style="padding: 6px 20px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      ${passengersHtml}
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- 6. Payment Summary Card -->
-          <tr>
-            <td style="padding-bottom: 32px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #1a1a1a; border-radius: 16px; border: 1px solid #2a2a2a;">
-                <tr>
-                  <td style="padding: 20px 24px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td>
-                          <span style="font-size: 14px; color: #888888; font-weight: 500;">Total Paid</span>
-                        </td>
-                        <td align="right">
-                          <span style="font-size: 24px; font-weight: 700; color: #22c55e;">${formatCurrency(booking.totalAmount, booking.currency)}</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- 7. Actions Section -->
-          <tr>
-            <td align="center" style="padding-bottom: 16px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
-                <tr>
-                  <td align="center">
-                    <a href="https://planera.app" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 15px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 12px; width: 100%; max-width: 280px; text-align: center; box-sizing: border-box;">View Booking in App</a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding-bottom: 48px;">
-              <span style="font-size: 13px; color: #666666;">
-                <a href="#" style="color: #888888; text-decoration: none;">Download PDF</a>
-                <span style="color: #444444; padding: 0 12px;">•</span>
-                <a href="#" style="color: #888888; text-decoration: none;">Add to Calendar</a>
-              </span>
-            </td>
-          </tr>
-          
-          <!-- 8. Footer -->
-          <tr>
-            <td style="border-top: 1px solid #1a1a1a; padding-top: 32px;" align="center">
-              <p style="margin: 0 0 8px; font-size: 14px; color: #666666;">Questions about your booking?</p>
-              <p style="margin: 0 0 24px;">
-                <a href="mailto:support@planeraai.app" style="color: #888888; text-decoration: none; font-size: 14px;">support@planeraai.app</a>
-              </p>
-              <p style="margin: 0; font-size: 12px; color: #444444;">© ${new Date().getFullYear()} Planera. All rights reserved.</p>
-            </td>
-          </tr>
-          
-        </table>
-      </td>
-    </tr>
-  </table>
-  
+
+<body style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0;">
+<tr>
+<td align="center">
+
+<table width="600" cellpadding="0" cellspacing="0"
+style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+
+<!-- Header -->
+<tr>
+<td style="background:#0b1220;padding:24px;text-align:center;">
+<h1 style="margin:0;color:#ffffff;font-size:22px;">✈️ Booking Confirmed</h1>
+<p style="margin:6px 0 0;color:#c7d2fe;font-size:14px;">
+Your flight has been successfully booked
+</p>
+</td>
+</tr>
+
+<!-- PNR -->
+<tr>
+<td style="padding:24px;text-align:center;">
+<p style="margin:0;color:#6b7280;font-size:13px;">Airline Booking Reference</p>
+<h2 style="margin:6px 0;letter-spacing:3px;">${booking.bookingReference}</h2>
+<p style="margin:0;color:#9ca3af;">${airlineName}</p>
+</td>
+</tr>
+
+<!-- Info -->
+<tr>
+<td style="padding:0 24px 24px;">
+<div style="background:#f1f5f9;border-radius:10px;padding:16px;font-size:14px;">
+<strong>ℹ️ Check-in Required</strong>
+<p style="margin:8px 0 0;color:#475569;">
+Check-in is completed on the ${airlineName} website or mobile app using your
+booking reference (PNR) and last name.
+</p>
+</div>
+</td>
+</tr>
+
+<!-- Itinerary -->
+<tr>
+<td style="padding:0 24px 24px;">
+<h3 style="margin-bottom:12px;">${isRoundTrip ? "Round Trip" : "One Way"} Flight Itinerary</h3>
+
+<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px;">
+<strong>Outbound · ${formatEmailDate(booking.outboundFlight.departureDate)}</strong>
+<p style="margin:8px 0 0;">
+<strong>${booking.outboundFlight.departure} ${booking.outboundFlight.origin}</strong> → <strong>${booking.outboundFlight.arrival} ${booking.outboundFlight.destination}</strong><br/>
+Direct · ${booking.outboundFlight.airline} · ${booking.outboundFlight.flightNumber}
+</p>
+</div>
+
+${returnFlightHtml}
+
+</td>
+</tr>
+
+<!-- Passenger -->
+<tr>
+<td style="padding:0 24px 24px;">
+<h3>Passengers</h3>
+${passengersHtml}
+</td>
+</tr>
+
+<!-- Payment -->
+<tr>
+<td style="padding:0 24px 24px;">
+<h3>Total Paid</h3>
+<p style="font-size:18px;"><strong>${formatCurrency(booking.totalAmount, booking.currency)}</strong></p>
+</td>
+</tr>
+
+<!-- CTA -->
+<tr>
+<td style="padding:0 24px 32px;text-align:center;">
+<a href="https://planera.app" style="background:#111827;color:#ffffff;padding:12px 20px;
+border-radius:8px;text-decoration:none;display:inline-block;">
+View Booking in App
+</a>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td style="border-top:1px solid #e5e7eb;padding:16px 24px;font-size:12px;color:#6b7280;">
+Questions about your booking?<br/>
+Contact us at <a href="mailto:support@planeraai.app">support@planeraai.app</a><br/><br/>
+© ${new Date().getFullYear()} Planera. All rights reserved.
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
 </body>
-</html>
-  `;
+</html>`;
 
   // Plain text version
   const text = `
@@ -558,20 +424,18 @@ Check-in is completed on the ${airlineName} website or mobile app using your boo
 
 ${isRoundTrip ? "ROUND TRIP" : "ONE WAY"} FLIGHT ITINERARY
 
-OUTBOUND
-${formatEmailDate(booking.outboundFlight.departureDate)}
-${booking.outboundFlight.departure} ${booking.outboundFlight.origin}  →  ${booking.outboundFlight.arrival} ${booking.outboundFlight.destination}
-${booking.outboundFlight.airline} ${booking.outboundFlight.flightNumber} • Direct
+OUTBOUND · ${formatEmailDate(booking.outboundFlight.departureDate)}
+${booking.outboundFlight.departure} ${booking.outboundFlight.origin} → ${booking.outboundFlight.arrival} ${booking.outboundFlight.destination}
+Direct · ${booking.outboundFlight.airline} · ${booking.outboundFlight.flightNumber}
 
-${booking.returnFlight ? `RETURN
-${formatEmailDate(booking.returnFlight.departureDate)}
-${booking.returnFlight.departure} ${booking.returnFlight.origin}  →  ${booking.returnFlight.arrival} ${booking.returnFlight.destination}
-${booking.returnFlight.airline} ${booking.returnFlight.flightNumber} • Direct
+${booking.returnFlight ? `RETURN · ${formatEmailDate(booking.returnFlight.departureDate)}
+${booking.returnFlight.departure} ${booking.returnFlight.origin} → ${booking.returnFlight.arrival} ${booking.returnFlight.destination}
+Direct · ${booking.returnFlight.airline} · ${booking.returnFlight.flightNumber}
 ` : ""}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 PASSENGERS
-${booking.passengers.map(p => `• ${p.givenName} ${p.familyName}`).join("\n")}
+${booking.passengers.map(p => `• ${p.givenName.toUpperCase()} ${p.familyName.toUpperCase()}`).join("\n")}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
