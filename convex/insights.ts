@@ -199,6 +199,39 @@ export const dismissTrip = authMutation({
 // Get insights for a specific destination (anonymously)
 export const getDestinationInsights = query({
     args: { destination: v.string() },
+    returns: v.array(v.object({
+        _id: v.id("insights"),
+        _creationTime: v.float64(),
+        userId: v.string(),
+        destination: v.optional(v.string()),
+        destinationId: v.optional(v.string()),
+        tripId: v.optional(v.id("trips")),
+        content: v.string(),
+        category: v.union(
+            v.literal("food"),
+            v.literal("transport"),
+            v.literal("neighborhoods"),
+            v.literal("timing"),
+            v.literal("hidden_gem"),
+            v.literal("avoid"),
+            v.literal("other")
+        ),
+        verified: v.boolean(),
+        likes: v.float64(),
+        moderationStatus: v.optional(v.union(
+            v.literal("pending"),
+            v.literal("approved"),
+            v.literal("rejected"),
+            v.literal("flagged")
+        )),
+        image: v.optional(v.object({
+            url: v.string(),
+            photographer: v.optional(v.string()),
+            attribution: v.optional(v.string()),
+        })),
+        createdAt: v.float64(),
+        updatedAt: v.optional(v.float64()),
+    })),
     handler: async (ctx, args) => {
         // Normalize destination to lowercase slug
         const destinationId = args.destination.toLowerCase().replace(/\s+/g, '-');
@@ -208,11 +241,11 @@ export const getDestinationInsights = query({
             .withIndex("by_destination", (q) =>
                 q.eq("destinationId", destinationId)
             )
-            .filter((q) => q.eq(q.field("moderationStatus"), "approved"))
             .order("desc")
             .take(10);
         
-        return insights;
+        // Filter approved insights in memory
+        return insights.filter(insight => insight.moderationStatus === "approved");
     },
 });
 

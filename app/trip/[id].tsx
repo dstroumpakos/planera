@@ -1260,11 +1260,26 @@ export default function TripDetails() {
                         <View>
                             <Text style={styles.sectionTitle}>Available Flights</Text>
                             {trip.skipFlights ? (
-                                <View style={styles.card}>
+                                <View style={[styles.card, styles.skippedCard]}>
                                     <View style={styles.skippedSection}>
-                                        <Ionicons name="airplane" size={32} color="#94A3B8" />
-                                        <Text style={styles.skippedTitle}>Flights Skipped</Text>
-                                        <Text style={styles.skippedText}>You indicated you already have flights booked for this trip.</Text>
+                                        <View style={styles.skippedIconContainer}>
+                                            <Ionicons name="airplane" size={32} color="#64748B" />
+                                        </View>
+                                        <Text style={styles.skippedTitle}>Flight Search Skipped</Text>
+                                        <Text style={styles.skippedText}>
+                                            {trip.itinerary?.flights?.message || "You've chosen to skip flight searches for this trip."}
+                                        </Text>
+                                        <View style={styles.skippedDivider} />
+                                        <Text style={styles.skippedHint}>
+                                            To enable flight booking, create a traveler profile in Settings with your passport details.
+                                        </Text>
+                                        <TouchableOpacity 
+                                            style={styles.skippedButton}
+                                            onPress={() => router.push('/settings/traveler-profiles')}
+                                        >
+                                            <Ionicons name="person-add-outline" size={18} color="#1A1A1A" />
+                                            <Text style={styles.skippedButtonText}>Create Traveler Profile</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
                             ) : (
@@ -1375,11 +1390,26 @@ export default function TripDetails() {
                         <View>
                             <Text style={styles.sectionTitle}>Accommodations</Text>
                             {trip.skipHotel ? (
-                                <View style={styles.card}>
+                                <View style={[styles.card, styles.skippedCard]}>
                                     <View style={styles.skippedSection}>
-                                        <Ionicons name="bed" size={32} color="#94A3B8" />
-                                        <Text style={styles.skippedTitle}>Hotels Skipped</Text>
-                                        <Text style={styles.skippedText}>You indicated you already have accommodation booked for this trip.</Text>
+                                        <View style={styles.skippedIconContainer}>
+                                            <Ionicons name="bed" size={32} color="#64748B" />
+                                        </View>
+                                        <Text style={styles.skippedTitle}>Hotel Search Skipped</Text>
+                                        <Text style={styles.skippedText}>
+                                            You've chosen to skip hotel searches for this trip. This could be because you already have accommodation booked or you're staying with friends/family.
+                                        </Text>
+                                        <View style={styles.skippedDivider} />
+                                        <Text style={styles.skippedHint}>
+                                            To enable hotel booking, create a traveler profile in Settings with your details.
+                                        </Text>
+                                        <TouchableOpacity 
+                                            style={styles.skippedButton}
+                                            onPress={() => router.push('/settings/traveler-profiles')}
+                                        >
+                                            <Ionicons name="person-add-outline" size={18} color="#1A1A1A" />
+                                            <Text style={styles.skippedButtonText}>Create Traveler Profile</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
                             ) : (
@@ -1417,7 +1447,7 @@ export default function TripDetails() {
 
                     {activeFilter === 'transportation' && (
                         <View>
-                            <Text style={styles.sectionTitle}>Transportation Options</Text>
+                            <Text style={styles.sectionTitle}>Getting Around</Text>
                             {trip.itinerary?.transportation?.map((option: any, index: number) => (
                                 <View key={index} style={styles.card}>
                                     <View style={styles.row}>
@@ -1480,7 +1510,15 @@ export default function TripDetails() {
                                 </View>
                             ))}
                             {(!trip.itinerary?.transportation || trip.itinerary.transportation.length === 0) && (
-                                <Text style={styles.emptyText}>No transportation options found.</Text>
+                                <View style={styles.card}>
+                                    <View style={styles.skippedSection}>
+                                        <Ionicons name="car-outline" size={32} color="#94A3B8" />
+                                        <Text style={styles.skippedTitle}>Transportation Info</Text>
+                                        <Text style={styles.skippedText}>
+                                            Local transportation options for {trip.destination} will appear here.
+                                        </Text>
+                                    </View>
+                                </View>
                             )}
                         </View>
                     )}
@@ -1491,6 +1529,7 @@ export default function TripDetails() {
             {insights && insights.length > 0 && (
                 <View style={styles.insightsSection}>
                     <Text style={styles.sectionTitle}>Traveler Insights</Text>
+                    <Text style={styles.insightsSubtitle}>Tips from travelers who visited {trip.destination}</Text>
                     <ScrollView 
                         horizontal 
                         showsHorizontalScrollIndicator={false}
@@ -1499,9 +1538,20 @@ export default function TripDetails() {
                         {insights.map((insight: any) => (
                             <View key={insight._id} style={styles.insightCard}>
                                 <View style={styles.insightHeader}>
-                                    <View style={styles.insightCategory}>
+                                    <View style={styles.insightCategoryBadge}>
+                                        <Ionicons 
+                                            name={
+                                                insight.category === 'food' ? 'restaurant' :
+                                                insight.category === 'transport' ? 'bus' :
+                                                insight.category === 'hidden_gem' ? 'diamond' :
+                                                insight.category === 'avoid' ? 'warning' :
+                                                'bulb'
+                                            }
+                                            size={14} 
+                                            color="#92400E"
+                                        />
                                         <Text style={styles.insightCategoryText}>
-                                            {insight.category.replace('_', ' ').toUpperCase()}
+                                            {insight.category.replace('_', ' ')}
                                         </Text>
                                     </View>
                                     <View style={styles.insightLikes}>
@@ -1509,11 +1559,11 @@ export default function TripDetails() {
                                         <Text style={styles.insightLikesText}>{insight.likes}</Text>
                                     </View>
                                 </View>
-                                <Text style={styles.insightContent} numberOfLines={3}>
+                                <Text style={styles.insightContent} numberOfLines={4}>
                                     {insight.content}
                                 </Text>
                                 <Text style={styles.insightDate}>
-                                    {new Date(insight.createdAt).toLocaleDateString()}
+                                    {new Date(insight.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                                 </Text>
                             </View>
                         ))}
@@ -1692,7 +1742,8 @@ export default function TripDetails() {
                                                 interest === "History" ? "book" :
                                                 interest === "Shopping" ? "cart" :
                                                 interest === "Luxury" ? "diamond" :
-                                                "people"
+                                                interest === "Family" ? "people" :
+                                                "sparkles"
                                             } 
                                             size={20} 
                                             color={editForm.interests.includes(interest) ? "#1A1A1A" : "#546E7A"}
@@ -1763,7 +1814,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        backgroundColor: "rgba(255, 229, 0, 0.1)",
+        backgroundColor: "rgba(255,255,255,0.9)",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
@@ -1900,7 +1951,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         borderWidth: 2,
-        borderColor: "#F1F5F9",
+        borderColor: "rgba(255, 255, 255, 0.2)",
         zIndex: 1,
     },
     timelineTime: {
@@ -2593,15 +2644,15 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        padding: 14,
         backgroundColor: "#1A1A1A",
-        borderRadius: 12,
+        paddingVertical: 12,
+        borderRadius: 8,
         gap: 8,
     },
     affiliateButtonText: {
-        color: "white",
-        fontWeight: "700",
+        color: "#FFFFFF",
         fontSize: 14,
+        fontWeight: "600",
     },
     price: {
         fontSize: 18,
@@ -2649,13 +2700,13 @@ const styles = StyleSheet.create({
     },
     bookButton: {
         marginTop: 16,
-        backgroundColor: "#1A1A1A",
+        backgroundColor: "#1A2433",
         paddingVertical: 12,
         borderRadius: 12,
         alignItems: "center",
     },
     bookButtonText: {
-        color: "white",
+        color: "#FFFFFF",
         fontWeight: "700",
         fontSize: 14,
     },
@@ -2796,50 +2847,181 @@ const styles = StyleSheet.create({
         paddingVertical: 32,
         paddingHorizontal: 16,
     },
+    skippedCard: {
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderStyle: 'dashed',
+    },
+    skippedIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#F1F5F9',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
     skippedTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1A1A1A',
-        marginTop: 12,
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#334155',
+        marginTop: 8,
     },
     skippedText: {
         fontSize: 14,
         color: '#64748B',
         textAlign: 'center',
         marginTop: 8,
+        lineHeight: 20,
+        maxWidth: 280,
     },
+    skippedDivider: {
+        width: 40,
+        height: 1,
+        backgroundColor: '#E2E8F0',
+        marginVertical: 16,
+    },
+    skippedHint: {
+        fontSize: 13,
+        color: '#94A3B8',
+        textAlign: 'center',
+        lineHeight: 18,
+        maxWidth: 260,
+    },
+    skippedButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#FFE500',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginTop: 16,
+    },
+    skippedButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1A1A1A',
+    },
+    // Empty transport styles
+    emptyTransportCard: {
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderStyle: 'dashed',
+    },
+    emptyTransportContent: {
+        alignItems: 'center',
+        paddingVertical: 32,
+        paddingHorizontal: 24,
+    },
+    emptyTransportTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#334155',
+        marginTop: 12,
+        textAlign: 'center',
+    },
+    emptyTransportText: {
+        fontSize: 14,
+        color: '#64748B',
+        textAlign: 'center',
+        marginTop: 8,
+        lineHeight: 20,
+    },
+    // Transport card improvements
+    transportCard: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
+    transportIconBadge: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: '#1A1A1A',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    transportContent: {
+        flex: 1,
+    },
+    transportFeatures: {
+        marginTop: 12,
+    },
+    // Enhanced insights styles
     insightsSection: {
+        padding: 16,
+        marginHorizontal: 16,
         marginBottom: 32,
+        borderRadius: 16,
+    },
+    insightsHeader: {
+        marginBottom: 16,
+    },
+    insightsTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    insightsSectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    insightsSubtitle: {
+        fontSize: 13,
+        marginLeft: 28,
+    },
+    insightsScrollContent: {
+        paddingRight: 16,
     },
     insightsScroll: {
         marginBottom: 24,
     },
     insightCard: {
-        width: 200,
-        backgroundColor: 'white',
+        width: 220,
         borderRadius: 12,
-        padding: 12,
+        padding: 14,
         marginRight: 12,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: '#FEF3C7',
     },
     insightHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 10,
     },
-    insightCategory: {
-        backgroundColor: '#FEF3C7',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
+    insightCategoryBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 16,
     },
     insightCategoryText: {
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: '600',
-        color: '#92400E',
-        textTransform: 'uppercase',
+        textTransform: 'capitalize',
+    },
+    verifiedBadge: {
+        padding: 2,
+    },
+    insightContent: {
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 10,
+    },
+    insightFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    insightDate: {
+        fontSize: 12,
     },
     insightLikes: {
         flexDirection: 'row',
@@ -2848,21 +3030,10 @@ const styles = StyleSheet.create({
     },
     insightLikesText: {
         fontSize: 12,
-        color: '#F59E0B',
         fontWeight: '600',
+        color: '#F59E0B',
     },
-    insightContent: {
-        fontSize: 13,
-        color: '#1A1A1A',
-        lineHeight: 18,
-        marginBottom: 8,
-    },
-    insightDate: {
-        fontSize: 11,
-        color: '#94A3B8',
-    },
-
-    // Loading Screen Styles
+    // Loading screen styles
     loadingContainer: {
         flex: 1,
         backgroundColor: '#1A1A1A',
@@ -2874,6 +3045,7 @@ const styles = StyleSheet.create({
     },
     loadingOverlay: {
         ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)',
     },
     loadingContent: {
         flex: 1,
@@ -2901,9 +3073,6 @@ const styles = StyleSheet.create({
         color: 'white',
         textAlign: 'center',
         marginBottom: 24,
-        textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
     },
     loadingIconContainer: {
         width: 100,
@@ -2927,126 +3096,188 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 32,
     },
-    progressBarContainer: {
-        width: '100%',
-        alignItems: 'center',
-        marginBottom: 32,
-    },
     progressBarBackground: {
         width: '100%',
         height: 8,
         backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 4,
-        overflow: 'hidden',
     },
     progressBarFill: {
-        height: '100%',
+        height: 8,
         backgroundColor: '#FFE500',
         borderRadius: 4,
     },
     progressText: {
-        marginTop: 8,
         fontSize: 14,
-        fontWeight: '600',
-        color: 'rgba(255,255,255,0.8)',
+        color: 'rgba(255,255,255,0.7)',
+        marginTop: 12,
+    },
+    progressBarContainer: {
+        width: '100%',
+        alignItems: 'center',
     },
     loadingSteps: {
-        width: '100%',
-        gap: 12,
+        marginTop: 24,
     },
     loadingStep: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 12,
         gap: 12,
     },
     loadingStepText: {
-        fontSize: 15,
-        color: 'rgba(255,255,255,0.5)',
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.6)',
     },
     loadingStepComplete: {
-        color: 'white',
+        color: '#FFE500',
     },
     loadingAttribution: {
-        paddingHorizontal: 16,
-        paddingBottom: 16,
+        alignItems: 'center',
+        paddingBottom: 32,
     },
     loadingAttributionText: {
         fontSize: 12,
         color: 'rgba(255,255,255,0.5)',
-        textAlign: 'center',
     },
     imageIndicators: {
-        position: 'absolute',
-        bottom: 60,
-        left: 0,
-        right: 0,
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 8,
+        gap: 6,
+        marginBottom: 16,
     },
     imageIndicator: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
         backgroundColor: 'rgba(255,255,255,0.3)',
     },
     imageIndicatorActive: {
         backgroundColor: '#FFE500',
-        width: 24,
+        width: 20,
     },
-    // Header Image Overlay Styles
+    // Header overlay styles
     headerImageOverlay: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: '70%',
-        justifyContent: 'flex-end',
-        paddingBottom: 60,
+        paddingTop: 80,
+        paddingBottom: 16,
         paddingHorizontal: 16,
     },
     headerTitleOverlay: {
-        gap: 8,
+        marginBottom: 8,
     },
     headerTitleOnImage: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: '800',
         color: 'white',
-        textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
+        marginBottom: 8,
     },
     headerSubtitleRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
+        gap: 12,
     },
     headerDateBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
         backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
     },
     headerDateText: {
         fontSize: 13,
-        fontWeight: '600',
         color: 'white',
+        fontWeight: '500',
     },
     headerTravelersBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
         backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
     },
     headerTravelersText: {
         fontSize: 13,
-        fontWeight: '600',
         color: 'white',
+        fontWeight: '500',
+    },
+    // Transport additional styles
+    transportTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1A1A1A',
+        marginBottom: 4,
+    },
+    transportOptionsContainer: {
+        gap: 8,
+    },
+    transportOptionItem: {
+        backgroundColor: '#F8FAFC',
+        borderRadius: 10,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    transportOptionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    transportOptionPrice: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#1A1A1A',
+    },
+    transportDayPass: {
+        fontSize: 12,
+        color: '#64748B',
+        marginTop: 4,
+    },
+    transportDescription: {
+        fontSize: 14,
+        color: '#64748B',
+        lineHeight: 20,
+        marginBottom: 8,
+    },
+    transportPriceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    transportPriceLabel: {
+        fontSize: 12,
+        color: '#94A3B8',
+        fontWeight: '500',
+    },
+    transportPriceValue: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1A1A1A',
+    },
+    transportFeatureBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginBottom: 6,
+    },
+    transportFeatureText: {
+        fontSize: 12,
+        color: '#475569',
+    },
+    transportBookButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#FFE500',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

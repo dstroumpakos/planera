@@ -10,7 +10,7 @@ import { AIRPORTS } from "@/lib/airports";
 import * as Haptics from "expo-haptics";
 
 type OnboardingStep = "welcome" | "traveler-choice" | "my-profile" | "add-travelers" | "preferences";
-type TravelerChoice = "just-me" | "me-others";
+type TravelerChoice = "just-me" | "me-others" | "skip-profile";
 
 interface TravelerForm {
   firstName: string;
@@ -64,6 +64,9 @@ export default function Onboarding() {
   const [skipFlights, setSkipFlights] = useState(false);
   const [skipHotels, setSkipHotels] = useState(false);
   
+  // Track if user skipped profile creation
+  const [skippedProfile, setSkippedProfile] = useState(false);
+  
   // Airport autocomplete
   const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
   const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
@@ -88,7 +91,7 @@ export default function Onboarding() {
       case "traveler-choice": return 1;
       case "my-profile": return 2;
       case "add-travelers": return 2;
-      case "preferences": return 3;
+      case "preferences": return skippedProfile ? 2 : 3;
       default: return 1;
     }
   };
@@ -399,6 +402,7 @@ export default function Onboarding() {
             onPress={() => {
               hapticFeedback();
               setTravelerChoice("just-me");
+              setSkippedProfile(false);
             }}
           >
             <View style={styles.choiceLeft}>
@@ -425,6 +429,7 @@ export default function Onboarding() {
             onPress={() => {
               hapticFeedback();
               setTravelerChoice("me-others");
+              setSkippedProfile(false);
             }}
           >
             <View style={styles.choiceLeft}>
@@ -441,10 +446,47 @@ export default function Onboarding() {
             </View>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.choiceCard, travelerChoice === "skip-profile" && styles.choiceCardActive]}
+            onPress={() => {
+              hapticFeedback();
+              setTravelerChoice("skip-profile");
+              setSkippedProfile(true);
+              // Auto-enable skip flights and hotels when skipping profile
+              setSkipFlights(true);
+              setSkipHotels(true);
+            }}
+          >
+            <View style={styles.choiceLeft}>
+              <View style={[styles.choiceIconContainer, travelerChoice === "skip-profile" && styles.choiceIconContainerActive]}>
+                <Ionicons name="flash" size={28} color={travelerChoice === "skip-profile" ? "#1A1A1A" : "#6B7280"} />
+              </View>
+              <View style={styles.choiceTextContainer}>
+                <Text style={styles.choiceTitle}>Skip for now</Text>
+                <Text style={styles.choiceHelper}>Explore destinations without booking flights or hotels</Text>
+              </View>
+            </View>
+            <View style={[styles.radioOuter, travelerChoice === "skip-profile" && styles.radioOuterActive]}>
+              {travelerChoice === "skip-profile" && <View style={styles.radioInner} />}
+            </View>
+          </TouchableOpacity>
+
+          {travelerChoice === "skip-profile" && (
+            <View style={styles.warningCard}>
+              <Ionicons name="information-circle" size={20} color="#92400E" />
+              <Text style={styles.warningText}>
+                Without a traveler profile, flight and hotel searches will be skipped. You can add your profile later in Settings to enable these features.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.noteCard}>
             <Ionicons name="bulb-outline" size={20} color="#92400E" />
             <Text style={styles.noteText}>
-              You'll always create your profile first. Additional travelers can be added after.
+              {travelerChoice === "skip-profile" 
+                ? "You can create a traveler profile anytime from your Settings."
+                : "You'll always create your profile first. Additional travelers can be added after."
+              }
             </Text>
           </View>
         </ScrollView>
@@ -454,7 +496,11 @@ export default function Onboarding() {
             style={styles.primaryButton}
             onPress={() => {
               hapticFeedback();
-              setStep("my-profile");
+              if (travelerChoice === "skip-profile") {
+                setStep("preferences");
+              } else {
+                setStep("my-profile");
+              }
             }}
           >
             <Text style={styles.primaryButtonText}>Continue</Text>
@@ -1160,22 +1206,31 @@ export default function Onboarding() {
             {/* Flight Time Preference */}
             <View style={styles.formSection}>
               <Text style={styles.sectionLabel}>PREFERRED FLIGHT TIME</Text>
-              <View style={styles.flightTimeRow}>
+              {skippedProfile && (
+                <View style={styles.lockedNotice}>
+                  <Ionicons name="lock-closed" size={14} color="#94A3B8" />
+                  <Text style={styles.lockedNoticeText}>Create a traveler profile to enable flight preferences</Text>
+                </View>
+              )}
+              <View style={[styles.flightTimeRow, skippedProfile && styles.disabledSection]}>
                 {flightTimeOptions.map((option) => (
                   <TouchableOpacity
                     key={option.value}
-                    style={[styles.flightTimeCard, flightTimePreference === option.value && styles.flightTimeCardActive]}
+                    style={[styles.flightTimeCard, flightTimePreference === option.value && styles.flightTimeCardActive, skippedProfile && styles.flightTimeCardDisabled]}
                     onPress={() => {
-                      hapticFeedback();
-                      setFlightTimePreference(option.value);
+                      if (!skippedProfile) {
+                        hapticFeedback();
+                        setFlightTimePreference(option.value);
+                      }
                     }}
+                    disabled={skippedProfile}
                   >
                     <Ionicons
                       name={option.icon}
                       size={22}
-                      color={flightTimePreference === option.value ? "#1A1A1A" : "#6B7280"}
+                      color={skippedProfile ? "#CBD5E1" : (flightTimePreference === option.value ? "#1A1A1A" : "#6B7280")}
                     />
-                    <Text style={[styles.flightTimeText, flightTimePreference === option.value && styles.flightTimeTextActive]}>
+                    <Text style={[styles.flightTimeText, flightTimePreference === option.value && styles.flightTimeTextActive, skippedProfile && styles.flightTimeTextDisabled]}>
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -1187,38 +1242,56 @@ export default function Onboarding() {
             <View style={styles.formSection}>
               <Text style={styles.sectionLabel}>DEFAULT SEARCH SETTINGS</Text>
               
+              {skippedProfile && (
+                <View style={styles.lockedBanner}>
+                  <Ionicons name="lock-closed" size={18} color="#92400E" />
+                  <View style={styles.lockedBannerText}>
+                    <Text style={styles.lockedBannerTitle}>Flights & Hotels Disabled</Text>
+                    <Text style={styles.lockedBannerDesc}>Create a traveler profile in Settings to enable booking features</Text>
+                  </View>
+                </View>
+              )}
+              
               <View style={styles.settingsCard}>
-                <View style={styles.toggleRow}>
+                <View style={[styles.toggleRow, skippedProfile && styles.toggleRowLocked]}>
                   <View style={styles.toggleInfo}>
                     <View style={styles.toggleHeader}>
-                      <Ionicons name="airplane-outline" size={20} color="#1A1A1A" />
-                      <Text style={styles.toggleLabel}>Skip Flights</Text>
+                      <Ionicons name="airplane-outline" size={20} color={skippedProfile ? "#94A3B8" : "#1A1A1A"} />
+                      <Text style={[styles.toggleLabel, skippedProfile && styles.toggleLabelLocked]}>Skip Flights</Text>
+                      {skippedProfile && <Ionicons name="lock-closed" size={14} color="#94A3B8" style={{ marginLeft: 6 }} />}
                     </View>
-                    <Text style={styles.toggleDescription}>Don't search for flights by default</Text>
+                    <Text style={[styles.toggleDescription, skippedProfile && styles.toggleDescriptionLocked]}>
+                      {skippedProfile ? "Locked - requires traveler profile" : "Don't search for flights by default"}
+                    </Text>
                   </View>
                   <Switch
                     value={skipFlights}
-                    onValueChange={setSkipFlights}
-                    trackColor={{ false: "#E2E8F0", true: "#FFE500" }}
+                    onValueChange={skippedProfile ? undefined : setSkipFlights}
+                    trackColor={{ false: "#E2E8F0", true: skippedProfile ? "#CBD5E1" : "#FFE500" }}
                     thumbColor={Platform.OS === "ios" ? "#FFFFFF" : skipFlights ? "#FFFFFF" : "#F1F5F9"}
+                    disabled={skippedProfile}
                   />
                 </View>
                 
                 <View style={styles.divider} />
                 
-                <View style={styles.toggleRow}>
+                <View style={[styles.toggleRow, skippedProfile && styles.toggleRowLocked]}>
                   <View style={styles.toggleInfo}>
                     <View style={styles.toggleHeader}>
-                      <Ionicons name="bed-outline" size={20} color="#1A1A1A" />
-                      <Text style={styles.toggleLabel}>Skip Hotels</Text>
+                      <Ionicons name="bed-outline" size={20} color={skippedProfile ? "#94A3B8" : "#1A1A1A"} />
+                      <Text style={[styles.toggleLabel, skippedProfile && styles.toggleLabelLocked]}>Skip Hotels</Text>
+                      {skippedProfile && <Ionicons name="lock-closed" size={14} color="#94A3B8" style={{ marginLeft: 6 }} />}
                     </View>
-                    <Text style={styles.toggleDescription}>Don't search for hotels by default</Text>
+                    <Text style={[styles.toggleDescription, skippedProfile && styles.toggleDescriptionLocked]}>
+                      {skippedProfile ? "Locked - requires traveler profile" : "Don't search for hotels by default"}
+                    </Text>
                   </View>
                   <Switch
                     value={skipHotels}
-                    onValueChange={setSkipHotels}
-                    trackColor={{ false: "#E2E8F0", true: "#FFE500" }}
+                    onValueChange={skippedProfile ? undefined : setSkipHotels}
+                    trackColor={{ false: "#E2E8F0", true: skippedProfile ? "#CBD5E1" : "#FFE500" }}
                     thumbColor={Platform.OS === "ios" ? "#FFFFFF" : skipHotels ? "#FFFFFF" : "#F1F5F9"}
+                    disabled={skippedProfile}
                   />
                 </View>
               </View>
@@ -2033,5 +2106,76 @@ const styles = StyleSheet.create({
     color: "#1A1A1A",
     borderWidth: 1,
     borderColor: "#E8E6E1",
+  },
+  lockedNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 6,
+  },
+  lockedNoticeText: {
+    fontSize: 13,
+    color: "#94A3B8",
+  },
+  lockedBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFF8E1",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#FFE082",
+    gap: 12,
+  },
+  lockedBannerText: {
+    flex: 1,
+  },
+  lockedBannerTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#92400E",
+    marginBottom: 2,
+  },
+  lockedBannerDesc: {
+    fontSize: 13,
+    color: "#A16207",
+    lineHeight: 18,
+  },
+  warningCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFF8E1",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#FFE082",
+    gap: 10,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#92400E",
+    lineHeight: 18,
+  },
+  disabledSection: {
+    opacity: 0.5,
+  },
+  flightTimeCardDisabled: {
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  flightTimeTextDisabled: {
+    color: "#CBD5E1",
+  },
+  toggleRowLocked: {
+    opacity: 0.6,
+  },
+  toggleLabelLocked: {
+    color: "#94A3B8",
+  },
+  toggleDescriptionLocked: {
+    color: "#CBD5E1",
   },
 });
