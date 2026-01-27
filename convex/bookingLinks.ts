@@ -2,8 +2,20 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
+// Flight item structure for the flights array
+const flightItemValidator = v.object({
+    from: v.string(),
+    to: v.string(),
+    departureDateTime: v.string(),
+    airline: v.string(),
+    flightNumber: v.optional(v.string()),
+    arrivalDateTime: v.optional(v.string()),
+    duration: v.optional(v.string()),
+});
+
 /**
  * Get booking details by token (for public HTTP endpoint)
+ * Returns flights[] array for round-trip/multi-segment support
  */
 export const getBookingByToken = internalQuery({
     args: { token: v.string() },
@@ -12,8 +24,11 @@ export const getBookingByToken = internalQuery({
             success: v.literal(true),
             booking: v.object({
                 status: v.string(),
+                // Legacy fields for backward compatibility
                 route: v.string(),
                 pnr: v.string(),
+                // New: Array of all flights
+                flights: v.array(flightItemValidator),
                 passengers: v.array(v.object({
                     firstName: v.string(),
                     lastName: v.string(),
@@ -53,6 +68,45 @@ export const getBookingByToken = internalQuery({
             return { success: false as const, error: "Booking not found" };
         }
 
+        // Build flights array from outbound and return flights
+        const flights: Array<{
+            from: string;
+            to: string;
+            departureDateTime: string;
+            airline: string;
+            flightNumber?: string;
+            arrivalDateTime?: string;
+            duration?: string;
+        }> = [];
+
+        // Add outbound flight
+        if (flightBooking.outboundFlight) {
+            const outbound = flightBooking.outboundFlight;
+            flights.push({
+                from: outbound.origin,
+                to: outbound.destination,
+                departureDateTime: outbound.departure || outbound.departureDate,
+                airline: outbound.airline,
+                flightNumber: outbound.flightNumber || undefined,
+                arrivalDateTime: outbound.arrival || undefined,
+                duration: outbound.duration || undefined,
+            });
+        }
+
+        // Add return flight if exists
+        if (flightBooking.returnFlight) {
+            const returnFlt = flightBooking.returnFlight;
+            flights.push({
+                from: returnFlt.origin,
+                to: returnFlt.destination,
+                departureDateTime: returnFlt.departure || returnFlt.departureDate,
+                airline: returnFlt.airline,
+                flightNumber: returnFlt.flightNumber || undefined,
+                arrivalDateTime: returnFlt.arrival || undefined,
+                duration: returnFlt.duration || undefined,
+            });
+        }
+
         // Format the response
         const route = `${flightBooking.outboundFlight.origin} → ${flightBooking.outboundFlight.destination}`;
         const pnr = flightBooking.bookingReference || flightBooking.duffelOrderId.slice(-6).toUpperCase();
@@ -63,6 +117,7 @@ export const getBookingByToken = internalQuery({
                 status: flightBooking.status,
                 route,
                 pnr,
+                flights,
                 passengers: flightBooking.passengers.map((p) => ({
                     firstName: p.givenName,
                     lastName: p.familyName,
