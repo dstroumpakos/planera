@@ -513,6 +513,7 @@ export const sendFlightConfirmationEmail = internalAction({
   returns: v.object({
     success: v.boolean(),
     alreadySent: v.optional(v.boolean()),
+    messageId: v.optional(v.string()),
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
