@@ -491,4 +491,13 @@ export default defineSchema({
       theme: v.optional(v.string()), // "light", "dark", "system"
       onboardingCompleted: v.optional(v.boolean()),
     }).index("by_email", ["email"]),
+
+    // Booking links for secure external access
+    bookingLinks: defineTable({
+        token: v.string(),
+        bookingId: v.id("flightBookings"),
+        expiresAt: v.float64(), // Timestamp when link expires
+        createdAt: v.float64(),
+    })
+        .index("by_token", ["token"]),
 });
