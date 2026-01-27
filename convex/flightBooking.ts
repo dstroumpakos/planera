@@ -219,10 +219,10 @@ export const createFlightBooking = action({
 
       console.log(`✅ Booking confirmed: ${order.bookingReference}`);
 
-      // Send confirmation email asynchronously
+      // Send confirmation email asynchronously via Postmark
       try {
-        console.log(`📧 Triggering confirmation email for booking ${bookingId}...`);
-        await ctx.runAction(internal.emails.sendFlightConfirmationEmail, {
+        console.log(`📧 Triggering Postmark receipt email for booking ${bookingId}...`);
+        await ctx.runAction(internal.postmark.sendBookingReceiptEmail, {
           bookingId,
         });
       } catch (emailError) {
