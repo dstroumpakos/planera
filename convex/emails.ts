@@ -274,97 +274,89 @@ function generateFlightConfirmationEmail(booking: {
   const airlineName = booking.outboundFlight.airline;
   const isRoundTrip = !!booking.returnFlight;
 
-  // Build flight segments HTML
-  const outboundSegmentHtml = `
-    <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <span style="font-size: 12px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Outbound Flight</span>
-        <span style="font-size: 12px; color: #6b7280;">${formatEmailDate(booking.outboundFlight.departureDate)}</span>
+  // Helper for flight segment card
+  const renderFlightSegment = (title: string, flight: typeof booking.outboundFlight) => `
+    <div style="background-color: #1F2937; border-radius: 16px; padding: 24px; margin-bottom: 16px; border: 1px solid #374151;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #374151;">
+        <span style="font-size: 12px; color: #9CA3AF; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">${title}</span>
+        <span style="font-size: 13px; color: #D1D5DB; font-weight: 500;">${formatEmailDate(flight.departureDate)}</span>
       </div>
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div style="text-align: center;">
-          <div style="font-size: 28px; font-weight: 700; color: #111827;">${booking.outboundFlight.origin}</div>
-          <div style="font-size: 14px; color: #6b7280;">${booking.outboundFlight.departure}</div>
-          ${booking.outboundFlight.departureAirport ? `<div style="font-size: 11px; color: #9ca3af;">${booking.outboundFlight.departureAirport}</div>` : ""}
+      
+      <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td width="35%" align="left" valign="top">
+            <div style="font-size: 24px; font-weight: 700; color: #F9FAFB; margin-bottom: 4px;">${flight.departure}</div>
+            <div style="font-size: 14px; color: #9CA3AF; font-weight: 500;">${flight.origin}</div>
+            ${flight.departureAirport ? `<div style="font-size: 11px; color: #6B7280; margin-top: 2px;">${flight.departureAirport}</div>` : ""}
+          </td>
+          
+          <td width="30%" align="center" valign="middle" style="padding: 0 10px;">
+            <div style="font-size: 11px; color: #6B7280; margin-bottom: 6px; font-weight: 500;">${flight.duration || "Direct"}</div>
+            <div style="position: relative; height: 1px; background-color: #4B5563; width: 100%;">
+              <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background-color: #1F2937; padding: 0 6px;">
+                <span style="font-size: 14px; color: #9CA3AF;">✈️</span>
+              </div>
+            </div>
+            <div style="font-size: 11px; color: #9CA3AF; margin-top: 8px;">${flight.airline}</div>
+            <div style="font-size: 11px; color: #6B7280;">${flight.flightNumber}</div>
+          </td>
+          
+          <td width="35%" align="right" valign="top">
+            <div style="font-size: 24px; font-weight: 700; color: #F9FAFB; margin-bottom: 4px;">${flight.arrival}</div>
+            <div style="font-size: 14px; color: #9CA3AF; font-weight: 500;">${flight.destination}</div>
+            ${flight.arrivalAirport ? `<div style="font-size: 11px; color: #6B7280; margin-top: 2px;">${flight.arrivalAirport}</div>` : ""}
+          </td>
+        </tr>
+      </table>
+      
+      ${flight.cabinClass ? `
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed #374151; text-align: center;">
+          <span style="font-size: 12px; color: #9CA3AF; background-color: #374151; padding: 4px 10px; border-radius: 12px;">${flight.cabinClass} Class</span>
         </div>
-        <div style="flex: 1; text-align: center; padding: 0 20px;">
-          <div style="font-size: 11px; color: #9ca3af; margin-bottom: 4px;">${booking.outboundFlight.duration || "Direct"}</div>
-          <div style="height: 2px; background: linear-gradient(to right, #d1d5db 0%, #6b7280 50%, #d1d5db 100%); position: relative;">
-            <span style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 16px;">✈️</span>
-          </div>
-          <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">${airlineName} • ${booking.outboundFlight.flightNumber}</div>
-        </div>
-        <div style="text-align: center;">
-          <div style="font-size: 28px; font-weight: 700; color: #111827;">${booking.outboundFlight.destination}</div>
-          <div style="font-size: 14px; color: #6b7280;">${booking.outboundFlight.arrival}</div>
-          ${booking.outboundFlight.arrivalAirport ? `<div style="font-size: 11px; color: #9ca3af;">${booking.outboundFlight.arrivalAirport}</div>` : ""}
-        </div>
-      </div>
-      ${booking.outboundFlight.cabinClass ? `<div style="margin-top: 12px; font-size: 12px; color: #6b7280;">Class: ${booking.outboundFlight.cabinClass}</div>` : ""}
+      ` : ""}
     </div>
   `;
 
-  const returnSegmentHtml = booking.returnFlight ? `
-    <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <span style="font-size: 12px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Return Flight</span>
-        <span style="font-size: 12px; color: #6b7280;">${formatEmailDate(booking.returnFlight.departureDate)}</span>
-      </div>
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div style="text-align: center;">
-          <div style="font-size: 28px; font-weight: 700; color: #111827;">${booking.returnFlight.origin}</div>
-          <div style="font-size: 14px; color: #6b7280;">${booking.returnFlight.departure}</div>
-          ${booking.returnFlight.departureAirport ? `<div style="font-size: 11px; color: #9ca3af;">${booking.returnFlight.departureAirport}</div>` : ""}
-        </div>
-        <div style="flex: 1; text-align: center; padding: 0 20px;">
-          <div style="font-size: 11px; color: #9ca3af; margin-bottom: 4px;">${booking.returnFlight.duration || "Direct"}</div>
-          <div style="height: 2px; background: linear-gradient(to right, #d1d5db 0%, #6b7280 50%, #d1d5db 100%); position: relative;">
-            <span style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 16px;">✈️</span>
-          </div>
-          <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">${airlineName} • ${booking.returnFlight.flightNumber}</div>
-        </div>
-        <div style="text-align: center;">
-          <div style="font-size: 28px; font-weight: 700; color: #111827;">${booking.returnFlight.destination}</div>
-          <div style="font-size: 14px; color: #6b7280;">${booking.returnFlight.arrival}</div>
-          ${booking.returnFlight.arrivalAirport ? `<div style="font-size: 11px; color: #9ca3af;">${booking.returnFlight.arrivalAirport}</div>` : ""}
-        </div>
-      </div>
-      ${booking.returnFlight.cabinClass ? `<div style="margin-top: 12px; font-size: 12px; color: #6b7280;">Class: ${booking.returnFlight.cabinClass}</div>` : ""}
-    </div>
-  ` : "";
+  const outboundSegmentHtml = renderFlightSegment("Outbound Flight", booking.outboundFlight);
+  const returnSegmentHtml = booking.returnFlight ? renderFlightSegment("Return Flight", booking.returnFlight) : "";
 
   // Passengers HTML
   const passengersHtml = booking.passengers.map(p => 
-    `<div style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-      <span style="font-weight: 500; color: #111827;">${p.givenName} ${p.familyName}</span>
+    `<div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #374151;">
+      <span style="font-size: 16px; margin-right: 12px;">👤</span>
+      <span style="font-size: 15px; font-weight: 500; color: #F9FAFB;">${p.givenName} ${p.familyName}</span>
     </div>`
   ).join("");
 
   // Baggage HTML
   const baggageHtml = booking.includedBaggage && booking.includedBaggage.length > 0 ? `
-    <div style="margin-top: 24px;">
-      <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px;">Included Baggage</h3>
-      ${booking.includedBaggage.map(bag => `
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-          ${bag.passengerName ? `<span style="font-size: 13px; color: #6b7280;">${bag.passengerName}:</span>` : ""}
-          ${bag.cabinBags && bag.cabinBags > 0 ? `<span style="background: #ecfdf5; color: #059669; padding: 4px 8px; border-radius: 6px; font-size: 12px;">${bag.cabinBags} cabin bag${bag.cabinBags > 1 ? "s" : ""}</span>` : ""}
-          ${bag.checkedBags && bag.checkedBags > 0 ? `<span style="background: #ecfdf5; color: #059669; padding: 4px 8px; border-radius: 6px; font-size: 12px;">${bag.checkedBags} checked bag${bag.checkedBags > 1 ? "s" : ""}</span>` : ""}
-        </div>
-      `).join("")}
+    <div style="margin-top: 32px;">
+      <h3 style="font-size: 14px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;">Included Baggage</h3>
+      <div style="background-color: #1F2937; border-radius: 12px; padding: 20px; border: 1px solid #374151;">
+        ${booking.includedBaggage.map(bag => `
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; last-child: margin-bottom: 0;">
+            ${bag.passengerName ? `<span style="font-size: 13px; color: #D1D5DB; width: 120px;">${bag.passengerName}</span>` : ""}
+            <div style="display: flex; gap: 8px;">
+              ${bag.cabinBags && bag.cabinBags > 0 ? `<span style="background: rgba(16, 185, 129, 0.1); color: #34D399; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;">${bag.cabinBags} Cabin Bag${bag.cabinBags > 1 ? "s" : ""}</span>` : ""}
+              ${bag.checkedBags && bag.checkedBags > 0 ? `<span style="background: rgba(16, 185, 129, 0.1); color: #34D399; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;">${bag.checkedBags} Checked Bag${bag.checkedBags > 1 ? "s" : ""}</span>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </div>
     </div>
   ` : "";
 
   // Policies HTML
   const policiesHtml = booking.policies ? `
-    <div style="margin-top: 24px; padding: 16px; background: #fffbeb; border-radius: 12px; border: 1px solid #fbbf24;">
-      <h3 style="font-size: 14px; font-weight: 600; color: #92400e; margin-bottom: 12px;">Change & Cancellation Policy</h3>
-      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+    <div style="margin-top: 24px; padding: 20px; background: rgba(245, 158, 11, 0.1); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.2);">
+      <h3 style="font-size: 14px; font-weight: 600; color: #FBBF24; margin-bottom: 12px; margin-top: 0;">Change & Cancellation Policy</h3>
+      <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 8px;">
         <span style="font-size: 16px;">${booking.policies.canChange ? "✅" : "❌"}</span>
-        <span style="font-size: 13px; color: #78350f;">Changes: ${booking.policies.changePolicy}</span>
+        <span style="font-size: 13px; color: #FDE68A;">Changes: ${booking.policies.changePolicy}</span>
       </div>
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="display: flex; gap: 12px; align-items: center;">
         <span style="font-size: 16px;">${booking.policies.canRefund ? "✅" : "❌"}</span>
-        <span style="font-size: 13px; color: #78350f;">Refunds: ${booking.policies.refundPolicy}</span>
+        <span style="font-size: 13px; color: #FDE68A;">Refunds: ${booking.policies.refundPolicy}</span>
       </div>
     </div>
   ` : "";
@@ -375,78 +367,103 @@ function generateFlightConfirmationEmail(booking: {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flight Booking Confirmation</title>
+  <title>Flight Booking Confirmed</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
+  </style>
+  <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-    <!-- Header -->
-    <div style="text-align: center; margin-bottom: 32px;">
-      <div style="font-size: 32px; margin-bottom: 8px;">✈️</div>
-      <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #111827;">Booking Confirmed!</h1>
-      <p style="margin: 8px 0 0; font-size: 14px; color: #6b7280;">Your flight has been successfully booked</p>
-    </div>
+<body style="margin: 0; padding: 0; background-color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #F9FAFB;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #111827;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <div style="max-width: 600px; width: 100%; text-align: left;">
+          
+          <!-- Header -->
+          <div style="text-align: center; margin-bottom: 40px;">
+            <div style="display: inline-block; background-color: rgba(16, 185, 129, 0.1); border-radius: 50%; padding: 20px; margin-bottom: 20px;">
+              <span style="font-size: 32px; line-height: 1; display: block;">✈️</span>
+            </div>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #F9FAFB; letter-spacing: -0.5px;">Booking Confirmed</h1>
+            <p style="margin: 12px 0 0; font-size: 16px; color: #9CA3AF;">Your flight has been successfully booked</p>
+          </div>
 
-    <!-- Main Card -->
-    <div style="background: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-      
-      <!-- Booking Reference -->
-      <div style="text-align: center; padding: 24px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 12px; margin-bottom: 24px;">
-        <div style="font-size: 12px; color: #92400e; text-transform: uppercase; font-weight: 600; margin-bottom: 8px;">Airline Booking Reference (PNR)</div>
-        <div style="font-size: 32px; font-weight: 800; color: #111827; letter-spacing: 4px;">${booking.bookingReference}</div>
-        <div style="margin-top: 8px; font-size: 13px; color: #92400e;">
-          ${airlineName}
-        </div>
-      </div>
+          <!-- PNR Card -->
+          <div style="background-color: #1F2937; border-radius: 20px; padding: 32px; margin-bottom: 24px; text-align: center; border: 1px solid #374151; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+            <div style="font-size: 12px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 12px;">Airline Booking Reference</div>
+            <div style="font-size: 42px; font-weight: 800; color: #F59E0B; letter-spacing: 6px; font-family: monospace; margin-bottom: 12px; line-height: 1;">${booking.bookingReference}</div>
+            <div style="font-size: 15px; color: #D1D5DB; font-weight: 500;">${airlineName}</div>
+          </div>
 
-      <!-- Important Check-in Notice -->
-      <div style="background: #eff6ff; border: 1px solid #3b82f6; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-        <div style="display: flex; align-items: flex-start; gap: 12px;">
-          <span style="font-size: 20px;">ℹ️</span>
-          <div>
-            <div style="font-weight: 600; color: #1e40af; margin-bottom: 4px;">Check-in Required</div>
-            <div style="font-size: 13px; color: #1e3a8a; line-height: 1.5;">
-              Check-in is completed on <strong>${airlineName}'s website or mobile app</strong> using your booking reference (PNR) <strong>${booking.bookingReference}</strong> and your last name.
+          <!-- Check-in Info -->
+          <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 40px;">
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td width="32" valign="top" style="padding-right: 16px;">
+                  <span style="font-size: 24px;">ℹ️</span>
+                </td>
+                <td>
+                  <div style="font-size: 15px; font-weight: 600; color: #60A5FA; margin-bottom: 6px;">Check-in Required</div>
+                  <div style="font-size: 14px; color: #BFDBFE; line-height: 1.6;">
+                    Check-in is completed on the <strong>${airlineName}</strong> website or mobile app using your booking reference (PNR) and last name.
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Itinerary -->
+          <h2 style="font-size: 18px; font-weight: 700; color: #F9FAFB; margin-bottom: 20px; padding-left: 4px;">
+            ${isRoundTrip ? "Round Trip" : "One Way"} Flight Itinerary
+          </h2>
+          
+          ${outboundSegmentHtml}
+          ${returnSegmentHtml}
+
+          <!-- Passengers -->
+          <div style="margin-top: 40px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;">Passengers</h3>
+            <div style="background-color: #1F2937; border-radius: 16px; padding: 8px 24px; border: 1px solid #374151;">
+              ${passengersHtml}
             </div>
           </div>
+
+          ${baggageHtml}
+          ${policiesHtml}
+
+          <!-- Total -->
+          <div style="margin-top: 40px; padding-top: 32px; border-top: 1px solid #374151;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 16px; font-weight: 600; color: #D1D5DB;">Total Paid</span>
+              <span style="font-size: 32px; font-weight: 800; color: #10B981;">${formatCurrency(booking.totalAmount, booking.currency)}</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="margin-top: 40px; text-align: center;">
+            <a href="https://planera.app" style="display: inline-block; background-color: #F59E0B; color: #111827; font-weight: 700; font-size: 16px; padding: 16px 32px; border-radius: 12px; text-decoration: none; margin-bottom: 16px;">View Booking in App</a>
+            <div style="font-size: 14px; color: #6B7280;">
+              <a href="#" style="color: #9CA3AF; text-decoration: none; margin: 0 10px;">Download PDF</a> • 
+              <a href="#" style="color: #9CA3AF; text-decoration: none; margin: 0 10px;">Add to Calendar</a>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="text-align: center; margin-top: 60px; padding-top: 32px; border-top: 1px solid #374151;">
+            <p style="font-size: 14px; color: #6B7280; margin-bottom: 16px; line-height: 1.6;">
+              Questions about your booking?<br>
+              Contact us at <a href="mailto:support@planeraai.app" style="color: #F59E0B; text-decoration: none;">support@planeraai.app</a>
+            </p>
+            <p style="font-size: 12px; color: #4B5563;">
+              © ${new Date().getFullYear()} Planera. All rights reserved.
+            </p>
+          </div>
+
         </div>
-      </div>
-
-      <!-- Flight Itinerary -->
-      <h2 style="font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 16px;">
-        ${isRoundTrip ? "Round Trip" : "One Way"} Flight Itinerary
-      </h2>
-      
-      ${outboundSegmentHtml}
-      ${returnSegmentHtml}
-
-      <!-- Passengers -->
-      <div style="margin-top: 24px;">
-        <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px;">Passengers</h3>
-        ${passengersHtml}
-      </div>
-
-      ${baggageHtml}
-      ${policiesHtml}
-
-      <!-- Total -->
-      <div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 16px; font-weight: 600; color: #111827;">Total Paid</span>
-          <span style="font-size: 24px; font-weight: 700; color: #059669;">${formatCurrency(booking.totalAmount, booking.currency)}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="text-align: center; margin-top: 32px; padding: 0 20px;">
-      <p style="font-size: 13px; color: #6b7280; margin-bottom: 16px;">
-        Questions about your booking? Contact us at <a href="mailto:support@planeraai.app" style="color: #f59e0b;">support@planeraai.app</a>
-      </p>
-      <p style="font-size: 12px; color: #9ca3af;">
-        © ${new Date().getFullYear()} Planera. All rights reserved.
-      </p>
-    </div>
-  </div>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `;
