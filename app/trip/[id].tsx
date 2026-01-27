@@ -1,16 +1,17 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Image, Linking, Platform, Alert, Modal, TextInput, KeyboardAvoidingView } from "react-native";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BlurView } from "expo-blur";
 import { useDestinationImage } from "@/lib/useImages";
 import ActivityCard from "@/components/ActivityCard";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 import { useTheme } from "@/lib/ThemeContext";
+import { LinearGradient } from "expo-linear-gradient";
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Calendar } from 'react-native-calendars';
@@ -243,6 +244,14 @@ export default function TripDetails() {
     const trackClick = useMutation(api.bookings.trackClick);
     const insights = useQuery(api.insights.getDestinationInsights, trip ? { destination: trip.destination } : "skip");
     const { image: destinationImage } = useDestinationImage(trip?.destination);
+    const getDestinationImages = useAction(api.images.getDestinationImages);
+
+    // Loading screen state
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [loadingImages, setLoadingImages] = useState<Array<{url: string; photographer: string}>>([]);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+    const imageInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [accommodationType, setAccommodationType] = useState<'all' | 'hotel' | 'airbnb'>('all');
@@ -389,6 +398,49 @@ export default function TripDetails() {
         return marked;
     };
 
+    // Fetch destination images for loading screen
+    useEffect(() => {
+        if (trip?.status === "generating" && trip?.destination) {
+            // Fetch images for the destination
+            getDestinationImages({ destination: trip.destination, count: 5 })
+                .then((images) => {
+                    if (images && images.length > 0) {
+                        setLoadingImages(images.map((img: { url: string; photographer: string }) => ({
+                            url: img.url,
+                            photographer: img.photographer
+                        })));
+                    }
+                })
+                .catch(console.error);
+
+            // Start progress animation
+            setLoadingProgress(0);
+            progressInterval.current = setInterval(() => {
+                setLoadingProgress(prev => {
+                    if (prev >= 95) return prev; // Cap at 95% until done
+                    return prev + Math.random() * 3;
+                });
+            }, 500);
+
+            return () => {
+                if (progressInterval.current) clearInterval(progressInterval.current);
+            };
+        }
+    }, [trip?.status, trip?.destination]);
+
+    // Cycle through images
+    useEffect(() => {
+        if (loadingImages.length > 1) {
+            imageInterval.current = setInterval(() => {
+                setCurrentImageIndex(prev => (prev + 1) % loadingImages.length);
+            }, 3000);
+
+            return () => {
+                if (imageInterval.current) clearInterval(imageInterval.current);
+            };
+        }
+    }, [loadingImages.length]);
+
     if (trip === undefined) {
         return (
             <View style={[styles.center, { backgroundColor: colors.background }]}>
@@ -406,11 +458,135 @@ export default function TripDetails() {
     }
 
     if (trip.status === "generating") {
+        const currentImage = loadingImages[currentImageIndex];
+        
         return (
-            <View style={[styles.center, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[styles.generatingText, { color: colors.text }]}>Generating your trip...</Text>
-                <Text style={[styles.generatingSubtext, { color: colors.textSecondary }]}>{trip.destination}</Text>
+            <View style={styles.loadingContainer}>
+                {/* Background Image Slideshow */}
+                {currentImage ? (
+                    <Image 
+                        source={{ uri: currentImage.url }} 
+                        style={styles.loadingBackgroundImage}
+                        blurRadius={Platform.OS === 'ios' ? 1 : 0.5}
+                    />
+                ) : (
+                    <View style={[styles.loadingBackgroundImage, { backgroundColor: '#1A1A1A' }]} />
+                )}
+                
+                {/* Dark Overlay */}
+                <LinearGradient
+                    colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+                    style={styles.loadingOverlay}
+                />
+                
+                {/* Content */}
+                <SafeAreaView style={styles.loadingContent}>
+                    {/* Back Button */}
+                    <TouchableOpacity 
+                        style={styles.loadingBackButton} 
+                        onPress={() => router.back()}
+                    >
+                        <Ionicons name="chevron-back" size={24} color="white" />
+                    </TouchableOpacity>
+                    
+                    {/* Center Content */}
+                    <View style={styles.loadingCenterContent}>
+                        {/* Destination Name */}
+                        <Text style={styles.loadingDestination}>{trip.destination}</Text>
+                        
+                        {/* Animated Plane Icon */}
+                        <View style={styles.loadingIconContainer}>
+                            <Ionicons name="airplane" size={48} color="#FFE500" />
+                        </View>
+                        
+                        {/* Status Text */}
+                        <Text style={styles.loadingTitle}>Creating your perfect trip</Text>
+                        <Text style={styles.loadingSubtitle}>
+                            Finding the best flights, hotels & activities...
+                        </Text>
+                        
+                        {/* Progress Bar */}
+                        <View style={styles.progressBarContainer}>
+                            <View style={styles.progressBarBackground}>
+                                <View 
+                                    style={[
+                                        styles.progressBarFill, 
+                                        { width: `${Math.min(loadingProgress, 100)}%` }
+                                    ]} 
+                                />
+                            </View>
+                            <Text style={styles.progressText}>{Math.round(loadingProgress)}%</Text>
+                        </View>
+                        
+                        {/* Loading Steps */}
+                        <View style={styles.loadingSteps}>
+                            <View style={styles.loadingStep}>
+                                <Ionicons 
+                                    name={loadingProgress > 20 ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={20} 
+                                    color={loadingProgress > 20 ? "#10B981" : "rgba(255,255,255,0.5)"} 
+                                />
+                                <Text style={[styles.loadingStepText, loadingProgress > 20 && styles.loadingStepComplete]}>
+                                    Searching flights
+                                </Text>
+                            </View>
+                            <View style={styles.loadingStep}>
+                                <Ionicons 
+                                    name={loadingProgress > 45 ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={20} 
+                                    color={loadingProgress > 45 ? "#10B981" : "rgba(255,255,255,0.5)"} 
+                                />
+                                <Text style={[styles.loadingStepText, loadingProgress > 45 && styles.loadingStepComplete]}>
+                                    Finding accommodations
+                                </Text>
+                            </View>
+                            <View style={styles.loadingStep}>
+                                <Ionicons 
+                                    name={loadingProgress > 70 ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={20} 
+                                    color={loadingProgress > 70 ? "#10B981" : "rgba(255,255,255,0.5)"} 
+                                />
+                                <Text style={[styles.loadingStepText, loadingProgress > 70 && styles.loadingStepComplete]}>
+                                    Curating activities
+                                </Text>
+                            </View>
+                            <View style={styles.loadingStep}>
+                                <Ionicons 
+                                    name={loadingProgress > 90 ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={20} 
+                                    color={loadingProgress > 90 ? "#10B981" : "rgba(255,255,255,0.5)"} 
+                                />
+                                <Text style={[styles.loadingStepText, loadingProgress > 90 && styles.loadingStepComplete]}>
+                                    Building your itinerary
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                    
+                    {/* Photo Attribution */}
+                    {currentImage && (
+                        <View style={styles.loadingAttribution}>
+                            <Text style={styles.loadingAttributionText}>
+                                Photo by {currentImage.photographer} on Unsplash
+                            </Text>
+                        </View>
+                    )}
+                </SafeAreaView>
+                
+                {/* Image Indicators */}
+                {loadingImages.length > 1 && (
+                    <View style={styles.imageIndicators}>
+                        {loadingImages.map((_, index) => (
+                            <View 
+                                key={index} 
+                                style={[
+                                    styles.imageIndicator,
+                                    currentImageIndex === index && styles.imageIndicatorActive
+                                ]} 
+                            />
+                        ))}
+                    </View>
+                )}
             </View>
         );
     }
@@ -888,25 +1064,22 @@ export default function TripDetails() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            {/* Header */}
-            <SafeAreaView style={[styles.header, { backgroundColor: colors.card }]}>
+            {/* Header - Minimal with just back button */}
+            <SafeAreaView style={[styles.header, { backgroundColor: 'transparent', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, borderBottomWidth: 0 }]}>
                 <View style={styles.headerContent}>
-                    <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-                        <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20 }]} onPress={() => router.back()}>
+                        <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <View style={styles.headerTitleContainer}>
-                        <Text style={[styles.headerTitle, { color: colors.text }]}>{trip.destination}</Text>
-                        <View style={styles.aiBadge}>
-                            <Ionicons name="sparkles" size={12} color={colors.primary} />
-                            <Text style={[styles.aiBadgeText, { color: colors.textMuted }]}>AI Generated</Text>
-                        </View>
+                    <View style={{ flex: 1 }} />
+                    <View style={[styles.aiBadge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+                        <Ionicons name="sparkles" size={12} color="#FFE500" />
+                        <Text style={[styles.aiBadgeText, { color: '#1A1A1A' }]}>AI Generated</Text>
                     </View>
-                    <View style={styles.iconButton} />
                 </View>
             </SafeAreaView>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Map Preview */}
+                {/* Map Preview with Title Overlay */}
                 <View style={styles.mapPreviewContainer} pointerEvents="box-none">
                     {destinationImage ? (
                         <ImageWithAttribution
@@ -920,6 +1093,27 @@ export default function TripDetails() {
                             style={styles.mapImage} 
                         />
                     )}
+                    {/* Title Overlay on Image */}
+                    <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.7)']}
+                        style={styles.headerImageOverlay}
+                    >
+                        <View style={styles.headerTitleOverlay}>
+                            <Text style={styles.headerTitleOnImage}>{trip.destination}</Text>
+                            <View style={styles.headerSubtitleRow}>
+                                <View style={styles.headerDateBadge}>
+                                    <Ionicons name="calendar-outline" size={14} color="white" />
+                                    <Text style={styles.headerDateText}>
+                                        {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(trip.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </Text>
+                                </View>
+                                <View style={styles.headerTravelersBadge}>
+                                    <Ionicons name="people-outline" size={14} color="white" />
+                                    <Text style={styles.headerTravelersText}>{trip.travelers || 1} traveler{(trip.travelers || 1) > 1 ? 's' : ''}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </LinearGradient>
                     <TouchableOpacity style={[styles.viewMapButton, { backgroundColor: colors.card }]} onPress={() => openMap(trip.destination)}>
                         <Ionicons name="map" size={20} color={colors.primary} />
                         <Text style={[styles.viewMapText, { color: colors.text }]}>View Map</Text>
@@ -2666,5 +2860,193 @@ const styles = StyleSheet.create({
     insightDate: {
         fontSize: 11,
         color: '#94A3B8',
+    },
+
+    // Loading Screen Styles
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: '#1A1A1A',
+    },
+    loadingBackgroundImage: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    loadingContent: {
+        flex: 1,
+        justifyContent: 'space-between',
+    },
+    loadingBackButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 12,
+        marginLeft: 16,
+    },
+    loadingCenterContent: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 32,
+    },
+    loadingDestination: {
+        fontSize: 36,
+        fontWeight: '800',
+        color: 'white',
+        textAlign: 'center',
+        marginBottom: 24,
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+    },
+    loadingIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255,229,0,0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 32,
+    },
+    loadingTitle: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: 'white',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    loadingSubtitle: {
+        fontSize: 16,
+        color: 'rgba(255,255,255,0.7)',
+        textAlign: 'center',
+        marginBottom: 32,
+    },
+    progressBarContainer: {
+        width: '100%',
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    progressBarBackground: {
+        width: '100%',
+        height: 8,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 4,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: '#FFE500',
+        borderRadius: 4,
+    },
+    progressText: {
+        marginTop: 8,
+        fontSize: 14,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.8)',
+    },
+    loadingSteps: {
+        width: '100%',
+        gap: 12,
+    },
+    loadingStep: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    loadingStepText: {
+        fontSize: 15,
+        color: 'rgba(255,255,255,0.5)',
+    },
+    loadingStepComplete: {
+        color: 'white',
+    },
+    loadingAttribution: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+    },
+    loadingAttributionText: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.5)',
+        textAlign: 'center',
+    },
+    imageIndicators: {
+        position: 'absolute',
+        bottom: 60,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    imageIndicator: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+    },
+    imageIndicatorActive: {
+        backgroundColor: '#FFE500',
+        width: 24,
+    },
+    // Header Image Overlay Styles
+    headerImageOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '70%',
+        justifyContent: 'flex-end',
+        paddingBottom: 60,
+        paddingHorizontal: 16,
+    },
+    headerTitleOverlay: {
+        gap: 8,
+    },
+    headerTitleOnImage: {
+        fontSize: 32,
+        fontWeight: '800',
+        color: 'white',
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+    },
+    headerSubtitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    headerDateBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    headerDateText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: 'white',
+    },
+    headerTravelersBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    headerTravelersText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: 'white',
     },
 });
