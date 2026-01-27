@@ -8,7 +8,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "dev": "bunx convex dev"
+    "dev": "bunx convex dev",
+    "check-bundle": "node scripts/check-bundle-safety.js",
+    "prebuild": "node scripts/check-bundle-safety.js"
   },
   "dependencies": {
     "@better-auth/expo": "1.3.27",
