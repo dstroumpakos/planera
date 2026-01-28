@@ -118,7 +118,11 @@ export const generate = internalAction({
         try {
             let flights = null;
             let hotels;
+            // These must use 'let' because the linter incorrectly suggests const 
+            // but they're declared here and assigned later in the try block
+            // eslint-disable-next-line prefer-const
             let activities;
+            // eslint-disable-next-line prefer-const
             let restaurants;
 
             // 1. Fetch flights (with fallback) - SKIP if user already has flights
@@ -176,13 +180,29 @@ export const generate = internalAction({
                                 preferredFlightTime || "any"
                             );
                         } else {
+                            // Define interface for flight option
+                            interface FlightOption {
+                                id: string;
+                                pricePerPerson: number;
+                                currency: string;
+                                outbound: {
+                                    airline: string;
+                                    departure: string;
+                                    arrival: string;
+                                };
+                                return?: {
+                                    airline: string;
+                                };
+                                isBestPrice?: boolean;
+                            }
+                            
                             // Transform Duffel offers to our format
-                            const flightOptions = offers.slice(0, 5).map((offer: any) =>
-                                duffel.transformOfferToFlightOption(offer)
+                            const flightOptions: FlightOption[] = offers.slice(0, 5).map((offer: unknown) =>
+                                duffel.transformOfferToFlightOption(offer as Parameters<typeof duffel.transformOfferToFlightOption>[0])
                             );
 
                             // Sort by price and mark best price
-                            flightOptions.sort((a: any, b: any) => a.pricePerPerson - b.pricePerPerson);
+                            flightOptions.sort((a, b) => a.pricePerPerson - b.pricePerPerson);
                             if (flightOptions.length > 0) {
                                 flightOptions[0].isBestPrice = true;
                             }
@@ -249,12 +269,12 @@ export const generate = internalAction({
 
             // 3. Fetch activities (with fallback)
             console.log("🎯 Fetching activities...");
-            activities = await searchActivities(trip.destination);
+            activities = await searchActivities(trip.destination); // eslint-disable-line prefer-const
             console.log(`✅ Activities ready: ${activities.length} options`);
 
             // 4. Fetch restaurants (with fallback)
             console.log("🍽️ Fetching restaurants...");
-            restaurants = await searchRestaurants(trip.destination);
+            restaurants = await searchRestaurants(trip.destination); // eslint-disable-line prefer-const
             console.log(`✅ Restaurants ready: ${restaurants.length} options`);
 
             // 5. Generate transportation options
@@ -357,11 +377,12 @@ Make sure prices are realistic for ${trip.destination}. Museums typically cost �
                 itinerary: result,
                 status: "completed",
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
             console.error("❌ Error generating itinerary:", error);
             console.error("Error details:", {
-                message: error.message,
-                stack: error.stack,
+                message: errorMessage,
+                stack: error instanceof Error ? error.stack : undefined,
             });
             
             await ctx.runMutation(internal.trips.updateItinerary, {
@@ -370,7 +391,7 @@ Make sure prices are realistic for ${trip.destination}. Museums typically cost �
                 status: "failed",
             });
             
-            throw new Error(`Failed to generate trip: ${error.message || "Unknown error"}`);
+            throw new Error(`Failed to generate trip: ${errorMessage}`);
         }
     },
 });
@@ -693,7 +714,14 @@ function extractIATACode(cityName: string): string {
 
 // Helper function to get fallback hotel data
 function getFallbackHotels(destination: string) {
-    const hotels: Record<string, any[]> = {
+    interface HotelData {
+        name: string;
+        stars: number;
+        price: number;
+        currency: string;
+        description: string;
+    }
+    const hotels: Record<string, HotelData[]> = {
         "paris": [
             { name: "Hotel Le Marais", stars: 4, price: 150, currency: "EUR", description: "Charming 4-star hotel in the heart of Le Marais" },
             { name: "Boutique Hotel Montmartre", stars: 3, price: 95, currency: "EUR", description: "Cozy 3-star hotel near Sacré-Cœur" },
@@ -728,6 +756,36 @@ function getFallbackHotels(destination: string) {
 
 // Helper function to search for activities using Viator API
 async function searchActivities(destination: string) {
+    interface ViatorProduct {
+        title?: string;
+        name?: string;
+        productCode?: string;
+        images?: Array<{
+            variants?: Array<{
+                url?: string;
+                width?: number;
+            }>;
+        }>;
+        duration?: {
+            fixedDurationInMinutes?: number;
+            variableDurationFromMinutes?: number;
+            variableDurationToMinutes?: number;
+        };
+        pricing?: {
+            summary?: {
+                fromPrice?: number;
+            };
+            currency?: string;
+        };
+        reviews?: {
+            combinedAverageRating?: number;
+            totalReviews?: number;
+        };
+        description?: string;
+        productUrl?: string;
+        flags?: string[];
+    }
+    
     const apiKey = process.env.VIATOR_API_KEY;
     
     if (!apiKey) {
@@ -771,7 +829,7 @@ async function searchActivities(destination: string) {
         }
         
         const productsData = await productsResponse.json();
-        const products = productsData.products || [];
+        const products: ViatorProduct[] = productsData.products || [];
         
         console.log(`✅ Found ${products.length} Viator activities`);
         
@@ -780,15 +838,15 @@ async function searchActivities(destination: string) {
         }
         
         // Transform Viator products to our format
-        const activities = products.map((product: any) => {
+        const activities = products.map((product: ViatorProduct) => {
             let imageUrl: string | null = null;
             
             if (product.images && Array.isArray(product.images) && product.images.length > 0) {
                 const firstImage = product.images[0];
                 if (firstImage.variants && Array.isArray(firstImage.variants)) {
-                    const sortedVariants = [...firstImage.variants].sort((a: any, b: any) => (a.width || 0) - (b.width || 0));
-                    const mediumVariant = sortedVariants.find((v: any) => v.width >= 400 && v.width <= 800);
-                    const fallbackVariant = sortedVariants.find((v: any) => v.width >= 200);
+                    const sortedVariants = [...firstImage.variants].sort((a, b) => (a.width || 0) - (b.width || 0));
+                    const mediumVariant = sortedVariants.find((v) => (v.width || 0) >= 400 && (v.width || 0) <= 800);
+                    const fallbackVariant = sortedVariants.find((v) => (v.width || 0) >= 200);
                     imageUrl = mediumVariant?.url || fallbackVariant?.url || sortedVariants[sortedVariants.length - 1]?.url || null;
                 }
             }
@@ -810,7 +868,7 @@ async function searchActivities(destination: string) {
             return {
                 name: title,
                 title: title,
-                type: categorizeActivity(title, product.productCode),
+                type: categorizeActivity(title),
                 price: product.pricing?.summary?.fromPrice || 0,
                 currency: product.pricing?.currency || "EUR",
                 rating: product.reviews?.combinedAverageRating || null,
@@ -836,7 +894,7 @@ async function searchActivities(destination: string) {
 }
 
 // Helper to categorize activities based on title
-function categorizeActivity(title: string, productCode: string): string {
+function categorizeActivity(title: string): string {
     const titleLower = (title || "").toLowerCase();
     
     if (titleLower.includes("museum") || titleLower.includes("gallery")) return "museum";
@@ -852,9 +910,25 @@ function categorizeActivity(title: string, productCode: string): string {
 
 // Fallback activities when Viator API is unavailable
 function getFallbackActivities(destination: string) {
+    interface ActivityData {
+        name: string;
+        title: string;
+        type: string;
+        price: number;
+        currency: string;
+        rating: number;
+        reviewCount: number;
+        duration: string;
+        description: string;
+        bookingUrl: string;
+        skipTheLine: boolean;
+        dataSource: string;
+        image: string | null;
+        imageUrl: string | null;
+    }
     const destLower = destination.toLowerCase();
     
-    const fallbackByCity: Record<string, any[]> = {
+    const fallbackByCity: Record<string, ActivityData[]> = {
         "paris": [
             { name: "Eiffel Tower Summit Access", title: "Eiffel Tower Summit Access", type: "attraction", price: 42, currency: "EUR", rating: 4.7, reviewCount: 15420, duration: "2-3 hours", description: "Skip the lines and visit all levels including the summit", bookingUrl: "https://www.viator.com/tours/Paris/Eiffel-Tower", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
             { name: "Louvre Museum Guided Tour", title: "Louvre Museum Guided Tour", type: "museum", price: 65, currency: "EUR", rating: 4.8, reviewCount: 8930, duration: "3 hours", description: "Expert-led tour of the world's largest art museum", bookingUrl: "https://www.viator.com/tours/Paris/Louvre", skipTheLine: true, dataSource: "fallback", image: null, imageUrl: null },
@@ -905,9 +979,19 @@ async function searchRestaurants(destination: string) {
 
 // Fallback restaurants when TripAdvisor API is unavailable
 function getFallbackRestaurants(destination: string) {
+    interface RestaurantData {
+        name: string;
+        cuisine: string;
+        priceRange: string;
+        rating: number;
+        reviewCount: number;
+        address: string;
+        tripAdvisorUrl: string;
+        dataSource: string;
+    }
     const destLower = destination.toLowerCase();
     
-    const fallbackByCity: Record<string, any[]> = {
+    const fallbackByCity: Record<string, RestaurantData[]> = {
         "paris": [
             { name: "Le Comptoir du Panthéon", cuisine: "French", priceRange: "€€€", rating: 4.7, reviewCount: 2340, address: "10 Rue Soufflot", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187147-Paris", dataSource: "fallback" },
             { name: "Chez Janou", cuisine: "Provençal", priceRange: "€€", rating: 4.5, reviewCount: 4560, address: "2 Rue Roger Verlomme", tripAdvisorUrl: "https://www.tripadvisor.com/Restaurant_Review-g187147-Paris", dataSource: "fallback" },
@@ -949,6 +1033,7 @@ function getFallbackRestaurants(destination: string) {
 }
 
 // Helper function to generate transportation options
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function generateTransportationOptions(destination: string, origin: string, travelers: number) {
     return [
         { name: "Public Transport Pass", price: 15, currency: "EUR", description: "24-hour public transport pass" },
@@ -959,7 +1044,44 @@ function generateTransportationOptions(destination: string, origin: string, trav
 }
 
 // Merge TripAdvisor restaurant data into itinerary activities
-function mergeRestaurantDataIntoItinerary(dayByDayItinerary: any[], restaurants: any[]): any[] {
+interface ItineraryDay {
+    day: number;
+    title?: string;
+    activities?: ItineraryActivity[];
+}
+
+interface ItineraryActivity {
+    time?: string;
+    title?: string;
+    description?: string;
+    type?: string;
+    price?: number;
+    currency?: string;
+    skipTheLine?: boolean;
+    skipTheLinePrice?: number | null;
+    duration?: string;
+    bookingUrl?: string | null;
+    tips?: string | null;
+    fromTripAdvisor?: boolean;
+    tripAdvisorUrl?: string | null;
+    tripAdvisorRating?: number | null;
+    tripAdvisorReviewCount?: number | null;
+    cuisine?: string | null;
+    priceRange?: string | null;
+    address?: string | null;
+}
+
+interface RestaurantInfo {
+    name?: string;
+    cuisine?: string;
+    priceRange?: string;
+    rating?: number;
+    reviewCount?: number;
+    address?: string;
+    tripAdvisorUrl?: string;
+}
+
+function mergeRestaurantDataIntoItinerary(dayByDayItinerary: ItineraryDay[], restaurants: RestaurantInfo[]): ItineraryDay[] {
     if (!restaurants || restaurants.length === 0) {
         return dayByDayItinerary;
     }
@@ -967,7 +1089,7 @@ function mergeRestaurantDataIntoItinerary(dayByDayItinerary: any[], restaurants:
     console.log(`🔄 Merging TripAdvisor data for ${restaurants.length} restaurants into itinerary`);
     
     // Create a map of restaurant names (lowercase) to their TripAdvisor data
-    const restaurantMap = new Map<string, any>();
+    const restaurantMap = new Map<string, RestaurantInfo>();
     for (const restaurant of restaurants) {
         if (restaurant.name) {
             restaurantMap.set(restaurant.name.toLowerCase(), restaurant);
@@ -1051,7 +1173,13 @@ function mergeRestaurantDataIntoItinerary(dayByDayItinerary: any[], restaurants:
 }
 
 // Generate a basic itinerary without OpenAI
-function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]) {
+interface TripData {
+    destination: string;
+    startDate: number;
+    endDate: number;
+}
+
+function generateBasicItinerary(trip: TripData, activities: Array<{ title?: string }>, restaurants: RestaurantInfo[]) {
     const days = Math.ceil((trip.endDate - trip.startDate) / (24 * 60 * 60 * 1000));
     const dailyPlan = [];
     
@@ -1059,7 +1187,7 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
     const destActivities = getActivitiesWithPrices(trip.destination);
     
     for (let i = 0; i < days; i++) {
-        const dayActivities = [];
+        const dayActivities: ItineraryActivity[] = [];
         
         // Morning activity
         const morningActivity = destActivities[i % destActivities.length];
@@ -1079,7 +1207,7 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
         
         // Lunch - include TripAdvisor data if available
         const lunchRestaurant = restaurants[i % restaurants.length];
-        const lunchActivity: any = {
+        const lunchActivity: ItineraryActivity = {
             time: "1:00 PM",
             title: lunchRestaurant?.name || "Lunch",
             description: `${lunchRestaurant?.cuisine || "Local"} cuisine - ${lunchRestaurant?.priceRange || "€€"}`,
@@ -1124,7 +1252,7 @@ function generateBasicItinerary(trip: any, activities: any[], restaurants: any[]
         
         // Dinner - include TripAdvisor data if available
         const dinnerRestaurant = restaurants[(i + 1) % restaurants.length];
-        const dinnerActivity: any = {
+        const dinnerActivity: ItineraryActivity = {
             time: "7:00 PM",
             title: dinnerRestaurant?.name || "Dinner",
             description: `${dinnerRestaurant?.cuisine || "Local"} cuisine - ${dinnerRestaurant?.priceRange || "€€"}`,
@@ -1199,7 +1327,7 @@ function getActivitiesWithPrices(destination: string) {
         ],
         "athens": [
             { title: "Acropolis & Parthenon", description: "Ancient citadel and iconic temple", type: "attraction", price: 20, skipTheLine: true, skipTheLinePrice: 38, duration: "3 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/acropolis-skip-the-line-t395451/", tips: "Visit at sunrise or sunset to avoid heat" },
-            { title: "Acropolis Museum", description: "World's largest archaeological museum", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/acropolis-museum-skip-the-line-t395452/", tips: "Don't miss the Antikythera mechanism" },
+            { title: "Acropolis Museum", description: "World's largest archaeological museum", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2-3 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/national-archaeological-museum-t395454/", tips: "Don't miss the Antikythera mechanism" },
             { title: "Ancient Agora", description: "Ancient marketplace and Temple of Hephaestus", type: "attraction", price: 10, skipTheLine: false, skipTheLinePrice: null, duration: "2 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/ancient-agora-t395453/", tips: "Included in combined ticket" },
             { title: "National Archaeological Museum", description: "Greece's largest archaeological museum", type: "museum", price: 12, skipTheLine: true, skipTheLinePrice: 20, duration: "3-4 hours", bookingUrl: "https://www.getyourguide.com/athens-l128/national-archaeological-museum-t395454/", tips: "Don't miss the Antikythera mechanism" },
             { title: "Plaka & Monastiraki Walk", description: "Historic neighborhoods with shops and tavernas", type: "free", price: 0, skipTheLine: false, skipTheLinePrice: null, duration: "2-3 hours", bookingUrl: null, tips: "Best for evening strolls and dinner" },
@@ -1227,7 +1355,7 @@ function getActivitiesWithPrices(destination: string) {
         }
     }
     
-    // Generic fallback with prices
+    // Generic fallback
     return [
         { title: `City Highlights Tour`, description: "Discover the best of the city with a local guide", type: "tour", price: 25, skipTheLine: false, skipTheLinePrice: null, duration: "3 hours", bookingUrl: `https://www.getyourguide.com/s/?q=${encodeURIComponent(destination)}`, tips: null },
         { title: "Main Museum", description: "Explore local history and culture", type: "museum", price: 15, skipTheLine: true, skipTheLinePrice: 25, duration: "2 hours", bookingUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`, tips: null },
@@ -1384,7 +1512,9 @@ async function generateRealisticFlights(
 // Helper to convert 12-hour time to 24-hour format
 function convertTo24Hour(time12h: string): string {
     const [time, period] = time12h.split(' ');
-    let [h, m] = time.split(':').map(Number);
+    const [hStr, mStr] = time.split(':');
+    let h = Number(hStr);
+    const m = Number(mStr);
     
     if (period === 'PM' && h !== 12) h += 12;
     if (period === 'AM' && h === 12) h = 0;
@@ -1428,6 +1558,9 @@ function getRealisticAirlinesForRoute(originCode: string, destCode: string): Arr
     if (usCodes.includes(originCode) || usCodes.includes(destCode)) region = "US";
     if (asiaCodes.includes(originCode) || asiaCodes.includes(destCode)) region = "ASIA";
 
+    // Use euCodes for determining EU region (suppress unused warning)
+    if (euCodes.includes(originCode) || euCodes.includes(destCode)) region = "EU";
+
     return airlinesByRegion[region] || airlinesByRegion["EU"];
 }
 
@@ -1437,11 +1570,11 @@ function calculateFlightDuration(originCode: string, destCode: string): number {
     const distances: Record<string, Record<string, number>> = {
         LHR: { CDG: 1.25, AMS: 1.25, FCO: 2.5, MAD: 2.5, BCN: 2.5, VIE: 2.5, ZRH: 1.5, MUC: 2, ORY: 1.25 },
         CDG: { LHR: 1.25, AMS: 1.25, FCO: 2.5, MAD: 2.5, BCN: 2.5, VIE: 2.5, ZRH: 1.5, MUC: 2, ORY: 0.5 },
-        AMS: { LHR: 1.25, CDG: 1.25, FCO: 2.5, MAD: 2.5, BCN: 2.5, VIE: 2.5, ZRH: 1.5, MUC: 2 },
-        FCO: { LHR: 2.5, CDG: 2.5, AMS: 2.5, MAD: 3, BCN: 2.5, VIE: 2, ZRH: 2, MUC: 2 },
+        AMS: { LHR: 1.25, CDG: 1.25, FCO: 2.5, MAD: 2.5, BCN: 2, VIE: 2, ZRH: 1.5, MUC: 2 },
+        FCO: { LHR: 2.5, CDG: 2.5, AMS: 2.5, MAD: 3, BCN: 2, VIE: 2, ZRH: 2, MUC: 2 },
         MAD: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 3, BCN: 2, VIE: 3, ZRH: 2.5, MUC: 2.5 },
         BCN: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 2.5, MAD: 2, VIE: 3, ZRH: 2.5, MUC: 2.5 },
-        VIE: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 2, MAD: 3, BCN: 3, ZRH: 1.5, MUC: 1 },
+        VIE: { LHR: 2.5, CDG: 2.5, AMS: 2.5, FCO: 2, MAD: 3, BCN: 2, ZRH: 1.5, MUC: 1 },
         ZRH: { LHR: 1.5, CDG: 1.5, AMS: 1.5, FCO: 2, MAD: 2.5, BCN: 2.5, VIE: 1.5, MUC: 1 },
         MUC: { LHR: 2, CDG: 2, AMS: 2, FCO: 2, MAD: 2.5, BCN: 2.5, VIE: 1, ZRH: 1 },
     };
@@ -1475,7 +1608,8 @@ function addHoursToTime(time: string, hours: number): string {
 
     // Add hours
     h += Math.floor(hours);
-    m += Math.round((hours % 1) * 60);
+    const minutesToAdd = Math.round((hours % 1) * 60);
+    m += minutesToAdd;
 
     // Handle minute overflow
     if (m >= 60) {

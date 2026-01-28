@@ -414,15 +414,38 @@ export async function createOrder(params: {
       ];
 
   // Get the ages from the offer's passengers - Duffel requires these to match exactly
-  const offerPassengers = offer.passengers || [];
+  interface OfferPassenger {
+    id: string;
+    age?: number;
+  }
+  const offerPassengers: OfferPassenger[] = offer.passengers || [];
+  
+  // Define passenger data structure
+  interface PassengerWithAge {
+    id: string;
+    given_name: string;
+    family_name: string;
+    born_on: string;
+    gender: "m" | "f";
+    email: string;
+    phone_number: string;
+    title: "mr" | "ms" | "mrs" | "miss" | "dr";
+    age: number;
+    identity_documents?: Array<{
+      type: string;
+      unique_identifier: string;
+      issuing_country_code: string;
+      expires_on: string;
+    }>;
+  }
   
   // Add age and identity documents to each passenger
-  const passengersWithAge = params.passengers.map((p, index) => {
+  const passengersWithAge: PassengerWithAge[] = params.passengers.map((p, index) => {
     const offerPassenger = offerPassengers[index];
     const age = offerPassenger?.age || 30; // Use the age from the offer
     
     // Build passenger object with optional identity documents
-    const passengerData: any = {
+    const passengerData: PassengerWithAge = {
       id: offerPassenger?.id || p.id,
       given_name: p.given_name,
       family_name: p.family_name,
@@ -526,7 +549,7 @@ export async function getOrder(orderId: string) {
 }
 
 // Extract flight details from an offer for storage
-export function extractFlightDetails(offer: any) {
+export function extractFlightDetails(offer: DuffelOffer) {
   const slices = offer.slices || [];
   const outbound = slices[0];
   const returnSlice = slices[1];

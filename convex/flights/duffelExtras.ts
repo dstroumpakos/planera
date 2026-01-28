@@ -25,6 +25,104 @@ function getHeaders(config: { accessToken: string }) {
 }
 
 // ============================================================================
+// DUFFEL API RESPONSE TYPES
+// ============================================================================
+
+interface DuffelService {
+  id: string;
+  type: string;
+  passenger_id: string;
+  segment_ids?: string[];
+  maximum_quantity?: number;
+  total_amount?: string;
+  total_currency?: string;
+  metadata?: {
+    type?: string;
+    maximum_weight_kg?: string;
+  };
+}
+
+interface DuffelBaggage {
+  type: string;
+  quantity?: number;
+  weight?: string;
+}
+
+interface DuffelPassengerSegment {
+  passenger_id: string;
+  baggages?: DuffelBaggage[];
+}
+
+interface DuffelSegment {
+  id: string;
+  passengers?: DuffelPassengerSegment[];
+}
+
+interface DuffelSlice {
+  segments?: DuffelSegment[];
+}
+
+interface DuffelConditionDetail {
+  allowed: boolean;
+  penalty_amount?: string;
+  penalty_currency?: string;
+}
+
+interface DuffelConditions {
+  change_before_departure?: DuffelConditionDetail;
+  refund_before_departure?: DuffelConditionDetail;
+}
+
+interface DuffelOffer {
+  id: string;
+  conditions?: DuffelConditions;
+  slices?: DuffelSlice[];
+  available_services?: DuffelService[];
+  passengers?: Array<{ id: string; age?: number }>;
+  total_amount?: string;
+  total_currency?: string;
+}
+
+interface DuffelSeatService {
+  id: string;
+  passenger_id: string;
+  total_amount?: string;
+  total_currency?: string;
+}
+
+interface DuffelSeatElement {
+  type: string;
+  designator?: string;
+  name?: string;
+  disclosures?: string[];
+  available_services?: DuffelSeatService[];
+}
+
+interface DuffelSeatSection {
+  elements?: DuffelSeatElement[];
+}
+
+interface DuffelSeatRow {
+  sections?: DuffelSeatSection[];
+}
+
+interface DuffelSeatCabin {
+  cabin_class: string;
+  deck?: number;
+  rows?: DuffelSeatRow[];
+  wings?: {
+    first_row_index: number;
+    last_row_index: number;
+  };
+}
+
+interface DuffelSeatMap {
+  segment_id: string;
+  slice_id: string;
+  cabins?: DuffelSeatCabin[];
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -145,12 +243,12 @@ export async function getOfferWithExtras(offerId: string): Promise<OfferExtras |
     }
 
     const data = await response.json();
-    const offer = data.data;
+    const offer: DuffelOffer = data.data;
 
     // DEBUG: Log what Duffel returns for available services
     console.log(`📦 Duffel available_services count: ${offer.available_services?.length || 0}`);
     if (offer.available_services && offer.available_services.length > 0) {
-      console.log(`📦 Service types: ${offer.available_services.map((s: any) => s.type).join(', ')}`);
+      console.log(`📦 Service types: ${offer.available_services.map((s: DuffelService) => s.type).join(', ')}`);
     } else {
       console.log(`⚠️ NO EXTRAS AVAILABLE - This is common in Duffel test mode!`);
       console.log(`   Test mode airlines often don't provide baggage/seat services.`);
@@ -182,8 +280,8 @@ export async function getOfferWithExtras(offerId: string): Promise<OfferExtras |
 
           // Extract cabin baggage
           if (passenger.baggages) {
-            const cabinBag = passenger.baggages.find((b: any) => b.type === "carry_on");
-            const checkedBag = passenger.baggages.find((b: any) => b.type === "checked");
+            const cabinBag = passenger.baggages.find((b: DuffelBaggage) => b.type === "carry_on");
+            const checkedBag = passenger.baggages.find((b: DuffelBaggage) => b.type === "checked");
 
             if (cabinBag) {
               baggage.cabin = {
@@ -217,7 +315,7 @@ export async function getOfferWithExtras(offerId: string): Promise<OfferExtras |
           id: service.id,
           passengerId: service.passenger_id,
           segmentIds: service.segment_ids || [],
-          type: metadata.type || "checked",
+          type: (metadata.type as "checked" | "carry_on") || "checked",
           maxQuantity: service.maximum_quantity || 1,
           priceCents: Math.round(parseFloat(service.total_amount || "0") * 100),
           currency: service.total_currency || "EUR",
@@ -231,7 +329,7 @@ export async function getOfferWithExtras(offerId: string): Promise<OfferExtras |
 
     // Check if seat selection is available
     const seatMapsAvailable = offer.available_services?.some(
-      (s: any) => s.type === "seat"
+      (s: DuffelService) => s.type === "seat"
     ) || false;
 
     console.log(`✅ Offer extras fetched:`);
@@ -283,7 +381,7 @@ export async function getSeatMaps(offerId: string): Promise<SeatMap[] | null> {
     const data = await response.json();
     const seatMaps: SeatMap[] = [];
 
-    for (const seatMap of data.data || []) {
+    for (const seatMap of (data.data as DuffelSeatMap[]) || []) {
       const cabins: SeatCabin[] = [];
 
       for (const cabin of seatMap.cabins || []) {
@@ -297,7 +395,7 @@ export async function getSeatMaps(offerId: string): Promise<SeatMap[] | null> {
 
             for (const element of section.elements || []) {
               const seatElement: SeatElement = {
-                type: element.type,
+                type: element.type as SeatElement["type"],
                 designator: element.designator,
                 name: element.name,
                 disclosures: element.disclosures,
@@ -305,7 +403,7 @@ export async function getSeatMaps(offerId: string): Promise<SeatMap[] | null> {
 
               // Extract available seat services (pricing)
               if (element.available_services && element.available_services.length > 0) {
-                seatElement.availableServices = element.available_services.map((s: any) => ({
+                seatElement.availableServices = element.available_services.map((s: DuffelSeatService) => ({
                   id: s.id,
                   passengerId: s.passenger_id,
                   priceCents: Math.round(parseFloat(s.total_amount || "0") * 100),
@@ -385,18 +483,37 @@ export async function createOrderWithServices(params: {
   }
 
   const offerData = await offerResponse.json();
-  const offer = offerData.data;
+  const offer: DuffelOffer = offerData.data;
 
   // Build payments array
   const payments = params.paymentIntentId
     ? [{ type: "payment_intent", payment_intent_id: params.paymentIntentId }]
     : [{ type: "balance", currency: offer.total_currency || "GBP", amount: offer.total_amount }];
 
+  // Define passenger data type
+  interface PassengerData {
+    id: string;
+    given_name: string;
+    family_name: string;
+    born_on: string;
+    gender: "m" | "f";
+    email: string;
+    phone_number: string;
+    title: "mr" | "ms" | "mrs" | "miss" | "dr";
+    age: number;
+    identity_documents?: Array<{
+      type: string;
+      unique_identifier: string;
+      issuing_country_code: string;
+      expires_on: string;
+    }>;
+  }
+
   // Map passengers with ages from offer
   const offerPassengers = offer.passengers || [];
-  const passengersWithAge = params.passengers.map((p, index) => {
+  const passengersWithAge: PassengerData[] = params.passengers.map((p, index) => {
     const offerPassenger = offerPassengers[index];
-    const passengerData: any = {
+    const passengerData: PassengerData = {
       id: offerPassenger?.id || p.id,
       given_name: p.given_name,
       family_name: p.family_name,
@@ -421,7 +538,18 @@ export async function createOrderWithServices(params: {
   });
 
   // Build request payload
-  const payload: any = {
+  interface OrderPayload {
+    data: {
+      type: string;
+      selected_offers: string[];
+      passengers: PassengerData[];
+      payments: Array<{ type: string; payment_intent_id?: string; currency?: string; amount?: string }>;
+      metadata: Record<string, string>;
+      services?: Array<{ id: string; quantity: number }>;
+    };
+  }
+
+  const payload: OrderPayload = {
     data: {
       type: "instant",
       selected_offers: [params.offerId],
