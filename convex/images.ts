@@ -1,7 +1,17 @@
 "use node";
 
-import { action, query } from "./_generated/server";
+import { action } from "./_generated/server";
 import { v } from "convex/values";
+
+interface UnsplashPhoto {
+  urls: { regular: string };
+  user: { name: string; links: { html: string } };
+  links: { html: string; download_location: string };
+}
+
+interface UnsplashSearchResponse {
+  results: UnsplashPhoto[];
+}
 
 interface UnsplashImage {
   url: string;
@@ -33,7 +43,7 @@ async function fetchUnsplashImage(query: string): Promise<UnsplashImage | null> 
       return null;
     }
 
-    const data = await response.json() as any;
+    const data = await response.json() as UnsplashSearchResponse;
     if (!data.results || data.results.length === 0) {
       return null;
     }
@@ -103,12 +113,12 @@ export const getDestinationImages = action({
         return [];
       }
 
-      const data = await response.json() as any;
+      const data = await response.json() as UnsplashSearchResponse;
       if (!data.results) {
         return [];
       }
 
-      return data.results.map((photo: any) => ({
+      return data.results.map((photo: UnsplashPhoto) => ({
         url: photo.urls.regular,
         photographer: photo.user.name,
         attribution: photo.links.html,

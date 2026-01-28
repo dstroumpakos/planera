@@ -5,7 +5,6 @@
 
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
 
 // ============================================================================
 // Internal: Create a new booking draft

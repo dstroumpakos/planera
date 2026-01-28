@@ -313,7 +313,7 @@ export const getUserFlightBookings = authQuery({
     isUpcoming: v.boolean(),
     isPast: v.boolean(),
   })),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const bookings = await ctx.db
       .query("flightBookings")
       .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))

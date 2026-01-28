@@ -134,7 +134,9 @@ export async function generateRealisticFlights(
 // Helper to convert 12-hour time to 24-hour format
 export function convertTo24Hour(time12h: string): string {
     const [time, period] = time12h.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
+    const [hoursStr, minutesStr] = time.split(':');
+    let hours = Number(hoursStr);
+    const minutes = Number(minutesStr);
     
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
@@ -177,6 +179,7 @@ export function getRealisticAirlinesForRoute(originCode: string, destCode: strin
     let region = "EU";
     if (usCodes.includes(originCode) || usCodes.includes(destCode)) region = "US";
     if (asiaCodes.includes(originCode) || asiaCodes.includes(destCode)) region = "ASIA";
+    if (euCodes.includes(originCode) || euCodes.includes(destCode)) region = "EU";
 
     return airlinesByRegion[region] || airlinesByRegion["EU"];
 }

@@ -173,7 +173,11 @@ export const createFlightBooking = action({
       }
 
       // Get passenger IDs from the offer
-      const offerPassengerIds = offer.passengers?.map((p: any) => p.id) || [];
+      interface OfferPassenger {
+        id: string;
+        type?: string;
+      }
+      const offerPassengerIds = (offer.passengers as OfferPassenger[] | undefined)?.map((p) => p.id) || [];
 
       // Transform passengers to Duffel format, mapping to offer passenger IDs
       const duffelPassengers = args.passengers.map((p, index) => ({

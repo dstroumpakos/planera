@@ -10,11 +10,61 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { makeFunctionReference } from "convex/server";
 
+// Define the booking structure returned by getBookingForEmail
+interface BookingForEmail {
+  bookingReference: string;
+  outboundFlight: {
+    airline: string;
+    flightNumber: string;
+    departure: string;
+    arrival: string;
+    departureDate: string;
+    departureAirport?: string;
+    arrivalAirport?: string;
+    origin: string;
+    destination: string;
+    duration?: string;
+    cabinClass?: string;
+  };
+  returnFlight?: {
+    airline: string;
+    flightNumber: string;
+    departure: string;
+    arrival: string;
+    departureDate: string;
+    departureAirport?: string;
+    arrivalAirport?: string;
+    origin: string;
+    destination: string;
+    duration?: string;
+    cabinClass?: string;
+  };
+  passengers: Array<{
+    givenName: string;
+    familyName: string;
+    email?: string;
+  }>;
+  totalAmount: number;
+  currency: string;
+  policies?: {
+    canChange: boolean;
+    canRefund: boolean;
+    changePolicy: string;
+    refundPolicy: string;
+  };
+  includedBaggage?: Array<{
+    passengerName?: string;
+    cabinBags?: bigint;
+    checkedBags?: bigint;
+  }>;
+  confirmationEmailSentAt?: number;
+}
+
 // Create typed function references to avoid circular dependency issues
 const getBookingForEmailRef = makeFunctionReference<
   "query",
   { bookingId: Id<"flightBookings"> },
-  any
+  BookingForEmail | null
 >("emailHelpers:getBookingForEmail");
 
 const markConfirmationEmailSentRef = makeFunctionReference<

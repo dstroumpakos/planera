@@ -162,7 +162,8 @@ export const update = authMutation({
       }
     }
 
-    const { id, ...updateData } = args;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _unusedId, ...updateData } = args;
     await ctx.db.patch(args.id, {
       ...updateData,
       updatedAt: Date.now(),

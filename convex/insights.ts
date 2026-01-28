@@ -13,7 +13,7 @@ export const getCompletedTrips = authQuery({
         endDate: v.float64(),
         travelers: v.float64(),
     })),
-    handler: async (ctx, args) => {
+    handler: async (ctx) => {
         if (!ctx.user) {
             return [];
         }

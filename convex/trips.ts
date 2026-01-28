@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
 import { internalMutation, internalQuery, query } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 export const create = authMutation({
     args: {
@@ -500,8 +500,8 @@ export const getAllDestinations = query({
         });
 
         // Convert to array and sort by count (most popular first)
-        const allDestinations = Object.entries(destinationMap)
-            .map(([_, data]) => ({
+        const allDestinations = Object.values(destinationMap)
+            .map((data) => ({
                 destination: data.displayName,
                 count: data.count,
                 avgBudget: data.budgets.length > 0 

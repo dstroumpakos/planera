@@ -91,7 +91,16 @@ export async function fetchUnsplashImages(query: string, count: number = 5): Pro
 
     const data = await response.json();
 
-    return data.results.map((photo: any) => ({
+    interface UnsplashPhotoResult {
+      id: string;
+      urls: { regular: string };
+      description: string | null;
+      alt_description: string | null;
+      user: { name: string; links: { html: string } };
+      links: { download_location: string };
+    }
+
+    return data.results.map((photo: UnsplashPhotoResult) => ({
       id: photo.id,
       url: photo.urls.regular,
       description: photo.description || photo.alt_description,

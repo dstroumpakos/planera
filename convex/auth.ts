@@ -4,7 +4,6 @@ import { betterAuth } from "better-auth";
 import { expo } from "@better-auth/expo";
 import { components, internal } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
-import { query } from "./_generated/server";
 import { anonymous } from "better-auth/plugins";
 
 const authFunctions: AuthFunctions = internal.auth;
@@ -30,7 +29,7 @@ export const createAuth = (
     const appleClientId = process.env.APPLE_CLIENT_ID;
     const appleClientSecret = process.env.APPLE_CLIENT_SECRET;
 
-    const socialProviders: any = {};
+    const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
 
     if (googleClientId && googleClientSecret) {
         socialProviders.google = {

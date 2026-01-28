@@ -1,6 +1,5 @@
-import { query, mutation, internalQuery } from "./_generated/server";
+import { mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
 
 // Flight item structure for the flights array
 const flightItemValidator = v.object({

@@ -10,11 +10,50 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { makeFunctionReference } from "convex/server";
 
+// Define the booking structure returned by getBookingForEmail
+interface BookingForEmail {
+  bookingReference: string;
+  outboundFlight: {
+    airline: string;
+    flightNumber?: string;
+    departure?: string;
+    arrival?: string;
+    departureDate: string;
+    departureTime?: string;
+    arrivalTime?: string;
+    departureAirport?: string;
+    arrivalAirport?: string;
+    origin: string;
+    destination: string;
+  };
+  returnFlight?: {
+    airline: string;
+    flightNumber?: string;
+    departure?: string;
+    arrival?: string;
+    departureDate: string;
+    departureTime?: string;
+    arrivalTime?: string;
+    departureAirport?: string;
+    arrivalAirport?: string;
+    origin: string;
+    destination: string;
+  };
+  passengers: Array<{
+    givenName: string;
+    familyName: string;
+    email?: string;
+  }>;
+  totalAmount: number;
+  currency: string;
+  confirmationEmailSentAt?: number;
+}
+
 // Create typed function references
 const getBookingForEmailRef = makeFunctionReference<
   "query",
   { bookingId: Id<"flightBookings"> },
-  any
+  BookingForEmail | null
 >("emailHelpers:getBookingForEmail");
 
 const markConfirmationEmailSentRef = makeFunctionReference<
@@ -26,7 +65,7 @@ const markConfirmationEmailSentRef = makeFunctionReference<
 // Function reference for sendTemplateEmail (to avoid circular reference)
 const sendTemplateEmailRef = makeFunctionReference<
   "action",
-  { to: string; templateAlias: string; templateModel: any },
+  { to: string; templateAlias: string; templateModel: Record<string, string> },
   { success: boolean; messageId?: string; errorCode?: number; error?: string }
 >("postmark:sendTemplateEmail");
 
@@ -36,51 +75,15 @@ const SENDER_EMAIL = "Planera <support@planeraai.app>";
 const MESSAGE_STREAM = "outbound";
 
 /**
- * Receipt template model interface
+ * Receipt template model type - uses Record for compatibility
  */
-interface ReceiptTemplateModel {
-  product_url: string;
-  product_name: string;
-  pnr: string;
-  airline: string;
-
-  outbound_date: string;
-  outbound_depart_time: string;
-  outbound_depart_airport: string;
-  outbound_stops: string;
-  outbound_arrive_time: string;
-  outbound_arrive_airport: string;
-  outbound_flight_number: string;
-
-  return_date: string;
-  return_depart_time: string;
-  return_depart_airport: string;
-  return_stops: string;
-  return_arrive_time: string;
-  return_arrive_airport: string;
-  return_flight_number: string;
-
-  passenger_name: string;
-  total_paid: string;
-
-  view_booking_url: string;
-  download_pdf_url: string;
-  add_to_calendar_url: string;
-
-  company_name: string;
-  company_address: string;
-
-  receipt_id: string;
-  date: string;
-
-  support_url: string;
-}
+type ReceiptTemplateModel = Record<string, string>;
 
 /**
  * Validate required template model keys
  */
 function validateTemplateModel(model: Record<string, string>): string[] {
-  const requiredKeys: (keyof ReceiptTemplateModel)[] = [
+  const requiredKeys: string[] = [
     "product_url",
     "product_name",
     "pnr",
@@ -132,7 +135,7 @@ function formatDisplayDate(dateString: string): string {
 /**
  * Format time from ISO string (e.g., "14:30")
  */
-function formatTime(isoString: string): string {
+function formatTime(isoString: string | undefined): string {
   if (!isoString) return "";
   try {
     const date = new Date(isoString);
@@ -171,7 +174,7 @@ export const sendTemplateEmail = internalAction({
   args: {
     to: v.string(),
     templateAlias: v.string(),
-    templateModel: v.any(),
+    templateModel: v.record(v.string(), v.string()),
   },
   returns: v.object({
     success: v.boolean(),
@@ -254,7 +257,7 @@ export const sendBookingReceiptEmail = internalAction({
     alreadySent: v.optional(v.boolean()),
     messageId: v.optional(v.string()),
     error: v.optional(v.string()),
-    templateModel: v.optional(v.any()),
+    templateModel: v.optional(v.record(v.string(), v.string())),
     bookingUrl: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
@@ -319,13 +322,13 @@ export const sendBookingReceiptEmail = internalAction({
         outbound_flight_number: outbound.flightNumber || "",
 
         // Return flight (empty strings if one-way)
-        return_date: isRoundTrip ? formatDisplayDate(returnFlight.departureDate) : "",
-        return_depart_time: isRoundTrip ? (returnFlight.departure || formatTime(returnFlight.departureTime)) : "",
-        return_depart_airport: isRoundTrip ? (returnFlight.departureAirport || returnFlight.origin || "") : "",
+        return_date: isRoundTrip && returnFlight ? formatDisplayDate(returnFlight.departureDate) : "",
+        return_depart_time: isRoundTrip && returnFlight ? (returnFlight.departure || formatTime(returnFlight.departureTime)) : "",
+        return_depart_airport: isRoundTrip && returnFlight ? (returnFlight.departureAirport || returnFlight.origin || "") : "",
         return_stops: isRoundTrip ? "Direct" : "",
-        return_arrive_time: isRoundTrip ? (returnFlight.arrival || formatTime(returnFlight.arrivalTime)) : "",
-        return_arrive_airport: isRoundTrip ? (returnFlight.arrivalAirport || returnFlight.destination || "") : "",
-        return_flight_number: isRoundTrip ? (returnFlight.flightNumber || "") : "",
+        return_arrive_time: isRoundTrip && returnFlight ? (returnFlight.arrival || formatTime(returnFlight.arrivalTime)) : "",
+        return_arrive_airport: isRoundTrip && returnFlight ? (returnFlight.arrivalAirport || returnFlight.destination || "") : "",
+        return_flight_number: isRoundTrip && returnFlight ? (returnFlight.flightNumber || "") : "",
 
         // Passenger and payment
         passenger_name: `${primaryPassenger.givenName} ${primaryPassenger.familyName}`.toUpperCase(),
@@ -399,7 +402,7 @@ export const testReceiptEmail = action({
     success: v.boolean(),
     messageId: v.optional(v.string()),
     error: v.optional(v.string()),
-    templateModel: v.optional(v.any()),
+    templateModel: v.optional(v.record(v.string(), v.string())),
   }),
   handler: async (ctx, args) => {
     console.log(`🧪 [POSTMARK] Testing receipt email to ${args.to}`);

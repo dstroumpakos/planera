@@ -66,7 +66,7 @@ export default function TabLayout() {
                 name="create"
                 options={{
                     title: "",
-                    tabBarIcon: ({ focused }) => (
+                    tabBarIcon: () => (
                         <View style={[styles.createButton, { backgroundColor: colors.primary }]}>
                             <Ionicons name="add" size={28} color={colors.text} />
                         </View>

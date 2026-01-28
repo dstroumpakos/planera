@@ -17,16 +17,40 @@ function getHeaders(config: { accessToken: string }) {
   };
 }
 
-// Helper to calculate age from date of birth
-function calculateAgeFromDOB(dateOfBirth: string): number {
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
+// Define interface for Duffel offer structure
+interface DuffelOffer {
+  id: string;
+  owner?: {
+    iata_code?: string;
+    name?: string;
+    website_url?: string;
+  };
+  total_amount?: string;
+  total_currency?: string;
+  passengers?: Array<{ id: string; age?: number }>;
+  slices?: DuffelSlice[];
+}
+
+interface DuffelSlice {
+  departure_time?: string;
+  arrival_time?: string;
+  duration?: string;
+  departure_date?: string;
+  origin?: { iata_code?: string };
+  destination?: { iata_code?: string };
+  origin_airport_iata_code?: string;
+  destination_airport_iata_code?: string;
+  segments?: DuffelSegment[];
+}
+
+interface DuffelSegment {
+  operating_carrier?: {
+    name?: string;
+    iata_code?: string;
+  };
+  operating_carrier_flight_number?: string;
+  departing_at?: string;
+  arriving_at?: string;
 }
 
 export async function createOfferRequest(params: {
@@ -117,7 +141,7 @@ export async function createOfferRequest(params: {
     }
 
     // Filter for Duffel Airways (ZZ) test offers only - enables safe end-to-end booking flow in sandbox
-    const duffelAirwaysOffers = offers.filter((offer: any) => {
+    const duffelAirwaysOffers = offers.filter((offer: DuffelOffer) => {
       const ownerIataCode = offer.owner?.iata_code;
       const ownerName = offer.owner?.name;
       return ownerIataCode === "ZZ" || ownerName === "Duffel Airways";
@@ -143,7 +167,7 @@ function formatTime(isoString: string): string {
     const period = hours >= 12 ? 'PM' : 'AM';
     const hours12 = hours % 12 || 12;
     return `${String(hours12).padStart(2, '0')}:${minutesStr} ${period}`;
-  } catch (e) {
+  } catch {
     return isoString;
   }
 }
@@ -157,12 +181,12 @@ function formatDuration(isoDuration: string): string {
     const hours = match[1] ? match[1].replace('H', 'h') : '';
     const minutes = match[2] ? match[2].replace('M', 'm') : '';
     return `${hours} ${minutes}`.trim();
-  } catch (e) {
+  } catch {
     return isoDuration;
   }
 }
 
-export function transformOfferToFlightOption(offer: any) {
+export function transformOfferToFlightOption(offer: DuffelOffer) {
   const slices = offer.slices || [];
   const outbound = slices[0];
   const return_slice = slices[1];

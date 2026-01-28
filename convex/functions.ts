@@ -18,7 +18,7 @@ export const authQuery = customQuery(
         let user;
         try {
             user = await authComponent.getAuthUser(ctx);
-        } catch (e) {
+        } catch {
             user = null;
         }
         if (!user) throw new ConvexError("Authentication required");
@@ -36,7 +36,7 @@ export const authMutation = customMutation(
         let user;
         try {
             user = await authComponent.getAuthUser(ctx);
-        } catch (e) {
+        } catch {
             user = null;
         }
         if (!user) throw new ConvexError("Authentication required");
@@ -50,7 +50,7 @@ export const authAction = customAction(
         let user;
         try {
             user = await authComponent.getAuthUser(ctx);
-        } catch (e) {
+        } catch {
             user = null;
         }
         if (!user) throw new ConvexError("Authentication required");
