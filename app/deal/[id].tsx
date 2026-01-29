@@ -1,11 +1,11 @@
-
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { DEALS } from "@/lib/data";
 
-const { width } = Dimensions.get("window");
+// NOTE: Using fixed width for hotel cards instead of Dimensions
+// This avoids top-level native API calls
 
 export default function DealDetails() {
     const { id } = useLocalSearchParams();
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     hotelCard: {
-        width: width * 0.7,
+        width: "100%",
         backgroundColor: "white",
         borderRadius: 16,
         overflow: "hidden",

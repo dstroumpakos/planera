@@ -1,15 +1,13 @@
-import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform, Dimensions } from "react-native";
-import { Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "@/lib/auth-components";
+import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { Authenticated, Unauthenticated, AuthLoading } from "@/lib/auth-components";
 import { authClient } from "@/lib/auth-client";
 import { Redirect, useRouter } from "expo-router";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme, LIGHT_COLORS } from "@/lib/ThemeContext";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-
-const { width } = Dimensions.get("window");
 
 // Fallback colors for when theme is not available (e.g., during initial load)
 const COLORS = LIGHT_COLORS;

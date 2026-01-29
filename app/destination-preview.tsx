@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,8 +8,6 @@ import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/lib/ThemeContext";
-
-const { width } = Dimensions.get("window");
 
 // Destination highlights data
 const DESTINATION_HIGHLIGHTS: Record<string, { emoji: string; highlights: string[]; bestFor: string[]; bestTime: string }> = {

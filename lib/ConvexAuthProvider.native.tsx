@@ -79,18 +79,30 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
     user: null,
   });
 
-  // Check session on mount
+  // Initialize auth and check session on mount
   useEffect(() => {
     let mounted = true;
+    console.log("[BOOT_AUTH_01] ConvexNativeAuthProvider useEffect starting");
 
-    const checkSession = async () => {
+    const initAndCheckSession = async () => {
       try {
+        // CRITICAL: Initialize auth client first (loads from SecureStore)
+        console.log("[BOOT_AUTH_02] Calling authClient.init()...");
+        await authClient.init();
+        console.log("[BOOT_AUTH_03] authClient.init() complete");
+
+        if (!mounted) return;
+
+        // Now check session with server
+        console.log("[BOOT_AUTH_04] Checking session with server...");
         const result = await authClient.getSession();
-        
+        console.log("[BOOT_AUTH_05] Session check complete");
+
         if (!mounted) return;
 
         if (result.data?.session && result.data?.user) {
           const userData = result.data.user;
+          console.log("[BOOT_AUTH_06] User authenticated:", userData.email || userData.id);
           setAuthState({
             isAuthenticated: true,
             isLoading: false,
@@ -103,6 +115,7 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
             },
           });
         } else {
+          console.log("[BOOT_AUTH_06] No authenticated user");
           setAuthState({
             isAuthenticated: false,
             isLoading: false,
@@ -110,7 +123,7 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
           });
         }
       } catch (error) {
-        console.error("[Auth] Session check failed:", error);
+        console.error("[BOOT_AUTH_ERROR] Session check failed:", error);
         if (mounted) {
           setAuthState({
             isAuthenticated: false,
@@ -121,7 +134,7 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
       }
     };
 
-    checkSession();
+    initAndCheckSession();
 
     // Subscribe to session changes via store
     const unsubscribe = authClient.$store.listen((sessionState) => {

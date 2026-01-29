@@ -2,14 +2,16 @@
 // This file is used on iOS/Android to avoid importing better-auth directly
 // which contains webpack-style dynamic imports that crash Hermes
 
+// CRITICAL: NO native module calls at module scope!
+// All native API calls must happen inside functions called after React mounts.
+
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 
-// Storage keys
-const STORAGE_PREFIX = Constants.expoConfig?.scheme || "planera";
-const SESSION_KEY = `${STORAGE_PREFIX}_session`;
-const TOKEN_KEY = `${STORAGE_PREFIX}_token`;
+// Storage keys - these are safe at module scope (just strings)
+const getStoragePrefix = () => Constants.expoConfig?.scheme || "planera";
+const getSessionKey = () => `${getStoragePrefix()}_session`;
+const getTokenKey = () => `${getStoragePrefix()}_token`;
 
 // Get the base URL for auth requests
 const BASE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
@@ -43,7 +45,7 @@ export interface SessionData {
   user: AuthUser | null;
 }
 
-// Helper to safely access SecureStore
+// Helper to safely access SecureStore - ONLY call after mount
 async function getSecureItem(key: string): Promise<string | null> {
   try {
     return await SecureStore.getItemAsync(key);
@@ -69,9 +71,9 @@ async function deleteSecureItem(key: string): Promise<void> {
   }
 }
 
-// Get stored token
+// Get stored token - ONLY call after mount
 async function getStoredToken(): Promise<string | null> {
-  return getSecureItem(TOKEN_KEY);
+  return getSecureItem(getTokenKey());
 }
 
 // Make authenticated fetch request
@@ -121,6 +123,8 @@ function createNativeAuthClient() {
   // Session state listeners
   const listeners: Set<(session: SessionData | null) => void> = new Set();
   let currentSession: SessionData | null = null;
+  let initialized = false;
+  let initPromise: Promise<void> | null = null;
 
   const notifyListeners = (session: SessionData | null) => {
     currentSession = session;
@@ -129,38 +133,62 @@ function createNativeAuthClient() {
 
   // Store session data
   const storeSession = async (session: AuthSession, user: AuthUser) => {
-    await setSecureItem(SESSION_KEY, JSON.stringify({ session, user }));
+    await setSecureItem(getSessionKey(), JSON.stringify({ session, user }));
     if (session.token) {
-      await setSecureItem(TOKEN_KEY, session.token);
+      await setSecureItem(getTokenKey(), session.token);
     }
     notifyListeners({ session, user });
   };
 
   // Clear session data
   const clearSession = async () => {
-    await deleteSecureItem(SESSION_KEY);
-    await deleteSecureItem(TOKEN_KEY);
+    await deleteSecureItem(getSessionKey());
+    await deleteSecureItem(getTokenKey());
     notifyListeners(null);
   };
 
-  // Load stored session on init
+  // Load stored session - ONLY called after explicit init or first use
   const loadStoredSession = async () => {
+    if (initialized) return;
+    initialized = true;
+    
     try {
-      const stored = await getSecureItem(SESSION_KEY);
+      console.log("[Auth] Loading stored session...");
+      const stored = await getSecureItem(getSessionKey());
       if (stored) {
         const parsed = JSON.parse(stored);
         currentSession = parsed;
         notifyListeners(parsed);
+        console.log("[Auth] Restored session from storage");
+      } else {
+        console.log("[Auth] No stored session found");
       }
     } catch (error) {
       console.warn("[Auth] Failed to load stored session:", error);
     }
   };
 
-  // Initialize by loading stored session
-  loadStoredSession();
+  // Ensure initialized before any operation
+  const ensureInit = async () => {
+    if (!initPromise) {
+      initPromise = loadStoredSession();
+    }
+    await initPromise;
+  };
+
+  // Explicit init function - call from useEffect in root component
+  const init = async () => {
+    console.log("[Auth] Explicit init called");
+    await ensureInit();
+  };
+
+  // DO NOT call loadStoredSession() here at module scope!
+  // It will be called lazily on first use or via explicit init()
 
   return {
+    // Explicit initialization - call from useEffect
+    init,
+
     // Sign in with email/password
     signIn: {
       email: async ({
@@ -170,6 +198,7 @@ function createNativeAuthClient() {
         email: string;
         password: string;
       }): Promise<AuthResponse<SessionData>> => {
+        await ensureInit();
         const response = await authFetch<any>("/api/auth/sign-in/email", {
           method: "POST",
           body: JSON.stringify({ email, password }),
@@ -191,6 +220,7 @@ function createNativeAuthClient() {
         provider: string;
         callbackURL?: string;
       }): Promise<AuthResponse<{ url: string }>> => {
+        await ensureInit();
         const scheme = Constants.expoConfig?.scheme || "planera";
         const redirectURL = callbackURL || `${scheme}://`;
         
@@ -212,6 +242,7 @@ function createNativeAuthClient() {
 
       // Anonymous sign in
       anonymous: async (): Promise<AuthResponse<SessionData>> => {
+        await ensureInit();
         const response = await authFetch<any>("/api/auth/sign-in/anonymous", {
           method: "POST",
           body: JSON.stringify({}),
@@ -237,6 +268,7 @@ function createNativeAuthClient() {
         password: string;
         name?: string;
       }): Promise<AuthResponse<SessionData>> => {
+        await ensureInit();
         const response = await authFetch<any>("/api/auth/sign-up/email", {
           method: "POST",
           body: JSON.stringify({ email, password, name }),
@@ -253,6 +285,7 @@ function createNativeAuthClient() {
 
     // Sign out
     signOut: async (): Promise<AuthResponse<null>> => {
+      await ensureInit();
       try {
         await authFetch("/api/auth/sign-out", { method: "POST" });
       } catch (error) {
@@ -264,6 +297,7 @@ function createNativeAuthClient() {
 
     // Get current session
     getSession: async (): Promise<AuthResponse<SessionData>> => {
+      await ensureInit();
       const response = await authFetch<SessionData>("/api/auth/get-session", {
         method: "GET",
       });
@@ -315,4 +349,5 @@ function createNativeAuthClient() {
 }
 
 // Export the auth client singleton
+// CRITICAL: createNativeAuthClient() no longer calls SecureStore at import time
 export const authClient = createNativeAuthClient();

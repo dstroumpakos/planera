@@ -1,7 +1,7 @@
 // BOOT_01: Module load start
 console.log("[BOOT_01] _layout.tsx module loading...");
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 
 console.log("[BOOT_02] React Native imports loaded");
@@ -22,7 +22,7 @@ import { ConvexNativeAuthProvider } from "@/lib/ConvexAuthProvider";
 
 console.log("[BOOT_05] ConvexNativeAuthProvider loaded");
 
-// Environment validation
+// Environment validation - safe at module scope (just reads process.env)
 function validateEnvironment(): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
     
@@ -93,43 +93,74 @@ const envStyles = StyleSheet.create({
     },
 });
 
-// Create Convex client with error handling
-let convex: ConvexReactClient | null = null;
-try {
-    if (process.env.EXPO_PUBLIC_CONVEX_URL) {
-        convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL, {
-            unsavedChangesWarning: false,
-        });
-    }
-} catch (error) {
-    console.error("[App] Failed to create Convex client:", error);
-}
+console.log("[BOOT_06] Module scope complete - no native calls made");
+
+// CRITICAL: Do NOT create Convex client at module scope!
+// This will be done inside the component after mount.
 
 export default function RootLayout() {
+    console.log("[BOOT_07] RootLayout function called");
+    
     const [envCheck, setEnvCheck] = useState<{ valid: boolean; errors: string[] } | null>(null);
+    const [convex, setConvex] = useState<ConvexReactClient | null>(null);
+    const [initError, setInitError] = useState<string | null>(null);
+    const initRef = useRef(false);
 
     useEffect(() => {
-        // Validate environment on mount
+        // Prevent double initialization in strict mode
+        if (initRef.current) return;
+        initRef.current = true;
+        
+        console.log("[BOOT_08] RootLayout useEffect - initializing...");
+        
+        // Validate environment
         const result = validateEnvironment();
         setEnvCheck(result);
         
         if (!result.valid) {
-            console.error("[App] Environment validation failed:", result.errors);
+            console.error("[BOOT_08a] Environment validation failed:", result.errors);
+            return;
+        }
+        
+        console.log("[BOOT_09] Environment valid, creating Convex client...");
+        
+        // Create Convex client inside useEffect (after mount)
+        try {
+            const client = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
+                unsavedChangesWarning: false,
+            });
+            setConvex(client);
+            console.log("[BOOT_10] Convex client created successfully");
+        } catch (error) {
+            console.error("[BOOT_10_ERROR] Failed to create Convex client:", error);
+            setInitError(error instanceof Error ? error.message : "Unknown error");
         }
     }, []);
 
     // Show loading while checking environment
-    if (envCheck === null) {
+    if (envCheck === null || (envCheck.valid && convex === null && !initError)) {
+        console.log("[BOOT] Showing loading screen...");
         return (
-            <View style={{ flex: 1, backgroundColor: "#FFF8E7" }} />
+            <View style={{ flex: 1, backgroundColor: "#FFF8E7", justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ color: "#666", fontSize: 16 }}>Loading...</Text>
+            </View>
         );
     }
 
     // Show error if environment is invalid
-    if (!envCheck.valid || !convex) {
+    if (!envCheck.valid) {
+        console.log("[BOOT] Showing environment error screen");
         return <EnvironmentError errors={envCheck.errors} />;
     }
 
+    // Show error if Convex client failed to create
+    if (initError || !convex) {
+        console.log("[BOOT] Showing init error screen");
+        return <EnvironmentError errors={[initError || "Failed to initialize app"]} />;
+    }
+
+    console.log("[BOOT] Rendering app with providers");
+    
     // Render app with unified auth provider
     // ConvexNativeAuthProvider resolves to:
     // - Native: lib/ConvexAuthProvider.native.tsx (no better-auth imports)
