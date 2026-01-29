@@ -45,14 +45,15 @@ const EMPTY_SHIM = path.resolve(__dirname, "shims/empty-module.native.js");
 
 // =================================================================================
 // BLOCKLIST - Regex patterns to completely exclude from bundling
+// All patterns must have NO FLAGS to avoid Metro regex combination errors
 // =================================================================================
 defaultConfig.resolver.blockList = [
   // Block all better-auth internal files that might contain problematic code
   /node_modules\/better-auth\/dist\/db\/.*/,
   /node_modules\/better-auth\/dist\/cli\/.*/,
   /node_modules\/better-auth\/dist\/adapters\/.*/,
-  /node_modules\/better-auth\/dist\/api\/routes\/.*migration.*/,
-  /node_modules\/better-auth\/.*migration.*/i,
+  /node_modules\/better-auth\/dist\/api\/routes\/.*[Mm]igration.*/,
+  /node_modules\/better-auth\/.*[Mm]igration.*/,
   /node_modules\/better-auth\/.*internal-adapter.*/,
   // Block test files
   /node_modules\/better-auth\/.*\.(test|spec)\.[jt]sx?$/,
