@@ -1,142 +1,208 @@
 // metro.config.js
+// =================================================================================
+// FIX FOR iOS EAS BUILD FAILURE - HERMES CANNOT PARSE WEBPACK DYNAMIC IMPORTS
+// =================================================================================
+// 
+// Root Cause:
+// better-auth contains server-side migration code with:
+//   import(/* webpackIgnore: true */ path.join(migrationFolder, fileName))
+// 
+// This webpack-style dynamic import syntax is invalid in Hermes/Metro.
+// Even though our app only uses client-side better-auth APIs, Metro's bundler
+// traverses ALL exports and dependencies, pulling in the problematic server code.
+//
+// Solution:
+// 1. Hard-alias better-auth modules to native stubs via extraNodeModules
+// 2. Block problematic paths via blockList regex
+// 3. Intercept resolution with custom resolveRequest
+// =================================================================================
+
 const { getDefaultConfig } = require("@expo/metro-config");
 const path = require("path");
-const fs = require("fs");
 
 const defaultConfig = getDefaultConfig(__dirname);
 
+// Enable package exports for proper ESM/CJS resolution
 defaultConfig.resolver.unstable_enablePackageExports = true;
 
-// FIX FOR iOS EAS BUILD FAILURE
-// =============================
-// better-auth contains server-side code with dynamic imports that Hermes cannot parse.
-// We intercept and stub out ALL problematic modules before they enter the bundle.
+// =================================================================================
+// SHIM PATHS - Pure CommonJS stubs that replace better-auth on native
+// =================================================================================
+const SHIMS = {
+  "better-auth": path.resolve(__dirname, "shims/better-auth.native.js"),
+  "better-auth/react": path.resolve(__dirname, "shims/better-auth-react.native.js"),
+  "better-auth/client/plugins": path.resolve(__dirname, "shims/better-auth-client-plugins.native.js"),
+  "better-auth/plugins": path.resolve(__dirname, "shims/better-auth-plugins.native.js"),
+  // Catch-all for any other better-auth subpaths
+  "better-auth/client": path.resolve(__dirname, "shims/empty-module.native.js"),
+  "better-auth/db": path.resolve(__dirname, "shims/empty-module.native.js"),
+  "better-auth/adapters": path.resolve(__dirname, "shims/empty-module.native.js"),
+  "better-auth/cli": path.resolve(__dirname, "shims/empty-module.native.js"),
+  "better-auth/api": path.resolve(__dirname, "shims/empty-module.native.js"),
+};
 
-// Paths to our minimal stubs
-const MIGRATION_STUB = path.resolve(__dirname, "shims/better-auth-migrations.native.js");
-const DB_STUB = path.resolve(__dirname, "shims/better-auth-db.native.js");
-const EMPTY_STUB = path.resolve(__dirname, "shims/empty.js");
+const EMPTY_SHIM = path.resolve(__dirname, "shims/empty-module.native.js");
 
-// Store the original resolver
+// =================================================================================
+// BLOCKLIST - Regex patterns to completely exclude from bundling
+// =================================================================================
+defaultConfig.resolver.blockList = [
+  // Block all better-auth internal files that might contain problematic code
+  /node_modules\/better-auth\/dist\/db\/.*/,
+  /node_modules\/better-auth\/dist\/cli\/.*/,
+  /node_modules\/better-auth\/dist\/adapters\/.*/,
+  /node_modules\/better-auth\/dist\/api\/routes\/.*migration.*/,
+  /node_modules\/better-auth\/.*migration.*/i,
+  /node_modules\/better-auth\/.*internal-adapter.*/,
+  // Block test files
+  /node_modules\/better-auth\/.*\.(test|spec)\.[jt]sx?$/,
+];
+
+// =================================================================================
+// EXTRA NODE MODULES - Hard aliases that take precedence
+// =================================================================================
+// Note: extraNodeModules doesn't support platform-specific aliases directly,
+// so we handle this in resolveRequest instead
+defaultConfig.resolver.extraNodeModules = {
+  ...defaultConfig.resolver.extraNodeModules,
+};
+
+// =================================================================================
+// CUSTOM RESOLVER - Intercepts and redirects better-auth imports on native
+// =================================================================================
 const originalResolveRequest = defaultConfig.resolver.resolveRequest;
 
-// Files known to contain problematic dynamic imports
-const PROBLEMATIC_FILES = [
-    "internal-adapter",
-    "get-migration",
-    "run-migration", 
-    "migration-",
-    "migrations",
-    "/cli/",
-];
-
 defaultConfig.resolver.resolveRequest = (context, moduleName, platform) => {
-    const isNative = platform === "ios" || platform === "android";
-    
-    if (isNative) {
-        // Check module name for problematic patterns
-        const moduleNameLower = moduleName.toLowerCase();
-        
-        // Intercept any better-auth migration/db internal imports
-        if (moduleName.includes("better-auth")) {
-            for (const pattern of PROBLEMATIC_FILES) {
-                if (moduleNameLower.includes(pattern.toLowerCase())) {
-                    return {
-                        filePath: MIGRATION_STUB,
-                        type: "sourceFile",
-                    };
-                }
-            }
-        }
-        
-        // Use original resolver first to get the actual file path
-        let resolution;
-        try {
-            if (originalResolveRequest) {
-                resolution = originalResolveRequest(context, moduleName, platform);
-            } else {
-                resolution = context.resolveRequest(context, moduleName, platform);
-            }
-        } catch (e) {
-            // If resolution fails, return original error
-            throw e;
-        }
-        
-        // Check if the resolved file path contains problematic patterns
-        if (resolution && resolution.filePath) {
-            const filePath = resolution.filePath.toLowerCase();
-            
-            // Check if this is a better-auth file with problematic code
-            if (filePath.includes("better-auth")) {
-                for (const pattern of PROBLEMATIC_FILES) {
-                    if (filePath.includes(pattern.toLowerCase())) {
-                        return {
-                            filePath: MIGRATION_STUB,
-                            type: "sourceFile",
-                        };
-                    }
-                }
-                
-                // Extra safety: check file contents for the problematic pattern
-                if (resolution.filePath && fs.existsSync(resolution.filePath)) {
-                    try {
-                        const content = fs.readFileSync(resolution.filePath, "utf8");
-                        if (content.includes("webpackIgnore") || 
-                            content.includes("import(") && content.includes("path.join")) {
-                            return {
-                                filePath: MIGRATION_STUB,
-                                type: "sourceFile",
-                            };
-                        }
-                    } catch (e) {
-                        // Ignore read errors
-                    }
-                }
-            }
-        }
-        
-        return resolution;
+  const isNative = platform === "ios" || platform === "android";
+  
+  if (isNative) {
+    // STRATEGY 1: Exact module name match -> return shim immediately
+    if (SHIMS[moduleName]) {
+      console.log(`[SHIM] ${moduleName} -> ${path.basename(SHIMS[moduleName])}`);
+      return {
+        filePath: SHIMS[moduleName],
+        type: "sourceFile",
+      };
     }
     
-    // Default resolution for web
+    // STRATEGY 2: Any better-auth subpath not explicitly shimmed -> empty shim
+    if (moduleName.startsWith("better-auth/")) {
+      console.log(`[SHIM] ${moduleName} -> empty-module.native.js`);
+      return {
+        filePath: EMPTY_SHIM,
+        type: "sourceFile",
+      };
+    }
+    
+    // STRATEGY 3: Check if module name contains problematic patterns
+    const lowerModuleName = moduleName.toLowerCase();
+    if (
+      lowerModuleName.includes("better-auth") &&
+      (lowerModuleName.includes("migration") ||
+        lowerModuleName.includes("internal-adapter") ||
+        lowerModuleName.includes("/db/") ||
+        lowerModuleName.includes("/cli/") ||
+        lowerModuleName.includes("/adapters/"))
+    ) {
+      console.log(`[SHIM] ${moduleName} -> empty-module.native.js (pattern match)`);
+      return {
+        filePath: EMPTY_SHIM,
+        type: "sourceFile",
+      };
+    }
+  }
+  
+  // Use default resolution
+  let resolution;
+  try {
     if (originalResolveRequest) {
-        return originalResolveRequest(context, moduleName, platform);
+      resolution = originalResolveRequest(context, moduleName, platform);
+    } else {
+      resolution = context.resolveRequest(context, moduleName, platform);
     }
-    return context.resolveRequest(context, moduleName, platform);
+  } catch (error) {
+    throw error;
+  }
+  
+  // STRATEGY 4: Post-resolution check - if resolved path is in better-auth, redirect on native
+  if (isNative && resolution && resolution.filePath) {
+    const filePath = resolution.filePath;
+    const normalizedPath = filePath.replace(/\\/g, "/").toLowerCase();
+    
+    // Check if this resolves to better-auth package
+    if (normalizedPath.includes("node_modules/better-auth/")) {
+      // Check for specifically dangerous paths
+      if (
+        normalizedPath.includes("/db/") ||
+        normalizedPath.includes("/cli/") ||
+        normalizedPath.includes("/adapters/") ||
+        normalizedPath.includes("migration") ||
+        normalizedPath.includes("internal-adapter")
+      ) {
+        console.log(`[SHIM-POST] ${filePath} -> empty-module.native.js`);
+        return {
+          filePath: EMPTY_SHIM,
+          type: "sourceFile",
+        };
+      }
+    }
+  }
+  
+  return resolution;
 };
 
-// Block certain files from ever being resolved
-defaultConfig.resolver.blockList = [
-    /node_modules\/better-auth\/dist\/cli\//,
-    /node_modules\/better-auth\/.*\.test\./,
-    /node_modules\/better-auth\/.*\.spec\./,
+// =================================================================================
+// TRANSFORMER OPTIONS - Ensure Hermes compatibility
+// =================================================================================
+defaultConfig.transformer = {
+  ...defaultConfig.transformer,
+  getTransformOptions: async () => ({
+    transform: {
+      experimentalImportSupport: false,
+      inlineRequires: true,
+    },
+  }),
+  // Minifier config to ensure no invalid syntax passes through
+  minifierConfig: {
+    keep_classnames: true,
+    keep_fnames: true,
+    mangle: {
+      keep_classnames: true,
+      keep_fnames: true,
+    },
+  },
+};
+
+// =================================================================================
+// SOURCE EXTENSIONS - Prioritize .native.js files
+// =================================================================================
+defaultConfig.resolver.sourceExts = [
+  "native.js",
+  "native.jsx", 
+  "native.ts",
+  "native.tsx",
+  ...defaultConfig.resolver.sourceExts.filter(
+    (ext) => !ext.startsWith("native.")
+  ),
 ];
 
-// Ensure Hermes-compatible transformation
-defaultConfig.transformer = {
-    ...defaultConfig.transformer,
-    getTransformOptions: async () => ({
-        transform: {
-            experimentalImportSupport: false,
-            inlineRequires: true,
-        },
-    }),
-};
-
+// =================================================================================
+// FINAL EXPORT
+// =================================================================================
 module.exports = {
-    ...defaultConfig,
-    server: {
-        ...defaultConfig.server,
-        enhanceMiddleware: (middleware) => {
-            return (req, res, next) => {
-                req.setTimeout(30000);
-                res.setTimeout(30000);
-                return middleware(req, res, next);
-            };
-        },
+  ...defaultConfig,
+  server: {
+    ...defaultConfig.server,
+    enhanceMiddleware: (middleware) => {
+      return (req, res, next) => {
+        req.setTimeout(30000);
+        res.setTimeout(30000);
+        return middleware(req, res, next);
+      };
     },
-    watcher: {
-        ...defaultConfig.watcher,
-        unstable_lazySha1: true,
-    },
+  },
+  watcher: {
+    ...defaultConfig.watcher,
+    unstable_lazySha1: true,
+  },
 };
