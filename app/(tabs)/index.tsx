@@ -403,10 +403,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginHorizontal: 20,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
+    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.05)",
     elevation: 3,
   },
   searchIcon: {
@@ -440,9 +437,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 8,
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
     elevation: 2,
   },
   featureIcon: {
