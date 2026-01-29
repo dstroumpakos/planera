@@ -2,151 +2,192 @@
 /**
  * Fix better-auth for React Native/Hermes compatibility
  * 
- * This script patches better-auth to remove and neutralize code patterns
- * that cause iOS release builds to fail with Hermes:
+ * This script patches better-auth source files to remove/replace patterns
+ * that break iOS release builds. It runs automatically on postinstall.
  * 
- * 1. Removes @vite-ignore and webpackIgnore comments
- * 2. Neutralizes dynamic imports with expressions (path.join, variables)
- *    which Hermes cannot parse even without the comments
- * 3. Replaces migration-related dynamic imports with no-ops
+ * TARGET PATTERNS:
+ * - Dynamic imports with webpack pragma
+ * - path.join() inside import()
+ * - migrationFolder references (server-only)
  * 
- * Run this after installing packages:
- *   node scripts/fix-better-auth.js
+ * These patterns are valid JavaScript but Hermes cannot parse them.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const BETTER_AUTH_PATH = path.join(__dirname, '..', 'node_modules', 'better-auth');
+const BETTER_AUTH_PATH = path.join(process.cwd(), 'node_modules', 'better-auth');
+const BETTER_AUTH_DIST = path.join(BETTER_AUTH_PATH, 'dist');
 
-// Patterns to fix (order matters - comments first, then dynamic imports)
-const PATTERNS_TO_FIX = [
-    // 1. Remove @vite-ignore comments
-    { 
-        find: /\/\*\s*@vite-ignore\s*\*\//g, 
-        replace: '' 
-    },
-    // 2. Remove webpackIgnore comments  
-    { 
-        find: /\/\*\s*webpackIgnore:\s*true\s*\*\//g, 
-        replace: '' 
-    },
-    // 3. Neutralize dynamic imports with path.join (migration folder imports)
-    // Pattern: import(path.join(...)) or yield import(path.join(...))
-    // Replace with: Promise.resolve({}) to return empty module
+let filesPatched = 0;
+let patternsFixed = 0;
+
+/**
+ * Patterns to find and their replacements
+ */
+const PATCHES = [
     {
-        find: /yield\s+import\s*\(\s*path\.join\s*\([^)]+\)\s*\)/g,
-        replace: 'yield Promise.resolve({})'
+        // Pattern: import(/* webpackIgnore: true */ path.join(...))
+        // This is the exact pattern causing the iOS build failure
+        name: 'webpackIgnore dynamic import',
+        find: /import\s*\(\s*\/\*\s*webpackIgnore:\s*true\s*\*\/\s*[^)]+\.path\.join\s*\([^)]*\)\s*\)/g,
+        replace: 'Promise.resolve({})',
     },
     {
-        find: /import\s*\(\s*path\.join\s*\([^)]+\)\s*\)/g,
-        replace: 'Promise.resolve({})'
-    },
-    // 4. Neutralize dynamic imports with template literals
-    // Pattern: import(`...${...}...`) 
-    {
-        find: /yield\s+import\s*\(\s*`[^`]*\$\{[^}]+\}[^`]*`\s*\)/g,
-        replace: 'yield Promise.resolve({})'
+        // Pattern: import(/* @vite-ignore */ ...)
+        name: 'vite-ignore dynamic import',
+        find: /import\s*\(\s*\/\*\s*@vite-ignore\s*\*\/\s*[^)]+\)/g,
+        replace: 'Promise.resolve({})',
     },
     {
-        find: /import\s*\(\s*`[^`]*\$\{[^}]+\}[^`]*`\s*\)/g,
-        replace: 'Promise.resolve({})'
-    },
-    // 5. Neutralize dynamic imports with variable expressions (not string literals)
-    // Pattern: import(somePath) where somePath is a variable
-    // Be careful not to match import("static-string")
-    {
-        find: /yield\s+import\s*\(\s*([a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*)\s*\)/g,
-        replace: 'yield Promise.resolve({})'
-    },
-    // 6. Neutralize concatenated string imports: import(folder + "/" + file)
-    {
-        find: /yield\s+import\s*\(\s*[a-zA-Z_$][a-zA-Z0-9_$]*\s*\+[^)]+\)/g,
-        replace: 'yield Promise.resolve({})'
+        // Pattern: any dynamic import with path.join
+        name: 'path.join dynamic import',
+        find: /import\s*\(\s*[^)]*path\.join\s*\([^)]*\)\s*\)/g,
+        replace: 'Promise.resolve({})',
     },
     {
-        find: /import\s*\(\s*[a-zA-Z_$][a-zA-Z0-9_$]*\s*\+[^)]+\)/g,
-        replace: 'Promise.resolve({})'
+        // Pattern: require() with path.join for dynamic loading
+        name: 'path.join dynamic require',
+        find: /require\s*\(\s*[^)]*path\.join\s*\([^)]*migrationFolder[^)]*\)\s*\)/g,
+        replace: '({})',
+    },
+    {
+        // Pattern: async generator yields with dynamic imports
+        name: 'yield dynamic import',
+        find: /yield\s+import\s*\(\s*[^)]+\)/g,
+        replace: 'yield Promise.resolve({})',
     },
 ];
 
-let filesFixed = 0;
-let patternsFixed = 0;
-
-function fixFile(filePath) {
+/**
+ * Apply patches to a file
+ */
+function patchFile(filePath) {
+    if (!fs.existsSync(filePath)) return false;
+    
+    let content;
     try {
-        let content = fs.readFileSync(filePath, 'utf-8');
-        let modified = false;
-        
-        for (const { find, replace } of PATTERNS_TO_FIX) {
-            const matches = content.match(find);
-            if (matches) {
-                content = content.replace(find, replace);
-                modified = true;
-                patternsFixed += matches.length;
-                console.log(`    Found ${matches.length} match(es) for: ${find.toString().slice(0, 50)}...`);
-            }
-        }
-        
-        if (modified) {
-            fs.writeFileSync(filePath, content, 'utf-8');
-            filesFixed++;
-            console.log(`  ✓ Fixed: ${path.relative(BETTER_AUTH_PATH, filePath)}`);
-        }
-    } catch (err) {
-        console.error(`  ✗ Error processing ${filePath}: ${err.message}`);
+        content = fs.readFileSync(filePath, 'utf-8');
+    } catch (e) {
+        return false;
     }
+    
+    const originalContent = content;
+    const relativePath = path.relative(BETTER_AUTH_DIST, filePath);
+    
+    // Apply global patches
+    for (const patch of PATCHES) {
+        const matches = content.match(patch.find);
+        if (matches) {
+            console.log('  [' + relativePath + '] Fixing: ' + patch.name + ' (' + matches.length + ' occurrences)');
+            content = content.replace(patch.find, patch.replace);
+            patternsFixed += matches.length;
+        }
+    }
+    
+    // Only write if changes were made
+    if (content !== originalContent) {
+        fs.writeFileSync(filePath, content, 'utf-8');
+        filesPatched++;
+        return true;
+    }
+    
+    return false;
 }
 
-function scanDirectory(dirPath) {
-    if (!fs.existsSync(dirPath)) return;
+/**
+ * Recursively scan and patch all JS files
+ */
+function scanAndPatch(dir) {
+    if (!fs.existsSync(dir)) return;
     
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
     
     for (const entry of entries) {
-        const fullPath = path.join(dirPath, entry.name);
+        const fullPath = path.join(dir, entry.name);
         
         if (entry.isDirectory()) {
-            scanDirectory(fullPath);
-        } else if (entry.isFile()) {
-            const ext = path.extname(entry.name).toLowerCase();
-            if (['.js', '.mjs', '.cjs'].includes(ext)) {
-                fixFile(fullPath);
-            }
+            scanAndPatch(fullPath);
+        } else if (entry.isFile() && /\.(js|mjs|cjs)$/.test(entry.name)) {
+            patchFile(fullPath);
         }
     }
 }
 
-function main() {
-    console.log('🔧 Fixing better-auth for React Native/Hermes compatibility...\n');
+/**
+ * Create or verify shim files exist
+ */
+function ensureShims() {
+    const shimsDir = path.join(process.cwd(), 'shims');
     
+    if (!fs.existsSync(shimsDir)) {
+        fs.mkdirSync(shimsDir, { recursive: true });
+    }
+    
+    // Empty shim
+    const emptyShim = path.join(shimsDir, 'empty.js');
+    if (!fs.existsSync(emptyShim)) {
+        fs.writeFileSync(emptyShim, '// Empty shim\nmodule.exports = {};\n');
+        console.log('Created shims/empty.js');
+    }
+    
+    // Migration shim
+    const migrationShim = path.join(shimsDir, 'better-auth-migrations.js');
+    if (!fs.existsSync(migrationShim)) {
+        fs.writeFileSync(migrationShim, [
+            '// Shim for better-auth migrations (server-only)',
+            'export const runMigrations = async () => ({ success: true, migrations: [] });',
+            'export const getMigrations = async () => [];',
+            'export const createMigration = async () => null;',
+            'export const migrateDatabase = async () => ({ success: true });',
+            'export default { runMigrations, getMigrations, createMigration, migrateDatabase };',
+            ''
+        ].join('\n'));
+        console.log('Created shims/better-auth-migrations.js');
+    }
+}
+
+/**
+ * Main execution
+ */
+function main() {
+    console.log('Patching better-auth for React Native/Hermes compatibility...');
+    console.log('');
+    
+    // Ensure shims exist
+    ensureShims();
+    
+    // Check if better-auth is installed
     if (!fs.existsSync(BETTER_AUTH_PATH)) {
-        console.log('ℹ️  better-auth not found in node_modules, skipping.');
+        console.log('better-auth not found in node_modules - skipping patches');
         return;
     }
     
-    const distPath = path.join(BETTER_AUTH_PATH, 'dist');
-    if (fs.existsSync(distPath)) {
-        console.log('Scanning dist folder...\n');
-        scanDirectory(distPath);
+    console.log('Scanning ' + BETTER_AUTH_DIST + '...');
+    console.log('');
+    
+    // Scan and patch all files
+    scanAndPatch(BETTER_AUTH_DIST);
+    
+    // Also check the root of better-auth for any JS files
+    const rootFiles = fs.readdirSync(BETTER_AUTH_PATH)
+        .filter(function(f) { return /\.(js|mjs|cjs)$/.test(f); });
+    
+    for (const file of rootFiles) {
+        patchFile(path.join(BETTER_AUTH_PATH, file));
     }
     
-    // Also check the package root for any .js files
-    const entries = fs.readdirSync(BETTER_AUTH_PATH, { withFileTypes: true });
-    for (const entry of entries) {
-        if (entry.isFile()) {
-            const ext = path.extname(entry.name).toLowerCase();
-            if (['.js', '.mjs', '.cjs'].includes(ext)) {
-                fixFile(path.join(BETTER_AUTH_PATH, entry.name));
-            }
-        }
+    console.log('');
+    console.log('========================================');
+    
+    if (filesPatched > 0) {
+        console.log('Patched ' + filesPatched + ' file(s), fixed ' + patternsFixed + ' pattern(s)');
+    } else {
+        console.log('No patches needed (already patched or no issues found)');
     }
     
-    console.log(`\n✅ Fixed ${patternsFixed} patterns in ${filesFixed} files.`);
-    
-    if (patternsFixed === 0) {
-        console.log('ℹ️  No problematic patterns found (may already be fixed).');
-    }
+    console.log('========================================');
+    console.log('');
 }
 
 main();
