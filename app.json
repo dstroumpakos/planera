@@ -4,7 +4,7 @@
     "slug": "voyage-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/appicon-1024x1024-01-s9s9iw.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
@@ -14,7 +14,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/appicon-1024x1024-01-s9s9iw.png",
         "backgroundColor": "#ffffff"
       },
       "newArchEnabled": false
