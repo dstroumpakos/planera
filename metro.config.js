@@ -1,6 +1,7 @@
 // metro.config.js
 const { getDefaultConfig } = require("@expo/metro-config");
 const path = require("path");
+const fs = require("fs");
 
 const defaultConfig = getDefaultConfig(__dirname);
 
@@ -8,84 +9,96 @@ defaultConfig.resolver.unstable_enablePackageExports = true;
 
 // FIX FOR iOS EAS BUILD FAILURE
 // =============================
-//
-// PROBLEM:
-// better-auth contains server-side migration code with dynamic imports like:
-//   import(path.join(migrationFolder, fileName))
-//
-// This pattern is valid for Node.js but Hermes cannot parse it,
-// causing iOS release builds to fail with "Invalid expression encountered".
-//
-// ROOT CAUSE:
-// - lib/auth-client.ts imports from "better-auth/react"
-// - better-auth/react internally imports core better-auth modules
-// - Those modules include db/internal-adapter.js which has the dynamic import
-// - Metro bundles everything, including server-only code
-//
-// SOLUTION:
-// Use resolveRequest to intercept and redirect problematic modules BEFORE
-// they are resolved, preventing the bad code from ever entering the bundle.
+// better-auth contains server-side code with dynamic imports that Hermes cannot parse.
+// We intercept and stub out ALL problematic modules before they enter the bundle.
 
-// Path to our empty shim
-const EMPTY_SHIM = path.resolve(__dirname, "shims/empty.js");
-const MIGRATION_SHIM = path.resolve(__dirname, "shims/better-auth-migrations.js");
+// Paths to our minimal stubs
+const MIGRATION_STUB = path.resolve(__dirname, "shims/better-auth-migrations.native.js");
+const DB_STUB = path.resolve(__dirname, "shims/better-auth-db.native.js");
+const EMPTY_STUB = path.resolve(__dirname, "shims/empty.js");
 
 // Store the original resolver
 const originalResolveRequest = defaultConfig.resolver.resolveRequest;
 
+// Files known to contain problematic dynamic imports
+const PROBLEMATIC_FILES = [
+    "internal-adapter",
+    "get-migration",
+    "run-migration", 
+    "migration-",
+    "migrations",
+    "/cli/",
+];
+
 defaultConfig.resolver.resolveRequest = (context, moduleName, platform) => {
-    // Only apply fixes on iOS/Android (not web)
     const isNative = platform === "ios" || platform === "android";
     
     if (isNative) {
-        // Shim patterns that contain migration/db code
-        // These patterns match the internal require paths within better-auth
-        const shimPatterns = [
-            // Direct matches for known problematic paths
-            /better-auth\/dist\/db\/internal-adapter/,
-            /better-auth\/dist\/db\/migrations/,
-            /better-auth\/dist\/cli/,
-            /better-auth\/db\/internal-adapter/,
-            /better-auth\/db\/migrations/,
-            /better-auth\/cli/,
-            // Match any path with "migration" in better-auth
-            /better-auth.*migration/i,
-            // Match internal adapter paths
-            /better-auth.*internal-adapter/,
-        ];
+        // Check module name for problematic patterns
+        const moduleNameLower = moduleName.toLowerCase();
         
-        // Check if this module path should be shimmed
-        for (const pattern of shimPatterns) {
-            if (pattern.test(moduleName)) {
-                return {
-                    filePath: MIGRATION_SHIM,
-                    type: "sourceFile",
-                };
-            }
-        }
-        
-        // Also check the originModulePath (where the import is coming FROM)
-        // This catches cases where the module is imported relatively within better-auth
-        if (context.originModulePath) {
-            const origin = context.originModulePath;
-            
-            // If we're resolving FROM a better-auth file that's known to be server-only
-            if (origin.includes('better-auth') && 
-                (origin.includes('internal-adapter') || 
-                 origin.includes('migration') ||
-                 origin.includes('/cli/'))) {
-                // Shim any relative imports from these files
-                if (moduleName.startsWith('.') || moduleName.startsWith('/')) {
+        // Intercept any better-auth migration/db internal imports
+        if (moduleName.includes("better-auth")) {
+            for (const pattern of PROBLEMATIC_FILES) {
+                if (moduleNameLower.includes(pattern.toLowerCase())) {
                     return {
-                        filePath: EMPTY_SHIM,
+                        filePath: MIGRATION_STUB,
                         type: "sourceFile",
                     };
                 }
             }
         }
+        
+        // Use original resolver first to get the actual file path
+        let resolution;
+        try {
+            if (originalResolveRequest) {
+                resolution = originalResolveRequest(context, moduleName, platform);
+            } else {
+                resolution = context.resolveRequest(context, moduleName, platform);
+            }
+        } catch (e) {
+            // If resolution fails, return original error
+            throw e;
+        }
+        
+        // Check if the resolved file path contains problematic patterns
+        if (resolution && resolution.filePath) {
+            const filePath = resolution.filePath.toLowerCase();
+            
+            // Check if this is a better-auth file with problematic code
+            if (filePath.includes("better-auth")) {
+                for (const pattern of PROBLEMATIC_FILES) {
+                    if (filePath.includes(pattern.toLowerCase())) {
+                        return {
+                            filePath: MIGRATION_STUB,
+                            type: "sourceFile",
+                        };
+                    }
+                }
+                
+                // Extra safety: check file contents for the problematic pattern
+                if (resolution.filePath && fs.existsSync(resolution.filePath)) {
+                    try {
+                        const content = fs.readFileSync(resolution.filePath, "utf8");
+                        if (content.includes("webpackIgnore") || 
+                            content.includes("import(") && content.includes("path.join")) {
+                            return {
+                                filePath: MIGRATION_STUB,
+                                type: "sourceFile",
+                            };
+                        }
+                    } catch (e) {
+                        // Ignore read errors
+                    }
+                }
+            }
+        }
+        
+        return resolution;
     }
     
-    // Default resolution
+    // Default resolution for web
     if (originalResolveRequest) {
         return originalResolveRequest(context, moduleName, platform);
     }
@@ -93,11 +106,8 @@ defaultConfig.resolver.resolveRequest = (context, moduleName, platform) => {
 };
 
 // Block certain files from ever being resolved
-// This is a fallback - the resolveRequest above should catch most cases
 defaultConfig.resolver.blockList = [
-    // CLI tools - never needed in mobile
     /node_modules\/better-auth\/dist\/cli\//,
-    // Test files
     /node_modules\/better-auth\/.*\.test\./,
     /node_modules\/better-auth\/.*\.spec\./,
 ];
