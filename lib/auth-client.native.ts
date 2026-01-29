@@ -14,8 +14,8 @@ const TOKEN_KEY = `${STORAGE_PREFIX}_token`;
 // Get the base URL for auth requests
 const BASE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
 
-// Types
-interface User {
+// Types - exported for use by consumers
+export interface AuthUser {
   id: string;
   email?: string;
   name?: string;
@@ -25,22 +25,22 @@ interface User {
   updatedAt?: Date;
 }
 
-interface Session {
+export interface AuthSession {
   id: string;
   userId: string;
   expiresAt: Date;
   token: string;
-  user?: User;
+  user?: AuthUser;
 }
 
-interface AuthResponse<T = any> {
+export interface AuthResponse<T = any> {
   data: T | null;
   error: Error | null;
 }
 
-interface SessionData {
-  session: Session | null;
-  user: User | null;
+export interface SessionData {
+  session: AuthSession | null;
+  user: AuthUser | null;
 }
 
 // Helper to safely access SecureStore
@@ -128,7 +128,7 @@ function createNativeAuthClient() {
   };
 
   // Store session data
-  const storeSession = async (session: Session, user: User) => {
+  const storeSession = async (session: AuthSession, user: AuthUser) => {
     await setSecureItem(SESSION_KEY, JSON.stringify({ session, user }));
     if (session.token) {
       await setSecureItem(TOKEN_KEY, session.token);

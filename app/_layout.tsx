@@ -1,13 +1,26 @@
+// BOOT_01: Module load start
+console.log("[BOOT_01] _layout.tsx module loading...");
+
 import { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
+
+console.log("[BOOT_02] React Native imports loaded");
+
 import { ConvexReactClient } from "convex/react";
 import { Stack } from "expo-router";
+
+console.log("[BOOT_03] Convex and Expo Router loaded");
+
 import { ThemeProvider } from "@/lib/ThemeContext";
+
+console.log("[BOOT_04] ThemeProvider loaded");
 
 // Platform-specific import
 // On native, this resolves to ConvexAuthProvider.native.tsx
 // On web, this resolves to ConvexAuthProvider.tsx (uses better-auth)
 import { ConvexNativeAuthProvider } from "@/lib/ConvexAuthProvider";
+
+console.log("[BOOT_05] ConvexNativeAuthProvider loaded");
 
 // Environment validation
 function validateEnvironment(): { valid: boolean; errors: string[] } {

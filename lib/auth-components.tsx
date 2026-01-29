@@ -1,9 +1,12 @@
-// Web auth components - use convex/react directly
-// Metro will resolve to .native.tsx on iOS/Android
+// Platform-specific auth components
+//
+// Re-export from native implementation which works on all platforms
+// This avoids importing convex/react auth components which may pull
+// in better-auth dependencies
 
-export { 
-  Authenticated, 
-  Unauthenticated, 
-  AuthLoading, 
-  useConvexAuth 
-} from "convex/react";
+export {
+  Authenticated,
+  Unauthenticated,
+  AuthLoading,
+  useConvexAuth,
+} from "./ConvexAuthProvider.native";
