@@ -1,26 +1,13 @@
-// BOOT_01: Module load start
-console.log("[BOOT_01] _layout.tsx module loading...");
+// Root Layout - CRITICAL FILE FOR APP STARTUP
+// This file MUST have a default export that renders properly
 
 import { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
-
-console.log("[BOOT_02] React Native imports loaded");
-
 import { ConvexReactClient } from "convex/react";
 import { Stack } from "expo-router";
-
-console.log("[BOOT_03] Convex and Expo Router loaded");
-
 import { ThemeProvider } from "@/lib/ThemeContext";
-
-console.log("[BOOT_04] ThemeProvider loaded");
-
-// Platform-specific import
-// On native, this resolves to ConvexAuthProvider.native.tsx
-// On web, this resolves to ConvexAuthProvider.tsx (uses better-auth)
 import { ConvexNativeAuthProvider } from "@/lib/ConvexAuthProvider";
-
-console.log("[BOOT_05] ConvexNativeAuthProvider loaded");
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Environment validation - safe at module scope (just reads process.env)
 function validateEnvironment(): { valid: boolean; errors: string[] } {
@@ -93,14 +80,17 @@ const envStyles = StyleSheet.create({
     },
 });
 
-console.log("[BOOT_06] Module scope complete - no native calls made");
+// Loading screen component
+function LoadingScreen() {
+    return (
+        <View style={{ flex: 1, backgroundColor: "#FFF8E7", justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ color: "#666", fontSize: 16 }}>Loading...</Text>
+        </View>
+    );
+}
 
-// CRITICAL: Do NOT create Convex client at module scope!
-// This will be done inside the component after mount.
-
-export default function RootLayout() {
-    console.log("[BOOT_07] RootLayout function called");
-    
+// Inner app component that handles initialization
+function AppContent() {
     const [envCheck, setEnvCheck] = useState<{ valid: boolean; errors: string[] } | null>(null);
     const [convex, setConvex] = useState<ConvexReactClient | null>(null);
     const [initError, setInitError] = useState<string | null>(null);
@@ -111,18 +101,20 @@ export default function RootLayout() {
         if (initRef.current) return;
         initRef.current = true;
         
-        console.log("[BOOT_08] RootLayout useEffect - initializing...");
+        if (__DEV__) {
+            console.log("[BOOT] RootLayout initializing...");
+        }
         
         // Validate environment
         const result = validateEnvironment();
         setEnvCheck(result);
         
         if (!result.valid) {
-            console.error("[BOOT_08a] Environment validation failed:", result.errors);
+            if (__DEV__) {
+                console.error("[BOOT] Environment validation failed:", result.errors);
+            }
             return;
         }
-        
-        console.log("[BOOT_09] Environment valid, creating Convex client...");
         
         // Create Convex client inside useEffect (after mount)
         try {
@@ -130,46 +122,45 @@ export default function RootLayout() {
                 unsavedChangesWarning: false,
             });
             setConvex(client);
-            console.log("[BOOT_10] Convex client created successfully");
+            if (__DEV__) {
+                console.log("[BOOT] Convex client created successfully");
+            }
         } catch (error) {
-            console.error("[BOOT_10_ERROR] Failed to create Convex client:", error);
+            console.error("[BOOT] Failed to create Convex client:", error);
             setInitError(error instanceof Error ? error.message : "Unknown error");
         }
     }, []);
 
     // Show loading while checking environment
     if (envCheck === null || (envCheck.valid && convex === null && !initError)) {
-        console.log("[BOOT] Showing loading screen...");
-        return (
-            <View style={{ flex: 1, backgroundColor: "#FFF8E7", justifyContent: "center", alignItems: "center" }}>
-                <Text style={{ color: "#666", fontSize: 16 }}>Loading...</Text>
-            </View>
-        );
+        return <LoadingScreen />;
     }
 
     // Show error if environment is invalid
     if (!envCheck.valid) {
-        console.log("[BOOT] Showing environment error screen");
         return <EnvironmentError errors={envCheck.errors} />;
     }
 
     // Show error if Convex client failed to create
     if (initError || !convex) {
-        console.log("[BOOT] Showing init error screen");
         return <EnvironmentError errors={[initError || "Failed to initialize app"]} />;
     }
 
-    console.log("[BOOT] Rendering app with providers");
-    
-    // Render app with unified auth provider
-    // ConvexNativeAuthProvider resolves to:
-    // - Native: lib/ConvexAuthProvider.native.tsx (no better-auth imports)
-    // - Web: lib/ConvexAuthProvider.tsx (uses @convex-dev/better-auth/react)
+    // Render app with providers
     return (
         <ConvexNativeAuthProvider client={convex}>
             <ThemeProvider>
                 <Stack screenOptions={{ headerShown: false }} />
             </ThemeProvider>
         </ConvexNativeAuthProvider>
+    );
+}
+
+// CRITICAL: Default export is required for Expo Router
+export default function RootLayout() {
+    return (
+        <ErrorBoundary>
+            <AppContent />
+        </ErrorBoundary>
     );
 }
