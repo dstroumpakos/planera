@@ -7,17 +7,17 @@
     "icon": "./assets/images/appicon-1024x1024-01-s9s9iw.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "newArchEnabled": false
+      "newArchEnabled": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/appicon-1024x1024-01-s9s9iw.png",
         "backgroundColor": "#ffffff"
       },
-      "newArchEnabled": false
+      "newArchEnabled": true
     },
     "web": {
       "bundler": "metro",
