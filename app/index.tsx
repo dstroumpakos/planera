@@ -1,5 +1,5 @@
 import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform, Dimensions } from "react-native";
-import { Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "convex/react";
+import { Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "@/lib/auth-components";
 import { authClient } from "@/lib/auth-client";
 import { Redirect, useRouter } from "expo-router";
 import { useState, useRef, useEffect } from "react";

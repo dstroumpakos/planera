@@ -14,7 +14,8 @@ import {
   ScrollView,
   Image,
 } from "react-native";
-import { useQuery, useMutation, usePaginatedQuery, useConvexAuth } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
+import { useConvexAuth } from "@/lib/auth-components";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";

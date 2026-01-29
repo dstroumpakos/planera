@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth } from "@/lib/auth-components";
 import { ImageWithAttribution } from "@/components/ImageWithAttribution";
 import { useTheme } from "@/lib/ThemeContext";
 

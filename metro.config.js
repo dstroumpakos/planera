@@ -12,9 +12,10 @@
 // traverses ALL exports and dependencies, pulling in the problematic server code.
 //
 // Solution:
-// 1. Hard-alias better-auth modules to native stubs via extraNodeModules
+// 1. Hard-alias ALL better-auth related modules to native stubs
 // 2. Block problematic paths via blockList regex
 // 3. Intercept resolution with custom resolveRequest
+// 4. Use platform-specific files (.native.ts) to avoid importing better-auth on native
 // =================================================================================
 
 const { getDefaultConfig } = require("@expo/metro-config");
@@ -29,16 +30,26 @@ defaultConfig.resolver.unstable_enablePackageExports = true;
 // SHIM PATHS - Pure CommonJS stubs that replace better-auth on native
 // =================================================================================
 const SHIMS = {
+  // Core better-auth
   "better-auth": path.resolve(__dirname, "shims/better-auth.native.js"),
   "better-auth/react": path.resolve(__dirname, "shims/better-auth-react.native.js"),
   "better-auth/client/plugins": path.resolve(__dirname, "shims/better-auth-client-plugins.native.js"),
   "better-auth/plugins": path.resolve(__dirname, "shims/better-auth-plugins.native.js"),
-  // Catch-all for any other better-auth subpaths
   "better-auth/client": path.resolve(__dirname, "shims/empty-module.native.js"),
   "better-auth/db": path.resolve(__dirname, "shims/empty-module.native.js"),
   "better-auth/adapters": path.resolve(__dirname, "shims/empty-module.native.js"),
   "better-auth/cli": path.resolve(__dirname, "shims/empty-module.native.js"),
   "better-auth/api": path.resolve(__dirname, "shims/empty-module.native.js"),
+  
+  // @convex-dev/better-auth
+  "@convex-dev/better-auth": path.resolve(__dirname, "shims/empty-module.native.js"),
+  "@convex-dev/better-auth/react": path.resolve(__dirname, "shims/convex-better-auth-react.native.js"),
+  "@convex-dev/better-auth/client/plugins": path.resolve(__dirname, "shims/convex-better-auth-client-plugins.native.js"),
+  "@convex-dev/better-auth/plugins": path.resolve(__dirname, "shims/empty-module.native.js"),
+  
+  // @better-auth/expo
+  "@better-auth/expo": path.resolve(__dirname, "shims/better-auth-expo.native.js"),
+  "@better-auth/expo/client": path.resolve(__dirname, "shims/better-auth-expo.native.js"),
 };
 
 const EMPTY_SHIM = path.resolve(__dirname, "shims/empty-module.native.js");
@@ -95,7 +106,25 @@ defaultConfig.resolver.resolveRequest = (context, moduleName, platform) => {
       };
     }
     
-    // STRATEGY 3: Check if module name contains problematic patterns
+    // STRATEGY 3: Any @convex-dev/better-auth subpath -> empty shim
+    if (moduleName.startsWith("@convex-dev/better-auth/")) {
+      console.log(`[SHIM] ${moduleName} -> empty-module.native.js`);
+      return {
+        filePath: EMPTY_SHIM,
+        type: "sourceFile",
+      };
+    }
+    
+    // STRATEGY 4: Any @better-auth subpath -> empty shim
+    if (moduleName.startsWith("@better-auth/")) {
+      console.log(`[SHIM] ${moduleName} -> empty-module.native.js`);
+      return {
+        filePath: EMPTY_SHIM,
+        type: "sourceFile",
+      };
+    }
+    
+    // STRATEGY 5: Check if module name contains problematic patterns
     const lowerModuleName = moduleName.toLowerCase();
     if (
       lowerModuleName.includes("better-auth") &&
@@ -125,13 +154,17 @@ defaultConfig.resolver.resolveRequest = (context, moduleName, platform) => {
     throw error;
   }
   
-  // STRATEGY 4: Post-resolution check - if resolved path is in better-auth, redirect on native
+  // STRATEGY 6: Post-resolution check - if resolved path is in better-auth packages, redirect on native
   if (isNative && resolution && resolution.filePath) {
     const filePath = resolution.filePath;
     const normalizedPath = filePath.replace(/\\/g, "/").toLowerCase();
     
-    // Check if this resolves to better-auth package
-    if (normalizedPath.includes("node_modules/better-auth/")) {
+    // Check if this resolves to any better-auth related package
+    if (
+      normalizedPath.includes("node_modules/better-auth/") ||
+      normalizedPath.includes("node_modules/@convex-dev/better-auth/") ||
+      normalizedPath.includes("node_modules/@better-auth/")
+    ) {
       // Check for specifically dangerous paths
       if (
         normalizedPath.includes("/db/") ||
@@ -175,7 +208,7 @@ defaultConfig.transformer = {
 };
 
 // =================================================================================
-// SOURCE EXTENSIONS - Prioritize .native.js files
+// SOURCE EXTENSIONS - Prioritize .native.js/.native.ts files
 // =================================================================================
 defaultConfig.resolver.sourceExts = [
   "native.js",
