@@ -6,27 +6,25 @@ const defaultConfig = getDefaultConfig(__dirname);
 
 defaultConfig.resolver.unstable_enablePackageExports = true;
 
-/**
- * FIX FOR iOS EAS BUILD FAILURE
- * =============================
- * 
- * PROBLEM:
- * better-auth@1.3.27 contains server-side migration code with dynamic imports:
- *   import(/* webpackIgnore: true */ path.join(migrationFolder, fileName))
- * 
- * This pattern is valid for Node.js/Webpack but Hermes cannot parse it,
- * causing iOS release builds to fail with "Invalid expression encountered".
- * 
- * ROOT CAUSE:
- * - lib/auth-client.ts imports from "better-auth/react"
- * - better-auth/react internally imports core better-auth modules
- * - Those modules include db/internal-adapter.js which has the dynamic import
- * - Metro bundles everything, including server-only code
- * 
- * SOLUTION:
- * Use resolveRequest to intercept and redirect problematic modules BEFORE
- * they are resolved, preventing the bad code from ever entering the bundle.
- */
+// FIX FOR iOS EAS BUILD FAILURE
+// =============================
+//
+// PROBLEM:
+// better-auth contains server-side migration code with dynamic imports like:
+//   import(path.join(migrationFolder, fileName))
+//
+// This pattern is valid for Node.js but Hermes cannot parse it,
+// causing iOS release builds to fail with "Invalid expression encountered".
+//
+// ROOT CAUSE:
+// - lib/auth-client.ts imports from "better-auth/react"
+// - better-auth/react internally imports core better-auth modules
+// - Those modules include db/internal-adapter.js which has the dynamic import
+// - Metro bundles everything, including server-only code
+//
+// SOLUTION:
+// Use resolveRequest to intercept and redirect problematic modules BEFORE
+// they are resolved, preventing the bad code from ever entering the bundle.
 
 // Path to our empty shim
 const EMPTY_SHIM = path.resolve(__dirname, "shims/empty.js");
