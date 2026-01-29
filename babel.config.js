@@ -1,8 +1,8 @@
 module.exports = function (api) {
-  api.cache(true);
+  // Use .cache.using() to cache based on platform
+  const platform = api.caller((caller) => caller?.platform);
+  api.cache.using(() => platform || 'default');
   
-  // Get the platform from environment or Metro
-  const platform = process.env.BABEL_PLATFORM || api.caller((caller) => caller?.platform);
   const isNative = platform === "ios" || platform === "android";
   
   const plugins = [];
