@@ -3,7 +3,10 @@
  * Pre-build safety check script
  * 
  * This script scans the codebase for patterns that will cause iOS release builds to fail.
- * Hermes/Metro cannot parse dynamic imports with web-bundler pragmas like @vite-ignore or webpackIgnore.
+ * Hermes/Metro cannot parse dynamic imports with:
+ * - Web-bundler pragmas like @vite-ignore or webpackIgnore
+ * - Expression arguments like path.join() or template literals
+ * - Variable paths like import(somePath)
  * 
  * Run this before `eas build` to catch issues early.
  * 
@@ -25,6 +28,9 @@ const DANGEROUS_PATTERNS = [
     { pattern: /webpackIgnore/g, description: 'webpackIgnore pragma (web-only)' },
     { pattern: /yield\s+import\s*\(/g, description: 'yield import() (unsupported by Hermes)' },
     { pattern: /import\s*\(\s*\/\*[^*]*\*\/\s*[^)]+\)/g, description: 'import() with inline comments' },
+    { pattern: /import\s*\(\s*path\.join\s*\(/g, description: 'import(path.join(...)) - dynamic path import' },
+    { pattern: /import\s*\(\s*`[^`]*\$\{/g, description: 'import(`...${...}`) - template literal import' },
+    { pattern: /migrationFolder/g, description: 'migrationFolder variable (Node.js migration code)' },
 ];
 
 // Directories to scan (our source code only)
@@ -127,6 +133,7 @@ function main() {
         console.error('\nTo fix:');
         console.error('1. Replace dynamic imports with static imports');
         console.error('2. Remove @vite-ignore and webpackIgnore comments');
+        console.error('3. Move Node.js-only code to server-side (Convex actions)');
         process.exit(1);
     }
     

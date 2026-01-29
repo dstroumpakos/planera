@@ -1,37 +1,62 @@
 // metro.config.js
 const { getDefaultConfig } = require("@expo/metro-config");
+const path = require("path");
 
 const defaultConfig = getDefaultConfig(__dirname);
 
 defaultConfig.resolver.unstable_enablePackageExports = true;
 
 // Fix better-auth dynamic imports that break Hermes/iOS builds
-// better-auth uses `yield import(/* @vite-ignore */ ...)` and `yield import(/* webpackIgnore: true */ ...)`
-// which Hermes cannot parse. We need to:
-// 1. Block the problematic files from being bundled on native platforms
-// 2. Provide empty shims for the excluded modules
+// better-auth uses patterns like:
+// - `yield import(/* @vite-ignore */ ...)`
+// - `yield import(/* webpackIgnore: true */ ...)`
+// - `yield import(path.join(migrationFolder, file))`
+// which Hermes cannot parse.
+//
+// The fix-better-auth.js script patches these in node_modules,
+// but we also add Metro-level protection as a safety net.
 
-// Block problematic files that contain web-only dynamic import syntax
-// These patterns match files in better-auth that use vite/webpack pragmas
+// Block problematic files that contain web-only or Node-only code
+// These patterns match files in better-auth that use dynamic imports
 defaultConfig.resolver.blockList = [
-    // Block the social provider implementation files that use dynamic imports
+    // Block migration-related files (they use dynamic path.join imports)
+    /node_modules\/better-auth\/dist\/.*migration.*\.js$/,
+    /node_modules\/better-auth\/dist\/.*migrate.*\.js$/,
+    // Block CLI-related files (Node.js only)
+    /node_modules\/better-auth\/dist\/cli.*\.js$/,
+    // Block social provider implementation files that may use dynamic imports
     /node_modules\/better-auth\/dist\/.*social-providers.*\.js$/,
+    // Block any files with "dynamic" in the name
     /node_modules\/better-auth\/dist\/.*dynamic.*\.js$/,
+    // Block adapter files that are database-specific (Node.js only)
+    /node_modules\/better-auth\/dist\/adapters\/.*\.js$/,
 ];
 
-// Resolve modules that might have web-only code to their React Native alternatives
+// Resolve modules that might have web-only or Node-only code to shims
 const originalResolveRequest = defaultConfig.resolver.resolveRequest;
 defaultConfig.resolver.resolveRequest = (context, moduleName, platform) => {
     // For native platforms, redirect problematic imports to empty modules
     if (platform !== "web") {
-        // If trying to import a module that doesn't exist or has web-only code,
-        // return an empty module
-        if (
-            moduleName.includes("@vite-ignore") || 
-            moduleName.includes("webpackIgnore")
-        ) {
+        // Block known problematic module patterns
+        const problematicPatterns = [
+            "@vite-ignore",
+            "webpackIgnore",
+            // Migration-related modules
+            /better-auth.*migration/i,
+            /better-auth.*migrate/i,
+            /better-auth.*cli/i,
+        ];
+        
+        const shouldShim = problematicPatterns.some(pattern => {
+            if (typeof pattern === "string") {
+                return moduleName.includes(pattern);
+            }
+            return pattern.test(moduleName);
+        });
+        
+        if (shouldShim) {
             return {
-                filePath: require.resolve("./shims/empty.js"),
+                filePath: path.resolve(__dirname, "shims/empty.js"),
                 type: "sourceFile",
             };
         }
