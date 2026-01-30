@@ -12,8 +12,9 @@ import * as SecureStore from "expo-secure-store";
 const getStoragePrefix = () => Constants.expoConfig?.scheme || "planera";
 const getSessionKey = () => `${getStoragePrefix()}_session`;
 const getTokenKey = () => `${getStoragePrefix()}_token`;
+const getUserKey = () => `${getStoragePrefix()}_user`;
 
-// Get the base URL for auth requests
+// Get the base URL for auth requests - MUST be EXPO_PUBLIC_CONVEX_SITE_URL
 const BASE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
 
 // Types - exported for use by consumers
@@ -73,10 +74,12 @@ async function deleteSecureItem(key: string): Promise<void> {
 
 // Get stored token - ONLY call after mount
 async function getStoredToken(): Promise<string | null> {
-  return getSecureItem(getTokenKey());
+  const token = await getSecureItem(getTokenKey());
+  console.log("[Auth] getStoredToken:", token ? "FOUND" : "MISSING");
+  return token;
 }
 
-// Make authenticated fetch request
+// Make authenticated fetch request with detailed logging
 async function authFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -98,19 +101,27 @@ async function authFetch<T>(
     }
 
     const url = `${BASE_URL}${endpoint}`;
+    console.log("[Auth] Fetching:", options.method || "GET", url);
+
     const response = await fetch(url, {
       ...options,
       headers,
       credentials: "include",
     });
 
+    console.log("[Auth] Response status:", response.status);
+
+    // Read body as text first for debugging
+    const bodyText = await response.text();
+    console.log("[Auth] Response body:", bodyText.substring(0, 500));
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[Auth] Request failed:", response.status, errorText);
-      return { data: null, error: new Error(errorText || `HTTP ${response.status}`) };
+      console.error("[Auth] Request failed:", response.status, bodyText);
+      return { data: null, error: new Error(bodyText || `HTTP ${response.status}`) };
     }
 
-    const data = await response.json();
+    // Parse JSON from text
+    const data = bodyText ? JSON.parse(bodyText) : null;
     return { data, error: null };
   } catch (error) {
     console.error("[Auth] Fetch error:", error);
@@ -128,22 +139,38 @@ function createNativeAuthClient() {
 
   const notifyListeners = (session: SessionData | null) => {
     currentSession = session;
+    console.log("[Auth] Notifying listeners, authenticated:", !!session?.session);
     listeners.forEach((listener) => listener(session));
   };
 
-  // Store session data
+  // Store session data - handles Better Auth response format
   const storeSession = async (session: AuthSession, user: AuthUser) => {
+    console.log("[Auth] Storing session for user:", user.id);
     await setSecureItem(getSessionKey(), JSON.stringify({ session, user }));
+    await setSecureItem(getUserKey(), JSON.stringify(user));
     if (session.token) {
       await setSecureItem(getTokenKey(), session.token);
+      console.log("[Auth] Token stored successfully");
     }
     notifyListeners({ session, user });
   };
 
+  // Create session object from Better Auth token+user response
+  const createSessionFromResponse = (token: string, user: AuthUser): AuthSession => {
+    return {
+      id: `native_${Date.now()}`,
+      userId: user.id,
+      token,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    };
+  };
+
   // Clear session data
   const clearSession = async () => {
+    console.log("[Auth] Clearing session");
     await deleteSecureItem(getSessionKey());
     await deleteSecureItem(getTokenKey());
+    await deleteSecureItem(getUserKey());
     notifyListeners(null);
   };
 
@@ -151,7 +178,7 @@ function createNativeAuthClient() {
   const loadStoredSession = async () => {
     if (initialized) return;
     initialized = true;
-    
+
     try {
       console.log("[Auth] Loading stored session...");
       const stored = await getSecureItem(getSessionKey());
@@ -159,7 +186,7 @@ function createNativeAuthClient() {
         const parsed = JSON.parse(stored);
         currentSession = parsed;
         notifyListeners(parsed);
-        console.log("[Auth] Restored session from storage");
+        console.log("[Auth] Restored session from storage, userId:", parsed.user?.id);
       } else {
         console.log("[Auth] No stored session found");
       }
@@ -182,9 +209,6 @@ function createNativeAuthClient() {
     await ensureInit();
   };
 
-  // DO NOT call loadStoredSession() here at module scope!
-  // It will be called lazily on first use or via explicit init()
-
   return {
     // Explicit initialization - call from useEffect
     init,
@@ -199,17 +223,33 @@ function createNativeAuthClient() {
         password: string;
       }): Promise<AuthResponse<SessionData>> => {
         await ensureInit();
+        console.log("[Auth] Signing in with email:", email);
+
         const response = await authFetch<any>("/api/auth/sign-in/email", {
           method: "POST",
           body: JSON.stringify({ email, password }),
         });
 
-        if (response.data?.session && response.data?.user) {
-          await storeSession(response.data.session, response.data.user);
-          return { data: { session: response.data.session, user: response.data.user }, error: null };
+        if (response.error) {
+          return { data: null, error: response.error };
         }
 
-        return { data: null, error: response.error };
+        const data = response.data;
+        console.log("[Auth] Sign-in response keys:", data ? Object.keys(data) : "null");
+
+        // Better Auth returns: { redirect: true, token: "...", user: {...}, url: "..." }
+        // OR: { session: {...}, user: {...} }
+        if (data?.token && data?.user) {
+          const session = createSessionFromResponse(data.token, data.user);
+          await storeSession(session, data.user);
+          return { data: { session, user: data.user }, error: null };
+        } else if (data?.session && data?.user) {
+          await storeSession(data.session, data.user);
+          return { data: { session: data.session, user: data.user }, error: null };
+        }
+
+        console.error("[Auth] Unexpected sign-in response format:", data);
+        return { data: null, error: new Error("Invalid response from server") };
       },
 
       // Social sign in (Google, Apple, etc.)
@@ -223,11 +263,13 @@ function createNativeAuthClient() {
         await ensureInit();
         const scheme = Constants.expoConfig?.scheme || "planera";
         const redirectURL = callbackURL || `${scheme}://`;
-        
+
+        console.log("[Auth] Starting social sign-in with provider:", provider);
+
         const response = await authFetch<any>("/api/auth/sign-in/social", {
           method: "POST",
-          body: JSON.stringify({ 
-            provider, 
+          body: JSON.stringify({
+            provider,
             callbackURL: redirectURL,
             mode: "expo",
           }),
@@ -243,17 +285,32 @@ function createNativeAuthClient() {
       // Anonymous sign in
       anonymous: async (): Promise<AuthResponse<SessionData>> => {
         await ensureInit();
+        console.log("[Auth] Starting anonymous sign-in");
+
         const response = await authFetch<any>("/api/auth/sign-in/anonymous", {
           method: "POST",
           body: JSON.stringify({}),
         });
 
-        if (response.data?.session && response.data?.user) {
-          await storeSession(response.data.session, response.data.user);
-          return { data: { session: response.data.session, user: response.data.user }, error: null };
+        if (response.error) {
+          return { data: null, error: response.error };
         }
 
-        return { data: null, error: response.error };
+        const data = response.data;
+        console.log("[Auth] Anonymous sign-in response keys:", data ? Object.keys(data) : "null");
+
+        // Handle both response formats
+        if (data?.token && data?.user) {
+          const session = createSessionFromResponse(data.token, data.user);
+          await storeSession(session, data.user);
+          return { data: { session, user: data.user }, error: null };
+        } else if (data?.session && data?.user) {
+          await storeSession(data.session, data.user);
+          return { data: { session: data.session, user: data.user }, error: null };
+        }
+
+        console.error("[Auth] Unexpected anonymous sign-in response format:", data);
+        return { data: null, error: new Error("Invalid response from server") };
       },
     },
 
@@ -269,23 +326,39 @@ function createNativeAuthClient() {
         name?: string;
       }): Promise<AuthResponse<SessionData>> => {
         await ensureInit();
+        console.log("[Auth] Signing up with email:", email);
+
         const response = await authFetch<any>("/api/auth/sign-up/email", {
           method: "POST",
           body: JSON.stringify({ email, password, name }),
         });
 
-        if (response.data?.session && response.data?.user) {
-          await storeSession(response.data.session, response.data.user);
-          return { data: { session: response.data.session, user: response.data.user }, error: null };
+        if (response.error) {
+          return { data: null, error: response.error };
         }
 
-        return { data: null, error: response.error };
+        const data = response.data;
+        console.log("[Auth] Sign-up response keys:", data ? Object.keys(data) : "null");
+
+        // Handle both response formats
+        if (data?.token && data?.user) {
+          const session = createSessionFromResponse(data.token, data.user);
+          await storeSession(session, data.user);
+          return { data: { session, user: data.user }, error: null };
+        } else if (data?.session && data?.user) {
+          await storeSession(data.session, data.user);
+          return { data: { session: data.session, user: data.user }, error: null };
+        }
+
+        console.error("[Auth] Unexpected sign-up response format:", data);
+        return { data: null, error: new Error("Invalid response from server") };
       },
     },
 
     // Sign out
     signOut: async (): Promise<AuthResponse<null>> => {
       await ensureInit();
+      console.log("[Auth] Signing out");
       try {
         await authFetch("/api/auth/sign-out", { method: "POST" });
       } catch (error) {
@@ -295,31 +368,48 @@ function createNativeAuthClient() {
       return { data: null, error: null };
     },
 
-    // Get current session
+    // Get current session from server
     getSession: async (): Promise<AuthResponse<SessionData>> => {
       await ensureInit();
-      const response = await authFetch<SessionData>("/api/auth/get-session", {
+      console.log("[Auth] Getting session from server");
+
+      const response = await authFetch<any>("/api/auth/get-session", {
         method: "GET",
       });
 
-      if (response.data?.session) {
-        await storeSession(response.data.session, response.data.user!);
-        return response;
+      if (response.error) {
+        return { data: { session: null, user: null }, error: response.error };
       }
 
-      // If no valid session from server, clear local storage
-      if (!response.error) {
-        await clearSession();
+      const data = response.data;
+      console.log("[Auth] Get-session response keys:", data ? Object.keys(data) : "null");
+
+      // Handle various response formats
+      if (data?.session && data?.user) {
+        await storeSession(data.session, data.user);
+        return { data: { session: data.session, user: data.user }, error: null };
+      } else if (data?.token && data?.user) {
+        const session = createSessionFromResponse(data.token, data.user);
+        await storeSession(session, data.user);
+        return { data: { session, user: data.user }, error: null };
+      } else if (data?.user && !data?.session) {
+        // Some Better Auth versions return just user
+        const token = await getStoredToken();
+        if (token) {
+          const session = createSessionFromResponse(token, data.user);
+          await storeSession(session, data.user);
+          return { data: { session, user: data.user }, error: null };
+        }
       }
 
-      return { data: { session: null, user: null }, error: response.error };
+      // No valid session from server, clear local storage
+      console.log("[Auth] No valid session from server");
+      await clearSession();
+      return { data: { session: null, user: null }, error: null };
     },
 
     // React hook for session (returns current state)
     useSession: () => {
-      // This is a simplified version - in the real implementation,
-      // this would be a proper React hook with useState/useEffect
-      // The actual hook behavior is handled by ConvexBetterAuthProvider
       return {
         data: currentSession,
         isPending: false,
@@ -343,7 +433,7 @@ function createNativeAuthClient() {
       notify: () => notifyListeners(currentSession),
     },
 
-    // For Convex integration
+    // For Convex integration - returns the stored token
     getToken: getStoredToken,
   };
 }

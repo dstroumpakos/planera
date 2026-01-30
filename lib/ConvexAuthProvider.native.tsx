@@ -1,12 +1,11 @@
 // Native-specific Convex Auth Provider
-// This avoids importing @convex-dev/better-auth/react which pulls in better-auth
+// Uses ConvexProviderWithAuth for proper auth state integration with Convex
 
-import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from "react";
+import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 
 // Import the native auth client directly to get proper types
-// This file only runs on native, so this import is safe
-import { authClient } from "./auth-client.native";
+import { authClient, SessionData } from "./auth-client.native";
 
 // Types
 interface User {
@@ -27,7 +26,7 @@ interface AuthContextValue extends AuthState {
   signOut: () => Promise<void>;
 }
 
-// Create context
+// Create context for additional auth info (user object, signOut)
 const AuthContext = createContext<AuthContextValue>({
   isAuthenticated: false,
   isLoading: true,
@@ -35,7 +34,7 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
 });
 
-// Hook to use auth context
+// Hook to use auth context - returns Convex-compatible auth state
 export function useConvexAuth() {
   const context = useContext(AuthContext);
   return {
@@ -71,20 +70,24 @@ interface ConvexAuthProviderProps {
   children: ReactNode;
 }
 
-// Native auth provider that works without better-auth imports
+// Helper to extract access token from session
+function extractAccessToken(session: SessionData | null): string | null {
+  if (!session?.session?.token) return null;
+  return session.session.token;
+}
+
+// Native auth provider that integrates with Convex properly
 export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProviderProps) {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    isLoading: true,
-    user: null,
-  });
+  const [session, setSession] = useState<SessionData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [initComplete, setInitComplete] = useState(false);
 
   // Initialize auth and check session on mount
   useEffect(() => {
     let mounted = true;
     console.log("[BOOT_AUTH_01] ConvexNativeAuthProvider useEffect starting");
 
-    const initAndCheckSession = async () => {
+    const initAuth = async () => {
       try {
         // CRITICAL: Initialize auth client first (loads from SecureStore)
         console.log("[BOOT_AUTH_02] Calling authClient.init()...");
@@ -93,71 +96,55 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
 
         if (!mounted) return;
 
-        // Now check session with server
-        console.log("[BOOT_AUTH_04] Checking session with server...");
+        // Get current session state from store
+        const currentSession = authClient.$store.get();
+        console.log("[BOOT_AUTH_04] Initial session state:", currentSession ? "HAS_SESSION" : "NO_SESSION");
+
+        if (currentSession?.session && currentSession?.user) {
+          setSession(currentSession);
+        }
+
+        // Mark init complete before verifying with server
+        setInitComplete(true);
+
+        // Now verify with server (but don't block on this)
+        console.log("[BOOT_AUTH_05] Verifying session with server...");
         const result = await authClient.getSession();
-        console.log("[BOOT_AUTH_05] Session check complete");
+        console.log("[BOOT_AUTH_06] Server session check complete");
 
         if (!mounted) return;
 
         if (result.data?.session && result.data?.user) {
-          const userData = result.data.user;
-          console.log("[BOOT_AUTH_06] User authenticated:", userData.email || userData.id);
-          setAuthState({
-            isAuthenticated: true,
-            isLoading: false,
-            user: {
-              id: userData.id,
-              _id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              image: userData.image ?? undefined,
-            },
-          });
+          console.log("[BOOT_AUTH_07] User authenticated:", result.data.user.email || result.data.user.id);
+          setSession(result.data);
         } else {
-          console.log("[BOOT_AUTH_06] No authenticated user");
-          setAuthState({
-            isAuthenticated: false,
-            isLoading: false,
-            user: null,
-          });
+          console.log("[BOOT_AUTH_07] No authenticated user from server");
+          setSession(null);
         }
+
+        setIsLoading(false);
       } catch (error) {
         console.error("[BOOT_AUTH_ERROR] Session check failed:", error);
         if (mounted) {
-          setAuthState({
-            isAuthenticated: false,
-            isLoading: false,
-            user: null,
-          });
+          setSession(null);
+          setIsLoading(false);
+          setInitComplete(true);
         }
       }
     };
 
-    initAndCheckSession();
+    initAuth();
 
     // Subscribe to session changes via store
     const unsubscribe = authClient.$store.listen((sessionState) => {
       if (!mounted) return;
-      
-      if (sessionState?.session && sessionState?.user) {
-        setAuthState({
-          isAuthenticated: true,
-          isLoading: false,
-          user: {
-            id: sessionState.user.id,
-            _id: sessionState.user.id,
-            email: sessionState.user.email,
-            name: sessionState.user.name,
-            image: sessionState.user.image ?? undefined,
-          },
-        });
-      } else {
-        setAuthState({
-          isAuthenticated: false,
-          isLoading: false,
-          user: null,
-        });
+
+      console.log("[Auth] Store listener fired, session:", sessionState ? "HAS_SESSION" : "NO_SESSION");
+      setSession(sessionState);
+
+      // If we get a session update after init, we're no longer loading
+      if (initComplete) {
+        setIsLoading(false);
       }
     });
 
@@ -165,22 +152,90 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
       mounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [initComplete]);
 
   const signOut = useCallback(async () => {
     await authClient.signOut();
   }, []);
 
+  // Compute auth state
+  const isAuthenticated = !!session?.session && !!extractAccessToken(session);
+
+  // Log auth state for debugging
+  useEffect(() => {
+    console.log("[Auth] State updated - isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
+  }, [isAuthenticated, isLoading]);
+
+  // Create the useAuth hook for ConvexProviderWithAuth
+  // This MUST be memoized to prevent infinite re-renders
+  const useAuth = useMemo(() => {
+    return () => {
+      // fetchAccessToken is called by Convex to get the token for authenticated requests
+      const fetchAccessToken = useCallback(
+        async ({ forceRefreshToken }: { forceRefreshToken: boolean }): Promise<string | null> => {
+          console.log("[Auth] fetchAccessToken called, forceRefresh:", forceRefreshToken);
+
+          // First try: get token from SecureStore directly
+          const storedToken = await authClient.getToken();
+          if (storedToken) {
+            console.log("[Auth] fetchAccessToken: FOUND token from SecureStore");
+            return storedToken;
+          }
+
+          // Second try: get from current session state
+          const tokenFromSession = extractAccessToken(session);
+          if (tokenFromSession) {
+            console.log("[Auth] fetchAccessToken: FOUND token from session state");
+            return tokenFromSession;
+          }
+
+          // Third try: refresh session from server
+          if (forceRefreshToken) {
+            console.log("[Auth] fetchAccessToken: Refreshing from server...");
+            const result = await authClient.getSession();
+            if (result.data?.session?.token) {
+              console.log("[Auth] fetchAccessToken: FOUND token after refresh");
+              return result.data.session.token;
+            }
+          }
+
+          console.log("[Auth] fetchAccessToken: MISSING - no token available");
+          return null;
+        },
+        [session]
+      );
+
+      return {
+        isLoading,
+        isAuthenticated,
+        fetchAccessToken,
+      };
+    };
+  }, [isLoading, isAuthenticated, session]);
+
+  // Build user object for context
+  const user: User | null = session?.user
+    ? {
+        id: session.user.id,
+        _id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image ?? undefined,
+      }
+    : null;
+
   const contextValue: AuthContextValue = {
-    ...authState,
+    isAuthenticated,
+    isLoading,
+    user,
     signOut,
   };
 
   return (
     <AuthContext.Provider value={contextValue}>
-      <ConvexProvider client={client}>
+      <ConvexProviderWithAuth client={client} useAuth={useAuth}>
         {children}
-      </ConvexProvider>
+      </ConvexProviderWithAuth>
     </AuthContext.Provider>
   );
 }

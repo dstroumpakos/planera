@@ -1,5 +1,5 @@
 import { Text, View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
-import { Authenticated, Unauthenticated, AuthLoading } from "@/lib/auth-components";
+import { useConvexAuth } from "@/lib/auth-components";
 import { authClient } from "@/lib/auth-client";
 import { Redirect, useRouter } from "expo-router";
 import { useState, useEffect } from "react";
@@ -12,8 +12,35 @@ import { api } from "@/convex/_generated/api";
 // Fallback colors for when theme is not available (e.g., during initial load)
 const COLORS = LIGHT_COLORS;
 
+// Component to handle authenticated user redirect based on onboarding status
+function AuthenticatedRedirect() {
+    const settings = useQuery(api.users.getSettings);
+
+    // Still loading settings from Convex
+    if (settings === undefined) {
+        console.log("[Index] AuthenticatedRedirect: Loading settings...");
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Loading your profile...</Text>
+            </View>
+        );
+    }
+
+    console.log("[Index] AuthenticatedRedirect: Settings loaded, onboardingCompleted:", settings.onboardingCompleted);
+
+    // If onboarding not completed, redirect to onboarding
+    if (!settings.onboardingCompleted) {
+        return <Redirect href="/onboarding" />;
+    }
+
+    // Otherwise go to tabs
+    return <Redirect href="/(tabs)" />;
+}
+
 export default function Index() {
     const { colors } = useTheme();
+    const { isAuthenticated, isLoading } = useConvexAuth();
     const [currentStep, setCurrentStep] = useState(0); // 0: splash, 1: onboarding, 2: auth
     const [isEmailAuth, setIsEmailAuth] = useState(false);
     const [isSignUp, setIsSignUp] = useState(true);
@@ -23,6 +50,11 @@ export default function Index() {
     const [loading, setLoading] = useState(false);
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
     const router = useRouter();
+
+    // Debug log auth state
+    useEffect(() => {
+        console.log("[Index] Auth state - isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
+    }, [isAuthenticated, isLoading]);
 
     // Add timeout for auth loading
     useEffect(() => {
@@ -44,9 +76,31 @@ export default function Index() {
         setLoading(true);
         try {
             if (isSignUp) {
-                await authClient.signUp.email({ email, password, name });
+                const result = await authClient.signUp.email({ email, password, name });
+                if (result.error) {
+                    // Check if user already exists
+                    if (result.error.message?.includes("already exists") || result.error.message?.includes("already registered")) {
+                        Alert.alert("Account Exists", "An account with this email already exists. Please sign in instead.");
+                        setIsSignUp(false);
+                    } else {
+                        Alert.alert("Error", result.error.message || "Sign up failed");
+                    }
+                }
+                // Success: session storage triggers auth provider -> isAuthenticated becomes true
             } else {
-                await authClient.signIn.email({ email, password });
+                const result = await authClient.signIn.email({ email, password });
+                if (result.error) {
+                    // Check if account doesn't exist
+                    if (result.error.message?.includes("not found") || result.error.message?.includes("Invalid credentials")) {
+                        Alert.alert("Account Not Found", "No account found with this email. Would you like to create one?", [
+                            { text: "Cancel", style: "cancel" },
+                            { text: "Sign Up", onPress: () => setIsSignUp(true) }
+                        ]);
+                    } else {
+                        Alert.alert("Error", result.error.message || "Sign in failed");
+                    }
+                }
+                // Success: session storage triggers auth provider -> isAuthenticated becomes true
             }
         } catch (error: any) {
             Alert.alert("Error", error.message || "Authentication failed");
@@ -72,6 +126,21 @@ export default function Index() {
             await authClient.signIn.social({ provider: "apple" });
         } catch (error: any) {
             Alert.alert("Error", "Apple sign in failed");
+        } finally {
+            setOauthLoading(null);
+        }
+    };
+
+    const handleAnonymousSignIn = async () => {
+        setOauthLoading("anonymous");
+        try {
+            const result = await authClient.signIn.anonymous();
+            if (result.error) {
+                Alert.alert("Error", result.error.message || "Anonymous sign in failed");
+            }
+            // Success: session storage triggers auth provider -> isAuthenticated becomes true
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Anonymous sign in failed");
         } finally {
             setOauthLoading(null);
         }
@@ -277,6 +346,21 @@ export default function Index() {
                             <Text style={styles.primaryButtonText}>Sign Up with Email</Text>
                         </TouchableOpacity>
 
+                        <TouchableOpacity 
+                            style={styles.guestButton} 
+                            onPress={handleAnonymousSignIn}
+                            disabled={oauthLoading !== null}
+                        >
+                            {oauthLoading === "anonymous" ? (
+                                <ActivityIndicator color={COLORS.textSecondary} />
+                            ) : (
+                                <>
+                                    <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} style={styles.socialIcon} />
+                                    <Text style={styles.guestButtonText}>Continue as Guest</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+
                         <TouchableOpacity onPress={() => { setIsEmailAuth(true); setIsSignUp(false); }}>
                             <Text style={styles.memberText}>
                                 Already a member? <Text style={styles.memberTextBold}>Log In</Text>
@@ -292,47 +376,29 @@ export default function Index() {
         </KeyboardAvoidingView>
     );
 
-    // Add this component to handle authenticated redirect logic
-    function AuthenticatedRedirect() {
-        const settings = useQuery(api.users.getSettings);
-        
-        // Still loading settings
-        if (settings === undefined) {
-            return (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                </View>
-            );
-        }
-        
-        // If onboarding not completed, redirect to onboarding
-        if (!settings.onboardingCompleted) {
-            return <Redirect href="/onboarding" />;
-        }
-        
-        // Otherwise go to tabs
-        return <Redirect href="/(tabs)" />;
+    // Show loading screen while auth state is being determined
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+        );
     }
 
+    // If authenticated, show the redirect logic (checks onboarding status)
+    if (isAuthenticated) {
+        return <AuthenticatedRedirect />;
+    }
+
+    // Not authenticated - show splash/onboarding/auth screens
     return (
         <View style={styles.container}>
-            <AuthLoading>
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                </View>
-            </AuthLoading>
-
-            <Unauthenticated>
-                <SafeAreaView style={styles.safeArea}>
-                    {currentStep === 0 && renderSplash()}
-                    {currentStep === 1 && renderOnboarding()}
-                    {currentStep === 2 && renderAuth()}
-                </SafeAreaView>
-            </Unauthenticated>
-
-            <Authenticated>
-                <AuthenticatedRedirect />
-            </Authenticated>
+            <SafeAreaView style={styles.safeArea}>
+                {currentStep === 0 && renderSplash()}
+                {currentStep === 1 && renderOnboarding()}
+                {currentStep === 2 && renderAuth()}
+            </SafeAreaView>
         </View>
     );
 }
@@ -351,6 +417,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: COLORS.background,
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: COLORS.textSecondary,
     },
     
     // Splash Styles
@@ -640,6 +711,23 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "700",
         color: COLORS.text,
+    },
+    guestButton: {
+        backgroundColor: "transparent",
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderStyle: "dashed",
+    },
+    guestButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.textSecondary,
     },
     memberText: {
         fontSize: 14,
