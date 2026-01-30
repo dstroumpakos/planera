@@ -280,6 +280,7 @@ function createNativeAuthClient() {
       }
       
       // Call Convex action to verify token and create session
+      console.log("[Auth] Calling Convex signInWithGoogle action...");
       const response = await fetch(`${CONVEX_URL}/api/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -292,11 +293,29 @@ function createNativeAuthClient() {
         }),
       });
       
-      const result = await response.json();
-      console.log("[Auth] Convex signInWithGoogle result:", result.success ? "Success" : result.error);
+      const responseText = await response.text();
+      console.log("[Auth] Raw Convex response status:", response.status);
+      console.log("[Auth] Raw Convex response:", responseText.substring(0, 200));
       
-      if (!result.success || result.error) {
-        return { data: null, error: new Error(result.error || "Google sign-in failed") };
+      let result;
+      try {
+        const parsed = JSON.parse(responseText);
+        // Convex action responses may be wrapped in a 'value' field
+        result = parsed.value !== undefined ? parsed.value : parsed;
+      } catch (e) {
+        console.error("[Auth] Failed to parse Convex response:", e);
+        return { data: null, error: new Error("Invalid response from server") };
+      }
+      
+      console.log("[Auth] Convex signInWithGoogle result:", {
+        success: result?.success,
+        hasToken: !!result?.token,
+        hasUser: !!result?.user,
+        error: result?.error,
+      });
+      
+      if (!result || !result.success || result.error) {
+        return { data: null, error: new Error(result?.error || "Google sign-in failed") };
       }
       
       // Store session
@@ -358,6 +377,7 @@ function createNativeAuthClient() {
       }
       
       // Call Convex action to verify token and create session
+      console.log("[Auth] Calling Convex signInWithApple action...");
       const response = await fetch(`${CONVEX_URL}/api/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -374,11 +394,29 @@ function createNativeAuthClient() {
         }),
       });
       
-      const result = await response.json();
-      console.log("[Auth] Convex signInWithApple result:", result.success ? "Success" : result.error);
+      const responseText = await response.text();
+      console.log("[Auth] Raw Convex response status:", response.status);
+      console.log("[Auth] Raw Convex response:", responseText.substring(0, 200));
       
-      if (!result.success || result.error) {
-        return { data: null, error: new Error(result.error || "Apple sign-in failed") };
+      let result;
+      try {
+        const parsed = JSON.parse(responseText);
+        // Convex action responses may be wrapped in a 'value' field
+        result = parsed.value !== undefined ? parsed.value : parsed;
+      } catch (e) {
+        console.error("[Auth] Failed to parse Convex response:", e);
+        return { data: null, error: new Error("Invalid response from server") };
+      }
+      
+      console.log("[Auth] Convex signInWithApple result:", {
+        success: result?.success,
+        hasToken: !!result?.token,
+        hasUser: !!result?.user,
+        error: result?.error,
+      });
+      
+      if (!result || !result.success || result.error) {
+        return { data: null, error: new Error(result?.error || "Apple sign-in failed") };
       }
       
       // Store session
