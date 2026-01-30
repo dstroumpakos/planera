@@ -7,6 +7,7 @@
 
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 // Storage keys - these are safe at module scope (just strings)
 const getStoragePrefix = () => Constants.expoConfig?.scheme || "planera";
@@ -16,6 +17,12 @@ const getUserKey = () => `${getStoragePrefix()}_user`;
 
 // Get the base URL for auth requests - MUST be EXPO_PUBLIC_CONVEX_SITE_URL
 const BASE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
+
+// Convex URL for native auth actions
+const CONVEX_URL = process.env.EXPO_PUBLIC_CONVEX_URL;
+
+// Google Web Client ID for native sign-in
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
 // Types - exported for use by consumers
 export interface AuthUser {
@@ -137,6 +144,9 @@ function createNativeAuthClient() {
   let initialized = false;
   let initPromise: Promise<void> | null = null;
 
+  // Google Sign-In instance (lazy loaded)
+  let googleSignInConfigured = false;
+
   const notifyListeners = (session: SessionData | null) => {
     currentSession = session;
     console.log("[Auth] Notifying listeners, authenticated:", !!session?.session);
@@ -209,9 +219,191 @@ function createNativeAuthClient() {
     await ensureInit();
   };
 
+  // Configure Google Sign-In (call once before using)
+  const configureGoogleSignIn = async () => {
+    if (googleSignInConfigured || Platform.OS === "web") return;
+    
+    try {
+      const { GoogleSignin } = await import("@react-native-google-signin/google-signin");
+      
+      if (!GOOGLE_WEB_CLIENT_ID) {
+        console.warn("[Auth] EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID not set");
+        return;
+      }
+      
+      GoogleSignin.configure({
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        offlineAccess: true,
+        scopes: ["profile", "email"],
+      });
+      
+      googleSignInConfigured = true;
+      console.log("[Auth] Google Sign-In configured");
+    } catch (error) {
+      console.warn("[Auth] Failed to configure Google Sign-In:", error);
+    }
+  };
+
+  // Native Google Sign-In
+  const nativeGoogleSignIn = async (): Promise<AuthResponse<SessionData>> => {
+    await ensureInit();
+    
+    if (Platform.OS === "web") {
+      return { data: null, error: new Error("Native Google Sign-In not available on web") };
+    }
+    
+    try {
+      console.log("[Auth] Starting native Google Sign-In...");
+      
+      // Import dynamically to avoid issues on web
+      const { GoogleSignin, statusCodes } = await import("@react-native-google-signin/google-signin");
+      
+      // Configure if not already done
+      await configureGoogleSignIn();
+      
+      // Check if user has previously signed in and sign out to ensure fresh sign-in
+      try {
+        const currentUser = GoogleSignin.getCurrentUser();
+        if (currentUser) {
+          await GoogleSignin.signOut();
+        }
+      } catch (e) {
+        // Ignore errors when checking/clearing previous sign-in
+      }
+      
+      // Sign in
+      const userInfo = await GoogleSignin.signIn();
+      console.log("[Auth] Google Sign-In response:", userInfo ? "Success" : "No user info");
+      
+      if (!userInfo.data?.idToken) {
+        return { data: null, error: new Error("No ID token received from Google") };
+      }
+      
+      // Call Convex action to verify token and create session
+      const response = await fetch(`${CONVEX_URL}/api/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: "authNative:signInWithGoogle",
+          args: {
+            idToken: userInfo.data.idToken,
+            displayName: userInfo.data.user?.name,
+          },
+        }),
+      });
+      
+      const result = await response.json();
+      console.log("[Auth] Convex signInWithGoogle result:", result.success ? "Success" : result.error);
+      
+      if (!result.success || result.error) {
+        return { data: null, error: new Error(result.error || "Google sign-in failed") };
+      }
+      
+      // Store session
+      const session = createSessionFromResponse(result.token, result.user);
+      await storeSession(session, result.user);
+      
+      return { data: { session, user: result.user }, error: null };
+    } catch (error: any) {
+      console.error("[Auth] Native Google Sign-In error:", error);
+      
+      // Handle specific error codes
+      const { statusCodes } = await import("@react-native-google-signin/google-signin");
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        return { data: null, error: new Error("Sign-in cancelled") };
+      }
+      if (error.code === statusCodes.IN_PROGRESS) {
+        return { data: null, error: new Error("Sign-in already in progress") };
+      }
+      if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        return { data: null, error: new Error("Google Play Services not available") };
+      }
+      
+      return { data: null, error: error as Error };
+    }
+  };
+
+  // Native Apple Sign-In
+  const nativeAppleSignIn = async (): Promise<AuthResponse<SessionData>> => {
+    await ensureInit();
+    
+    if (Platform.OS !== "ios") {
+      return { data: null, error: new Error("Apple Sign-In is only available on iOS") };
+    }
+    
+    try {
+      console.log("[Auth] Starting native Apple Sign-In...");
+      
+      // Import dynamically
+      const AppleAuthentication = await import("expo-apple-authentication");
+      
+      // Check if Apple Sign-In is available
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        return { data: null, error: new Error("Apple Sign-In not available on this device") };
+      }
+      
+      // Sign in
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      
+      console.log("[Auth] Apple Sign-In credential received");
+      
+      if (!credential.identityToken) {
+        return { data: null, error: new Error("No identity token received from Apple") };
+      }
+      
+      // Call Convex action to verify token and create session
+      const response = await fetch(`${CONVEX_URL}/api/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: "authNative:signInWithApple",
+          args: {
+            identityToken: credential.identityToken,
+            fullName: credential.fullName ? {
+              givenName: credential.fullName.givenName,
+              familyName: credential.fullName.familyName,
+            } : undefined,
+            email: credential.email,
+          },
+        }),
+      });
+      
+      const result = await response.json();
+      console.log("[Auth] Convex signInWithApple result:", result.success ? "Success" : result.error);
+      
+      if (!result.success || result.error) {
+        return { data: null, error: new Error(result.error || "Apple sign-in failed") };
+      }
+      
+      // Store session
+      const session = createSessionFromResponse(result.token, result.user);
+      await storeSession(session, result.user);
+      
+      return { data: { session, user: result.user }, error: null };
+    } catch (error: any) {
+      console.error("[Auth] Native Apple Sign-In error:", error);
+      
+      // Handle cancellation
+      if (error.code === "ERR_CANCELED") {
+        return { data: null, error: new Error("Sign-in cancelled") };
+      }
+      
+      return { data: null, error: error as Error };
+    }
+  };
+
   return {
     // Explicit initialization - call from useEffect
     init,
+
+    // Configure Google Sign-In (call early in app lifecycle)
+    configureGoogleSignIn,
 
     // Sign in with email/password
     signIn: {
@@ -252,19 +444,29 @@ function createNativeAuthClient() {
         return { data: null, error: new Error("Invalid response from server") };
       },
 
-      // Social sign in (Google, Apple, etc.)
+      // Social sign in - NOW USES NATIVE SDK instead of OAuth redirect
       social: async ({
         provider,
         callbackURL,
       }: {
         provider: string;
         callbackURL?: string;
-      }): Promise<AuthResponse<{ url: string }>> => {
+      }): Promise<AuthResponse<SessionData | { url: string }>> => {
         await ensureInit();
+        console.log("[Auth] Starting social sign-in with provider:", provider);
+
+        // Use native sign-in for Google and Apple on mobile
+        if (provider === "google" && Platform.OS !== "web") {
+          return nativeGoogleSignIn();
+        }
+        
+        if (provider === "apple" && Platform.OS === "ios") {
+          return nativeAppleSignIn();
+        }
+
+        // Fallback to OAuth redirect for web or unsupported providers
         const scheme = Constants.expoConfig?.scheme || "planera";
         const redirectURL = callbackURL || `${scheme}://`;
-
-        console.log("[Auth] Starting social sign-in with provider:", provider);
 
         const response = await authFetch<any>("/api/auth/sign-in/social", {
           method: "POST",
@@ -281,6 +483,12 @@ function createNativeAuthClient() {
 
         return { data: null, error: response.error };
       },
+
+      // Native Google Sign-In (direct method)
+      google: nativeGoogleSignIn,
+
+      // Native Apple Sign-In (direct method)
+      apple: nativeAppleSignIn,
 
       // Anonymous sign in
       anonymous: async (): Promise<AuthResponse<SessionData>> => {
@@ -359,7 +567,21 @@ function createNativeAuthClient() {
     signOut: async (): Promise<AuthResponse<null>> => {
       await ensureInit();
       console.log("[Auth] Signing out");
+      
       try {
+        // Sign out from native providers if signed in
+        if (Platform.OS !== "web") {
+          try {
+            const { GoogleSignin } = await import("@react-native-google-signin/google-signin");
+            const currentUser = GoogleSignin.getCurrentUser();
+            if (currentUser) {
+              await GoogleSignin.signOut();
+            }
+          } catch (e) {
+            // Ignore Google sign-out errors
+          }
+        }
+        
         await authFetch("/api/auth/sign-out", { method: "POST" });
       } catch (error) {
         console.warn("[Auth] Sign out request failed:", error);

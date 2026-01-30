@@ -429,7 +429,20 @@ export const completeBooking = action({
       }
 
       // Transform passengers to Duffel format
-      const duffelPassengers = draft.passengers.map(p => ({
+      const duffelPassengers = draft.passengers.map((p: {
+        passengerId: string;
+        givenName: string;
+        familyName: string;
+        dateOfBirth: string;
+        gender: "male" | "female";
+        email?: string;
+        phoneCountryCode?: string;
+        phoneNumber?: string;
+        title: "mr" | "ms" | "mrs" | "miss" | "dr";
+        passportNumber?: string;
+        passportIssuingCountry?: string;
+        passportExpiryDate?: string;
+      }) => ({
         id: p.passengerId,
         given_name: p.givenName,
         family_name: p.familyName,
@@ -487,8 +500,12 @@ export const completeBooking = action({
       } : undefined;
 
       // Build included baggage summary
-      const includedBaggage = draft.includedBaggage?.map(bag => {
-        const passenger = draft.passengers.find(p => p.passengerId === bag.passengerId);
+      const includedBaggage = draft.includedBaggage?.map((bag: {
+        passengerId: string;
+        cabin?: { quantity: bigint };
+        checked?: { quantity: bigint; weight?: { amount: number; unit: string } };
+      }) => {
+        const passenger = draft.passengers.find((p: { passengerId: string }) => p.passengerId === bag.passengerId);
         return {
           passengerId: bag.passengerId,
           passengerName: passenger ? `${passenger.givenName} ${passenger.familyName}` : undefined,
@@ -499,8 +516,15 @@ export const completeBooking = action({
       });
 
       // Build paid baggage summary
-      const paidBaggage = draft.selectedBags?.map(bag => {
-        const passenger = draft.passengers.find(p => p.passengerId === bag.passengerId);
+      const paidBaggage = draft.selectedBags?.map((bag: {
+        passengerId: string;
+        type: string;
+        quantity: bigint;
+        priceCents: bigint;
+        currency: string;
+        weight?: { amount: number; unit: string };
+      }) => {
+        const passenger = draft.passengers.find((p: { passengerId: string }) => p.passengerId === bag.passengerId);
         return {
           passengerId: bag.passengerId,
           passengerName: passenger ? `${passenger.givenName} ${passenger.familyName}` : undefined,
@@ -513,8 +537,14 @@ export const completeBooking = action({
       });
 
       // Build seat selections summary
-      const seatSelections = draft.selectedSeats?.map(seat => {
-        const passenger = draft.passengers.find(p => p.passengerId === seat.passengerId);
+      const seatSelections = draft.selectedSeats?.map((seat: {
+        passengerId: string;
+        segmentId: string;
+        seatDesignator: string;
+        priceCents: bigint;
+        currency: string;
+      }) => {
+        const passenger = draft.passengers.find((p: { passengerId: string }) => p.passengerId === seat.passengerId);
         return {
           passengerId: seat.passengerId,
           passengerName: passenger ? `${passenger.givenName} ${passenger.familyName}` : undefined,
@@ -553,7 +583,13 @@ export const completeBooking = action({
           destination: "",
         },
         returnFlight: flightDetails?.return,
-        passengers: draft.passengers.map(p => ({
+        passengers: draft.passengers.map((p: {
+          givenName: string;
+          familyName: string;
+          email?: string;
+          type?: "adult" | "child" | "infant";
+          dateOfBirth: string;
+        }) => ({
           givenName: p.givenName,
           familyName: p.familyName,
           email: p.email || "",

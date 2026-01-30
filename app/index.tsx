@@ -112,20 +112,42 @@ export default function Index() {
     const handleGoogleSignIn = async () => {
         setOauthLoading("google");
         try {
-            await authClient.signIn.social({ provider: "google" });
+            // Use native Google Sign-In on mobile
+            const result = await authClient.signIn.google();
+            if (result.error) {
+                // Don't show error for cancellation
+                if (result.error.message !== "Sign-in cancelled") {
+                    Alert.alert("Error", result.error.message || "Google sign in failed");
+                }
+            }
+            // Success: session storage triggers auth provider -> isAuthenticated becomes true
         } catch (error: any) {
-            Alert.alert("Error", "Google sign in failed");
+            Alert.alert("Error", error.message || "Google sign in failed");
         } finally {
             setOauthLoading(null);
         }
     };
 
     const handleAppleSignIn = async () => {
+        // Apple Sign-In only available on iOS
+        if (Platform.OS !== "ios") {
+            Alert.alert("Not Available", "Apple Sign-In is only available on iOS devices");
+            return;
+        }
+        
         setOauthLoading("apple");
         try {
-            await authClient.signIn.social({ provider: "apple" });
+            // Use native Apple Sign-In
+            const result = await authClient.signIn.apple();
+            if (result.error) {
+                // Don't show error for cancellation
+                if (result.error.message !== "Sign-in cancelled") {
+                    Alert.alert("Error", result.error.message || "Apple sign in failed");
+                }
+            }
+            // Success: session storage triggers auth provider -> isAuthenticated becomes true
         } catch (error: any) {
-            Alert.alert("Error", "Apple sign in failed");
+            Alert.alert("Error", error.message || "Apple sign in failed");
         } finally {
             setOauthLoading(null);
         }
@@ -323,20 +345,23 @@ export default function Index() {
                             )}
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
-                            style={styles.socialButton} 
-                            onPress={handleAppleSignIn}
-                            disabled={oauthLoading !== null}
-                        >
-                            {oauthLoading === "apple" ? (
-                                <ActivityIndicator color={colors.text} />
-                            ) : (
-                                <>
-                                    <Ionicons name="logo-apple" size={20} color={colors.text} style={styles.socialIcon} />
-                                    <Text style={styles.socialButtonText}>Continue with Apple</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
+                        {/* Apple Sign-In - Only show on iOS */}
+                        {Platform.OS === "ios" && (
+                            <TouchableOpacity 
+                                style={styles.socialButton} 
+                                onPress={handleAppleSignIn}
+                                disabled={oauthLoading !== null}
+                            >
+                                {oauthLoading === "apple" ? (
+                                    <ActivityIndicator color={colors.text} />
+                                ) : (
+                                    <>
+                                        <Ionicons name="logo-apple" size={20} color={colors.text} style={styles.socialIcon} />
+                                        <Text style={styles.socialButtonText}>Continue with Apple</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        )}
 
                         <TouchableOpacity 
                             style={styles.primaryButton} 
