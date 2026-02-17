@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { authComponent } from "./auth";
 
 // List all travelers for the current user
@@ -79,7 +79,7 @@ export const get = authQuery({
 });
 
 // Create a new traveler profile
-export const create = authMutation({
+export const create = mutation({
   args: {
     firstName: v.string(),
     lastName: v.string(),
@@ -95,11 +95,22 @@ export const create = authMutation({
   },
   returns: v.id("travelers"),
   handler: async (ctx, args) => {
+    // Manually resolve user — handles token propagation delay
+    let user;
+    try {
+      user = await authComponent.getAuthUser(ctx);
+    } catch {
+      user = null;
+    }
+    if (!user) {
+      throw new Error("Authentication not ready yet. Please try again in a moment.");
+    }
+
     // If this is marked as default, unmark any existing defaults
     if (args.isDefault) {
       const existingTravelers = await ctx.db
         .query("travelers")
-        .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
         .collect();
       
       for (const traveler of existingTravelers) {
@@ -112,13 +123,13 @@ export const create = authMutation({
     // Check if this is the first traveler - make it default
     const existingCount = await ctx.db
       .query("travelers")
-      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
     
     const isFirstTraveler = existingCount.length === 0;
 
     const id = await ctx.db.insert("travelers", {
-      userId: ctx.user._id,
+      userId: user._id,
       firstName: args.firstName,
       lastName: args.lastName,
       dateOfBirth: args.dateOfBirth,
