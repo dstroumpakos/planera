@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { INTERESTS, COUNTRIES } from "@/lib/data";
 import { AIRPORTS } from "@/lib/airports";
 import * as Haptics from "expo-haptics";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth } from "@/lib/auth-components";
 
 type OnboardingStep = "welcome" | "traveler-choice" | "my-profile" | "add-travelers" | "preferences";
 type TravelerChoice = "just-me" | "me-others" | "skip-profile";
@@ -197,25 +197,7 @@ export default function Onboarding() {
 
     setSaving(true);
 
-    // Wait for auth token to propagate before calling mutation
-    if (!isAuthenticatedRef.current) {
-      console.log("[Onboarding] Waiting for auth to be ready...");
-      const maxWait = 15000; // 15 seconds max
-      const pollInterval = 500;
-      let waited = 0;
-      while (!isAuthenticatedRef.current && waited < maxWait) {
-        await new Promise((r) => setTimeout(r, pollInterval));
-        waited += pollInterval;
-      }
-      if (!isAuthenticatedRef.current) {
-        setErrorMessage("Your session is still loading. Please wait a few seconds and try again.");
-        setSaving(false);
-        return;
-      }
-      console.log(`[Onboarding] Auth ready after ${waited}ms`);
-    }
-
-    const maxRetries = 3;
+    const maxRetries = 5;
     const retryDelay = 2000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -251,17 +233,15 @@ export default function Onboarding() {
           err?.data?.includes("Authentication not ready");
 
         if (isAuthError && attempt < maxRetries) {
-          // Token hasn't propagated yet — wait and retry
-          console.log(`[Onboarding] Auth not ready, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
+          console.log(`[Onboarding] Auth not ready for add traveler, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
           await new Promise((r) => setTimeout(r, retryDelay));
           continue;
         }
 
-        // Final attempt failed or non-auth error
-        console.error("Error saving profile:", err);
+        console.error("Error adding traveler:", err);
         const msg = isAuthError
           ? "Your session is still loading. Please wait a few seconds and try again."
-          : "Failed to save profile. Please try again.";
+          : "Failed to add traveler. Please try again.";
         if (Platform.OS !== "web") {
           Alert.alert("Error", msg);
         } else {
@@ -284,19 +264,10 @@ export default function Onboarding() {
       return;
     }
 
-    if (!isAuthenticated) {
-      const msg = "Still connecting... Please wait a moment and try again.";
-      if (Platform.OS !== "web") {
-        Alert.alert("Please Wait", msg);
-      } else {
-        setErrorMessage(msg);
-      }
-      return;
-    }
-
     setSaving(true);
+
     const maxRetries = 5;
-    const retryDelay = 3000;
+    const retryDelay = 2000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -314,18 +285,18 @@ export default function Onboarding() {
           isDefault: false,
         });
 
-        setAdditionalTravelers([...additionalTravelers, travelerForm]);
-        setTravelerForm(emptyForm);
-        setShowTravelerModal(false);
         hapticFeedback();
+        setAdditionalTravelers([...additionalTravelers, { ...travelerForm }]);
+        setTravelerForm({ ...emptyForm });
+        setShowTravelerModal(false);
         setSaving(false);
         return;
       } catch (err: any) {
         const isAuthError =
           err?.message?.includes("Authentication required") ||
           err?.message?.includes("Authentication not ready") ||
-          err?.data?.includes("Authentication required") ||
-          err?.data?.includes("Authentication not ready");
+          err?.data?.includes?.("Authentication required") ||
+          err?.data?.includes?.("Authentication not ready");
 
         if (isAuthError && attempt < maxRetries) {
           console.log(`[Onboarding] Auth not ready for add traveler, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);

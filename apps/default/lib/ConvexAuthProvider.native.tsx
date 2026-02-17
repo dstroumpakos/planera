@@ -1,7 +1,7 @@
 // Native-specific Convex Auth Provider
 // Uses ConvexProviderWithAuth for proper auth state integration with Convex
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef, ReactNode } from "react";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 
 // Import the native auth client directly to get proper types
@@ -69,6 +69,9 @@ interface ConvexAuthProviderProps {
   client: ConvexReactClient;
   children: ReactNode;
 }
+
+// The Convex site URL for token exchange
+const CONVEX_SITE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
 
 // Helper to extract access token from session
 function extractAccessToken(session: SessionData | null): string | null {
@@ -175,28 +178,18 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
         async ({ forceRefreshToken }: { forceRefreshToken: boolean }): Promise<string | null> => {
           console.log("[Auth] fetchAccessToken called, forceRefresh:", forceRefreshToken);
 
-          // First try: get token from SecureStore directly
+          // Try to get token from SecureStore first
           const storedToken = await authClient.getToken();
           if (storedToken) {
             console.log("[Auth] fetchAccessToken: FOUND token from SecureStore");
             return storedToken;
           }
 
-          // Second try: get from current session state
-          const tokenFromSession = extractAccessToken(session);
-          if (tokenFromSession) {
+          // Fallback: extract from session state
+          const sessionToken = extractAccessToken(session);
+          if (sessionToken) {
             console.log("[Auth] fetchAccessToken: FOUND token from session state");
-            return tokenFromSession;
-          }
-
-          // Third try: refresh session from server
-          if (forceRefreshToken) {
-            console.log("[Auth] fetchAccessToken: Refreshing from server...");
-            const result = await authClient.getSession();
-            if (result.data?.session?.token) {
-              console.log("[Auth] fetchAccessToken: FOUND token after refresh");
-              return result.data.session.token;
-            }
+            return sessionToken;
           }
 
           console.log("[Auth] fetchAccessToken: MISSING - no token available");
