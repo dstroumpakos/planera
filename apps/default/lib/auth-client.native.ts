@@ -54,8 +54,12 @@ export interface SessionData {
 }
 
 // Helper to safely access SecureStore - ONLY call after mount
+// On web, falls back to localStorage since expo-secure-store is native-only
 async function getSecureItem(key: string): Promise<string | null> {
   try {
+    if (Platform.OS === "web") {
+      return typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+    }
     return await SecureStore.getItemAsync(key);
   } catch (error) {
     console.warn("[Auth] SecureStore read error:", error);
@@ -65,6 +69,12 @@ async function getSecureItem(key: string): Promise<string | null> {
 
 async function setSecureItem(key: string, value: string): Promise<void> {
   try {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(key, value);
+      }
+      return;
+    }
     await SecureStore.setItemAsync(key, value);
   } catch (error) {
     console.warn("[Auth] SecureStore write error:", error);
@@ -73,6 +83,12 @@ async function setSecureItem(key: string, value: string): Promise<void> {
 
 async function deleteSecureItem(key: string): Promise<void> {
   try {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(key);
+      }
+      return;
+    }
     await SecureStore.deleteItemAsync(key);
   } catch (error) {
     console.warn("[Auth] SecureStore delete error:", error);

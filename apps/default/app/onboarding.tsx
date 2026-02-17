@@ -223,7 +223,9 @@ export default function Onboarding() {
       } catch (err: any) {
         const isAuthError =
           err?.message?.includes("Authentication required") ||
-          err?.data?.includes("Authentication required");
+          err?.message?.includes("Authentication not ready") ||
+          err?.data?.includes("Authentication required") ||
+          err?.data?.includes("Authentication not ready");
 
         if (isAuthError && attempt < maxRetries) {
           // Token hasn't propagated yet — wait and retry
@@ -298,7 +300,9 @@ export default function Onboarding() {
       } catch (err: any) {
         const isAuthError =
           err?.message?.includes("Authentication required") ||
-          err?.data?.includes("Authentication required");
+          err?.message?.includes("Authentication not ready") ||
+          err?.data?.includes("Authentication required") ||
+          err?.data?.includes("Authentication not ready");
 
         if (isAuthError && attempt < maxRetries) {
           console.log(`[Onboarding] Auth not ready for add traveler, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
@@ -362,7 +366,9 @@ export default function Onboarding() {
       } catch (err: any) {
         const isAuthError =
           err?.message?.includes("Authentication required") ||
-          err?.data?.includes("Authentication required");
+          err?.message?.includes("Authentication not ready") ||
+          err?.data?.includes("Authentication required") ||
+          err?.data?.includes("Authentication not ready");
 
         if (isAuthError && attempt < maxRetries) {
           console.log(`[Onboarding] Auth not ready for finish, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
