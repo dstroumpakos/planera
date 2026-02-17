@@ -7,7 +7,6 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useTheme } from "@/lib/ThemeContext";
-import { useConvexAuth } from "@/lib/auth-components";
 import * as Haptics from "expo-haptics";
 import { COUNTRIES } from "@/lib/data";
 
@@ -40,8 +39,7 @@ const emptyForm: TravelerForm = {
 export default function TravelerProfiles() {
   const router = useRouter();
   const { colors, isDarkMode } = useTheme();
-  const { isAuthenticated } = useConvexAuth();
-  const travelers = useQuery(api.travelers.list, isAuthenticated ? {} : "skip");
+  const travelers = useQuery(api.travelers.list);
   const createTraveler = useMutation(api.travelers.create);
   const updateTraveler = useMutation(api.travelers.update);
   const removeTraveler = useMutation(api.travelers.remove);

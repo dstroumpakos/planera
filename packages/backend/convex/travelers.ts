@@ -1,8 +1,12 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
+import { query } from "./_generated/server";
+import { authComponent } from "./auth";
 
 // List all travelers for the current user
-export const list = authQuery({
+// Uses a regular query (not authQuery) to gracefully handle the auth token
+// propagation race condition — returns [] when not yet authenticated.
+export const list = query({
   args: {},
   returns: v.array(
     v.object({
@@ -25,9 +29,17 @@ export const list = authQuery({
     })
   ),
   handler: async (ctx) => {
+    let user;
+    try {
+      user = await authComponent.getAuthUser(ctx);
+    } catch {
+      user = null;
+    }
+    if (!user) return [];
+
     const travelers = await ctx.db
       .query("travelers")
-      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
     return travelers;
   },

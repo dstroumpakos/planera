@@ -7,7 +7,6 @@ import { Id } from "@/convex/_generated/dataModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/ThemeContext";
-import { useConvexAuth } from "@/lib/auth-components";
 
 interface PassengerForm {
   givenName: string;
@@ -73,9 +72,8 @@ export default function FlightBookingScreen() {
   const getFlightOffer = useAction(api.flightBooking.getFlightOffer);
   const createBooking = useAction(api.flightBooking.createFlightBooking);
   
-  // Fetch saved traveler profiles if IDs are provided
-  const { isAuthenticated } = useConvexAuth();
-  const savedTravelers = useQuery(api.travelers.list, isAuthenticated ? {} : "skip");
+  // Fetch saved traveler profiles (backend gracefully returns [] if not yet authenticated)
+  const savedTravelers = useQuery(api.travelers.list);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

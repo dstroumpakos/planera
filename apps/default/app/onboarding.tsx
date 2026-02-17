@@ -5,7 +5,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
-import { useConvexAuth } from "@/lib/auth-components";
 import { INTERESTS, COUNTRIES } from "@/lib/data";
 import { AIRPORTS } from "@/lib/airports";
 import * as Haptics from "expo-haptics";
@@ -77,9 +76,8 @@ export default function Onboarding() {
   const saveTravelPreferences = useMutation(api.users.saveTravelPreferences);
   const completeOnboarding = useMutation(api.users.completeOnboarding);
   
-  // Query existing travelers - skip until auth is confirmed on Convex side
-  const { isAuthenticated } = useConvexAuth();
-  const existingTravelers = useQuery(api.travelers.list, isAuthenticated ? {} : "skip");
+  // Query existing travelers (backend gracefully returns [] if not yet authenticated)
+  const existingTravelers = useQuery(api.travelers.list);
 
   const hapticFeedback = () => {
     if (Platform.OS !== "web") {
