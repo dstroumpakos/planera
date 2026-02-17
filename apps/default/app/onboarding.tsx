@@ -191,16 +191,6 @@ export default function Onboarding() {
       return;
     }
 
-    if (!isAuthenticated) {
-      const msg = "Still connecting... Please wait a moment and try again.";
-      if (Platform.OS !== "web") {
-        Alert.alert("Please Wait", msg);
-      } else {
-        setErrorMessage(msg);
-      }
-      return;
-    }
-
     setSaving(true);
     const maxRetries = 3;
     const retryDelay = 2000; // 2 seconds
