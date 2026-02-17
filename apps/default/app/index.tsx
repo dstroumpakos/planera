@@ -14,11 +14,11 @@ const COLORS = LIGHT_COLORS;
 
 // Component to handle authenticated user redirect based on onboarding status
 function AuthenticatedRedirect() {
-    const settings = useQuery(api.users.getSettings);
+    const status = useQuery(api.users.getOnboardingStatus);
 
-    // Still loading settings from Convex
-    if (settings === undefined) {
-        console.log("[Index] AuthenticatedRedirect: Loading settings...");
+    // Still loading from Convex
+    if (status === undefined) {
+        console.log("[Index] AuthenticatedRedirect: Loading status...");
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -27,10 +27,21 @@ function AuthenticatedRedirect() {
         );
     }
 
-    console.log("[Index] AuthenticatedRedirect: Settings loaded, onboardingCompleted:", settings.onboardingCompleted);
+    // Auth token hasn't propagated to backend yet — show loading
+    if (!status.authenticated) {
+        console.log("[Index] AuthenticatedRedirect: Waiting for auth token...");
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Signing you in...</Text>
+            </View>
+        );
+    }
+
+    console.log("[Index] AuthenticatedRedirect: onboardingCompleted:", status.onboardingCompleted);
 
     // If onboarding not completed, redirect to onboarding
-    if (!settings.onboardingCompleted) {
+    if (!status.onboardingCompleted) {
         return <Redirect href="/onboarding" />;
     }
 

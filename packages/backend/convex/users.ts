@@ -1,5 +1,43 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
+import { query } from "./_generated/server";
+import { authComponent } from "./auth";
+
+// Public query that gracefully handles unauthenticated state
+// Used during the auth->redirect transition to avoid ConvexError crashes
+export const getOnboardingStatus = query({
+    args: {},
+    returns: v.union(
+        v.object({
+            authenticated: v.literal(true),
+            onboardingCompleted: v.boolean(),
+        }),
+        v.object({
+            authenticated: v.literal(false),
+        })
+    ),
+    handler: async (ctx) => {
+        let user;
+        try {
+            user = await authComponent.getAuthUser(ctx);
+        } catch {
+            user = null;
+        }
+        if (!user) {
+            return { authenticated: false as const };
+        }
+
+        const settings = await ctx.db
+            .query("userSettings")
+            .withIndex("by_user", (q) => q.eq("userId", user._id))
+            .unique();
+
+        return {
+            authenticated: true as const,
+            onboardingCompleted: settings?.onboardingCompleted ?? false,
+        };
+    },
+});
 
 export const getPlan = authQuery({
     args: {},
