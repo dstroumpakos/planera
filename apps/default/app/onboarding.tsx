@@ -4,10 +4,11 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { INTERESTS, COUNTRIES } from "@/lib/data";
 import { AIRPORTS } from "@/lib/airports";
 import * as Haptics from "expo-haptics";
+import { useConvexAuth } from "convex/react";
 
 type OnboardingStep = "welcome" | "traveler-choice" | "my-profile" | "add-travelers" | "preferences";
 type TravelerChoice = "just-me" | "me-others" | "skip-profile";
@@ -40,44 +41,49 @@ const emptyForm: TravelerForm = {
 
 export default function Onboarding() {
   const router = useRouter();
+  const { isAuthenticated } = useConvexAuth();
   const [step, setStep] = useState<OnboardingStep>("welcome");
-  const [travelerChoice, setTravelerChoice] = useState<TravelerChoice>("just-me");
-  const [myProfile, setMyProfile] = useState<TravelerForm>(emptyForm);
+  // Clear error when changing steps
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const prevStep = useRef(step);
+  useEffect(() => {
+    if (prevStep.current !== step) {
+      setErrorMessage(null);
+      prevStep.current = step;
+    }
+  }, [step]);
+
+  // Traveler choice
+  const [travelerChoice, setTravelerChoice] = useState<TravelerChoice | null>(null);
+  const [skippedProfile, setSkippedProfile] = useState(false);
+  
+  // My profile form
+  const [myProfile, setMyProfile] = useState<TravelerForm>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
-  const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
   
   // Additional travelers
   const [additionalTravelers, setAdditionalTravelers] = useState<TravelerForm[]>([]);
-  const [travelerForm, setTravelerForm] = useState<TravelerForm>(emptyForm);
+  const [travelerForm, setTravelerForm] = useState<TravelerForm>({ ...emptyForm });
   const [showTravelerModal, setShowTravelerModal] = useState(false);
-  const [travelerCountrySearch, setTravelerCountrySearch] = useState("");
   const [showTravelerCountryPicker, setShowTravelerCountryPicker] = useState(false);
-  const [showTravelerGenderPicker, setShowTravelerGenderPicker] = useState(false);
+  const [travelerCountrySearch, setTravelerCountrySearch] = useState("");
   
-  // Travel preferences
+  // Preferences
   const [homeAirport, setHomeAirport] = useState("");
-  const [defaultBudget, setDefaultBudget] = useState("2000");
+  const [defaultBudget, setDefaultBudget] = useState("");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [flightTimePreference, setFlightTimePreference] = useState("any");
+  const [flightTimePreference, setFlightTimePreference] = useState("no-preference");
   const [skipFlights, setSkipFlights] = useState(false);
   const [skipHotels, setSkipHotels] = useState(false);
-  
-  // Track if user skipped profile creation
-  const [skippedProfile, setSkippedProfile] = useState(false);
-  
-  // Airport autocomplete
-  const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
   const [airportSuggestions, setAirportSuggestions] = useState<typeof AIRPORTS>([]);
+  const [showAirportSuggestions, setShowAirportSuggestions] = useState(false);
   
   // Mutations
   const createTraveler = useMutation(api.travelers.create);
   const saveTravelPreferences = useMutation(api.users.saveTravelPreferences);
   const completeOnboarding = useMutation(api.users.completeOnboarding);
-  
-  // Query existing travelers (backend gracefully returns [] if not yet authenticated)
-  const existingTravelers = useQuery(api.travelers.list);
 
   const hapticFeedback = () => {
     if (Platform.OS !== "web") {
@@ -174,92 +180,154 @@ export default function Onboarding() {
   };
 
   const handleSaveMyProfile = async () => {
+    setErrorMessage(null);
     const error = validateProfileForm(myProfile);
     if (error) {
       if (Platform.OS !== "web") {
         Alert.alert("Missing Information", error);
       } else {
-        alert(error);
+        setErrorMessage(error);
+      }
+      return;
+    }
+
+    if (!isAuthenticated) {
+      const msg = "Still connecting... Please wait a moment and try again.";
+      if (Platform.OS !== "web") {
+        Alert.alert("Please Wait", msg);
+      } else {
+        setErrorMessage(msg);
       }
       return;
     }
 
     setSaving(true);
-    try {
-      await createTraveler({
-        firstName: myProfile.firstName.trim(),
-        lastName: myProfile.lastName.trim(),
-        dateOfBirth: myProfile.dateOfBirth,
-        gender: myProfile.gender as "male" | "female",
-        passportNumber: myProfile.passportNumber.trim(),
-        passportIssuingCountry: myProfile.passportIssuingCountry,
-        passportExpiryDate: myProfile.passportExpiryDate,
-        email: myProfile.email.trim() || undefined,
-        phoneCountryCode: myProfile.phoneCountryCode.trim() || undefined,
-        phoneNumber: myProfile.phoneNumber.trim() || undefined,
-        isDefault: true,
-      });
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 seconds
 
-      hapticFeedback();
-      
-      if (travelerChoice === "me-others") {
-        setStep("add-travelers");
-      } else {
-        setStep("preferences");
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await createTraveler({
+          firstName: myProfile.firstName.trim(),
+          lastName: myProfile.lastName.trim(),
+          dateOfBirth: myProfile.dateOfBirth,
+          gender: myProfile.gender as "male" | "female",
+          passportNumber: myProfile.passportNumber.trim(),
+          passportIssuingCountry: myProfile.passportIssuingCountry,
+          passportExpiryDate: myProfile.passportExpiryDate,
+          email: myProfile.email.trim() || undefined,
+          phoneCountryCode: myProfile.phoneCountryCode.trim() || undefined,
+          phoneNumber: myProfile.phoneNumber.trim() || undefined,
+          isDefault: true,
+        });
+
+        hapticFeedback();
+        
+        if (travelerChoice === "me-others") {
+          setStep("add-travelers");
+        } else {
+          setStep("preferences");
+        }
+        setSaving(false);
+        return; // Success — exit the loop
+      } catch (err: any) {
+        const isAuthError =
+          err?.message?.includes("Authentication required") ||
+          err?.data?.includes("Authentication required");
+
+        if (isAuthError && attempt < maxRetries) {
+          // Token hasn't propagated yet — wait and retry
+          console.log(`[Onboarding] Auth not ready, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
+          await new Promise((r) => setTimeout(r, retryDelay));
+          continue;
+        }
+
+        // Final attempt failed or non-auth error
+        console.error("Error saving profile:", err);
+        const msg = isAuthError
+          ? "Your session is still loading. Please wait a few seconds and try again."
+          : "Failed to save profile. Please try again.";
+        if (Platform.OS !== "web") {
+          Alert.alert("Error", msg);
+        } else {
+          setErrorMessage(msg);
+        }
       }
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      if (Platform.OS !== "web") {
-        Alert.alert("Error", "Failed to save profile. Please try again.");
-      } else {
-        alert("Failed to save profile. Please try again.");
-      }
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
   const handleAddTraveler = async () => {
+    setErrorMessage(null);
     const error = validateProfileForm(travelerForm);
     if (error) {
       if (Platform.OS !== "web") {
         Alert.alert("Missing Information", error);
       } else {
-        alert(error);
+        setErrorMessage(error);
+      }
+      return;
+    }
+
+    if (!isAuthenticated) {
+      const msg = "Still connecting... Please wait a moment and try again.";
+      if (Platform.OS !== "web") {
+        Alert.alert("Please Wait", msg);
+      } else {
+        setErrorMessage(msg);
       }
       return;
     }
 
     setSaving(true);
-    try {
-      await createTraveler({
-        firstName: travelerForm.firstName.trim(),
-        lastName: travelerForm.lastName.trim(),
-        dateOfBirth: travelerForm.dateOfBirth,
-        gender: travelerForm.gender as "male" | "female",
-        passportNumber: travelerForm.passportNumber.trim(),
-        passportIssuingCountry: travelerForm.passportIssuingCountry,
-        passportExpiryDate: travelerForm.passportExpiryDate,
-        email: travelerForm.email.trim() || undefined,
-        phoneCountryCode: travelerForm.phoneCountryCode.trim() || undefined,
-        phoneNumber: travelerForm.phoneNumber.trim() || undefined,
-        isDefault: false,
-      });
+    const maxRetries = 3;
+    const retryDelay = 2000;
 
-      setAdditionalTravelers([...additionalTravelers, travelerForm]);
-      setTravelerForm(emptyForm);
-      setShowTravelerModal(false);
-      hapticFeedback();
-    } catch (error) {
-      console.error("Error adding traveler:", error);
-      if (Platform.OS !== "web") {
-        Alert.alert("Error", "Failed to add traveler. Please try again.");
-      } else {
-        alert("Failed to add traveler. Please try again.");
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await createTraveler({
+          firstName: travelerForm.firstName.trim(),
+          lastName: travelerForm.lastName.trim(),
+          dateOfBirth: travelerForm.dateOfBirth,
+          gender: travelerForm.gender as "male" | "female",
+          passportNumber: travelerForm.passportNumber.trim(),
+          passportIssuingCountry: travelerForm.passportIssuingCountry,
+          passportExpiryDate: travelerForm.passportExpiryDate,
+          email: travelerForm.email.trim() || undefined,
+          phoneCountryCode: travelerForm.phoneCountryCode.trim() || undefined,
+          phoneNumber: travelerForm.phoneNumber.trim() || undefined,
+          isDefault: false,
+        });
+
+        setAdditionalTravelers([...additionalTravelers, travelerForm]);
+        setTravelerForm(emptyForm);
+        setShowTravelerModal(false);
+        hapticFeedback();
+        setSaving(false);
+        return;
+      } catch (err: any) {
+        const isAuthError =
+          err?.message?.includes("Authentication required") ||
+          err?.data?.includes("Authentication required");
+
+        if (isAuthError && attempt < maxRetries) {
+          console.log(`[Onboarding] Auth not ready for add traveler, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
+          await new Promise((r) => setTimeout(r, retryDelay));
+          continue;
+        }
+
+        console.error("Error adding traveler:", err);
+        const msg = isAuthError
+          ? "Your session is still loading. Please wait a few seconds and try again."
+          : "Failed to add traveler. Please try again.";
+        if (Platform.OS !== "web") {
+          Alert.alert("Error", msg);
+        } else {
+          setErrorMessage(msg);
+        }
       }
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
   const toggleInterest = (interest: string) => {
@@ -273,7 +341,7 @@ export default function Onboarding() {
         if (Platform.OS !== "web") {
           Alert.alert("Maximum Reached", "You can select up to 5 interests");
         } else {
-          alert("You can select up to 5 interests");
+          setErrorMessage("You can select up to 5 interests");
         }
       }
     }
@@ -281,30 +349,49 @@ export default function Onboarding() {
 
   const handleFinishOnboarding = async () => {
     setSaving(true);
-    try {
-      await saveTravelPreferences({
-        homeAirport,
-        defaultBudget: parseInt(defaultBudget) || undefined,
-        interests: selectedInterests,
-        flightTimePreference,
-        skipFlights,
-        skipHotels,
-      });
+    const maxRetries = 3;
+    const retryDelay = 2000;
 
-      await completeOnboarding();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await saveTravelPreferences({
+          homeAirport,
+          defaultBudget: parseInt(defaultBudget) || undefined,
+          interests: selectedInterests,
+          flightTimePreference,
+          skipFlights,
+          skipHotels,
+        });
 
-      hapticFeedback();
-      router.replace("/(tabs)");
-    } catch (error) {
-      console.error("Error completing onboarding:", error);
-      if (Platform.OS !== "web") {
-        Alert.alert("Error", "Failed to save preferences. Please try again.");
-      } else {
-        alert("Failed to save preferences. Please try again.");
+        await completeOnboarding();
+
+        hapticFeedback();
+        router.replace("/(tabs)");
+        setSaving(false);
+        return;
+      } catch (err: any) {
+        const isAuthError =
+          err?.message?.includes("Authentication required") ||
+          err?.data?.includes("Authentication required");
+
+        if (isAuthError && attempt < maxRetries) {
+          console.log(`[Onboarding] Auth not ready for finish, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
+          await new Promise((r) => setTimeout(r, retryDelay));
+          continue;
+        }
+
+        console.error("Error completing onboarding:", err);
+        const msg = isAuthError
+          ? "Your session is still loading. Please wait a few seconds and try again."
+          : "Failed to save preferences. Please try again.";
+        if (Platform.OS !== "web") {
+          Alert.alert("Error", msg);
+        } else {
+          setErrorMessage(msg);
+        }
       }
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
   // Progress indicator component
@@ -548,6 +635,16 @@ export default function Onboarding() {
               <Text style={styles.stepSubtitle}>Enter your details as shown on your passport</Text>
             </View>
             
+            {errorMessage && (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                <Text style={styles.errorBannerText}>{errorMessage}</Text>
+                <TouchableOpacity onPress={() => setErrorMessage(null)}>
+                  <Ionicons name="close" size={18} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Personal Information */}
             <View style={styles.formSection}>
               <Text style={styles.sectionLabel}>PERSONAL INFORMATION</Text>
@@ -801,6 +898,16 @@ export default function Onboarding() {
               Add family or friends you often travel with
             </Text>
             
+            {errorMessage && (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                <Text style={styles.errorBannerText}>{errorMessage}</Text>
+                <TouchableOpacity onPress={() => setErrorMessage(null)}>
+                  <Ionicons name="close" size={18} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Primary traveler (locked) */}
             <View style={styles.travelerCard}>
               <View style={styles.travelerCardLeft}>
@@ -1411,13 +1518,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFE500",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 32,
-    alignSelf: "center",
-    shadowColor: "#FFE500",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: "#E8E6E1",
   },
   logoInner: {
     width: 80,
@@ -2193,5 +2295,23 @@ const styles = StyleSheet.create({
   },
   toggleDescriptionLocked: {
     color: "#CBD5E1",
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  errorBannerText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#DC2626",
+    flex: 1,
   },
 });
