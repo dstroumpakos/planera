@@ -42,6 +42,10 @@ const emptyForm: TravelerForm = {
 export default function Onboarding() {
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
   const [step, setStep] = useState<OnboardingStep>("welcome");
   // Clear error when changing steps
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -192,8 +196,27 @@ export default function Onboarding() {
     }
 
     setSaving(true);
+
+    // Wait for auth token to propagate before calling mutation
+    if (!isAuthenticatedRef.current) {
+      console.log("[Onboarding] Waiting for auth to be ready...");
+      const maxWait = 15000; // 15 seconds max
+      const pollInterval = 500;
+      let waited = 0;
+      while (!isAuthenticatedRef.current && waited < maxWait) {
+        await new Promise((r) => setTimeout(r, pollInterval));
+        waited += pollInterval;
+      }
+      if (!isAuthenticatedRef.current) {
+        setErrorMessage("Your session is still loading. Please wait a few seconds and try again.");
+        setSaving(false);
+        return;
+      }
+      console.log(`[Onboarding] Auth ready after ${waited}ms`);
+    }
+
     const maxRetries = 3;
-    const retryDelay = 2000; // 2 seconds
+    const retryDelay = 2000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -272,8 +295,8 @@ export default function Onboarding() {
     }
 
     setSaving(true);
-    const maxRetries = 3;
-    const retryDelay = 2000;
+    const maxRetries = 5;
+    const retryDelay = 3000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -343,8 +366,8 @@ export default function Onboarding() {
 
   const handleFinishOnboarding = async () => {
     setSaving(true);
-    const maxRetries = 3;
-    const retryDelay = 2000;
+    const maxRetries = 5;
+    const retryDelay = 3000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
