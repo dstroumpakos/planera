@@ -187,7 +187,7 @@ export default function Index() {
                 <View style={styles.logoContainer}>
                     <View style={styles.logoIconWrapper}>
                         <Image 
-                            source={require("@/assets/images/appicon-1024x1024-01-s9s9iw.png")} 
+                            source={require("../../../assets/images/appicon-1024x1024-01-s9s9iw.png")} 
                             style={styles.logoImage}
                         />
                     </View>
