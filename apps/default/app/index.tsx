@@ -15,10 +15,22 @@ const COLORS = LIGHT_COLORS;
 // Component to handle authenticated user redirect based on onboarding status
 function AuthenticatedRedirect() {
     const status = useQuery(api.users.getOnboardingStatus);
+    const [waitingTooLong, setWaitingTooLong] = useState(false);
+
+    // If the backend keeps saying "not authenticated" for more than 3 seconds,
+    // the token probably hasn't propagated yet — skip to onboarding/tabs
+    useEffect(() => {
+        if (status && !status.authenticated) {
+            const timer = setTimeout(() => {
+                console.log("[Index] AuthenticatedRedirect: Token propagation timeout, redirecting anyway");
+                setWaitingTooLong(true);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [status]);
 
     // Still loading from Convex
     if (status === undefined) {
-        console.log("[Index] AuthenticatedRedirect: Loading status...");
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -27,9 +39,12 @@ function AuthenticatedRedirect() {
         );
     }
 
-    // Auth token hasn't propagated to backend yet — show loading
+    // Auth token hasn't propagated to backend yet
     if (!status.authenticated) {
-        console.log("[Index] AuthenticatedRedirect: Waiting for auth token...");
+        // If we've been waiting too long, just redirect to onboarding
+        if (waitingTooLong) {
+            return <Redirect href="/onboarding" />;
+        }
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -37,8 +52,6 @@ function AuthenticatedRedirect() {
             </View>
         );
     }
-
-    console.log("[Index] AuthenticatedRedirect: onboardingCompleted:", status.onboardingCompleted);
 
     // If onboarding not completed, redirect to onboarding
     if (!status.onboardingCompleted) {
