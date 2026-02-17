@@ -10,7 +10,7 @@ import { Calendar, DateData } from 'react-native-calendars';
 import { INTERESTS } from "@/lib/data";
 import { useTheme } from "@/lib/ThemeContext";
 
-import logoImage from "@/assets/images/appicon-1024x1024-01-1vb1vx.png";
+import logoImage from "../../../assets/images/appicon-1024x1024-01-1vb1vx.png";
 
 // Popular destinations list
 const DESTINATIONS = [
