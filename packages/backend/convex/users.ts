@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { authComponent } from "./auth";
 
 // Public query that gracefully handles unauthenticated state
@@ -321,13 +321,17 @@ export const getSettings = authQuery({
     },
 });
 
-export const completeOnboarding = authMutation({
+export const completeOnboarding = mutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
+    const user = await authComponent.getAuthUser(ctx);
+    if (!user) {
+      throw new Error("Authentication required");
+    }
     const settings = await ctx.db
         .query("userSettings")
-        .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
         .unique();
 
     if (settings) {
@@ -336,7 +340,7 @@ export const completeOnboarding = authMutation({
       });
     } else {
       await ctx.db.insert("userSettings", {
-        userId: ctx.user._id,
+        userId: user._id,
         onboardingCompleted: true,
       });
     }
@@ -345,7 +349,7 @@ export const completeOnboarding = authMutation({
 });
 
 // Save travel preferences directly to userSettings table
-export const saveTravelPreferences = authMutation({
+export const saveTravelPreferences = mutation({
   args: {
     homeAirport: v.optional(v.string()),
     defaultBudget: v.optional(v.number()),
@@ -357,9 +361,13 @@ export const saveTravelPreferences = authMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const user = await authComponent.getAuthUser(ctx);
+    if (!user) {
+      throw new Error("Authentication required");
+    }
     const settings = await ctx.db
         .query("userSettings")
-        .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
         .unique();
 
     const updateData = {
@@ -375,7 +383,7 @@ export const saveTravelPreferences = authMutation({
       await ctx.db.patch(settings._id, updateData);
     } else {
       await ctx.db.insert("userSettings", {
-        userId: ctx.user._id,
+        userId: user._id,
         ...updateData,
       });
     }
