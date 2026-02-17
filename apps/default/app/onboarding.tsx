@@ -85,6 +85,22 @@ export default function Onboarding() {
     }
   };
 
+  // Auto-format date input: inserts dashes as YYYY-MM-DD
+  const formatDateInput = (text: string, prev: string): string => {
+    // Only keep digits
+    const digits = text.replace(/[^0-9]/g, "");
+    // If user is deleting, just return stripped digits reformatted
+    if (text.length < prev.length) {
+      // Let them delete freely but reformat
+      if (digits.length <= 4) return digits;
+      if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+      return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+    }
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+  };
+
   const getStepNumber = (): number => {
     switch (step) {
       case "welcome": return 1;
@@ -568,10 +584,11 @@ export default function Onboarding() {
                 <TextInput
                   style={styles.input}
                   value={myProfile.dateOfBirth}
-                  onChangeText={(text) => setMyProfile({ ...myProfile, dateOfBirth: text })}
+                  onChangeText={(text) => setMyProfile({ ...myProfile, dateOfBirth: formatDateInput(text, myProfile.dateOfBirth) })}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#9B9B9B"
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType="number-pad"
+                  maxLength={10}
                 />
               </View>
               
@@ -639,10 +656,11 @@ export default function Onboarding() {
                 <TextInput
                   style={styles.input}
                   value={myProfile.passportExpiryDate}
-                  onChangeText={(text) => setMyProfile({ ...myProfile, passportExpiryDate: text })}
+                  onChangeText={(text) => setMyProfile({ ...myProfile, passportExpiryDate: formatDateInput(text, myProfile.passportExpiryDate) })}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#9B9B9B"
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType="number-pad"
+                  maxLength={10}
                 />
               </View>
             </View>
@@ -909,10 +927,11 @@ export default function Onboarding() {
                 <TextInput
                   style={styles.input}
                   value={travelerForm.dateOfBirth}
-                  onChangeText={(text) => setTravelerForm({ ...travelerForm, dateOfBirth: text })}
+                  onChangeText={(text) => setTravelerForm({ ...travelerForm, dateOfBirth: formatDateInput(text, travelerForm.dateOfBirth) })}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#9B9B9B"
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType="number-pad"
+                  maxLength={10}
                 />
               </View>
               
@@ -971,10 +990,11 @@ export default function Onboarding() {
                 <TextInput
                   style={styles.input}
                   value={travelerForm.passportExpiryDate}
-                  onChangeText={(text) => setTravelerForm({ ...travelerForm, passportExpiryDate: text })}
+                  onChangeText={(text) => setTravelerForm({ ...travelerForm, passportExpiryDate: formatDateInput(text, travelerForm.passportExpiryDate) })}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#9B9B9B"
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType="number-pad"
+                  maxLength={10}
                 />
               </View>
               
