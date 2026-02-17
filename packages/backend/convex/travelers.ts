@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { authMutation, authQuery } from "./functions";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { authComponent } from "./auth";
 
 // List all travelers for the current user
@@ -75,6 +75,68 @@ export const get = authQuery({
       return null;
     }
     return traveler;
+  },
+});
+
+// Internal mutation: Create a traveler for a known userId (called from trusted server-side code only)
+export const createForUser = internalMutation({
+  args: {
+    userId: v.string(),
+    firstName: v.string(),
+    lastName: v.string(),
+    dateOfBirth: v.string(),
+    gender: v.union(v.literal("male"), v.literal("female")),
+    passportNumber: v.string(),
+    passportIssuingCountry: v.string(),
+    passportExpiryDate: v.string(),
+    email: v.optional(v.string()),
+    phoneCountryCode: v.optional(v.string()),
+    phoneNumber: v.optional(v.string()),
+    isDefault: v.optional(v.boolean()),
+  },
+  returns: v.id("travelers"),
+  handler: async (ctx, args) => {
+    const { userId, ...travelerData } = args;
+
+    // If this is marked as default, unmark any existing defaults
+    if (travelerData.isDefault) {
+      const existingTravelers = await ctx.db
+        .query("travelers")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
+      
+      for (const traveler of existingTravelers) {
+        if (traveler.isDefault) {
+          await ctx.db.patch(traveler._id, { isDefault: false });
+        }
+      }
+    }
+
+    // Check if this is the first traveler - make it default
+    const existingCount = await ctx.db
+      .query("travelers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    
+    const isFirstTraveler = existingCount.length === 0;
+
+    const id = await ctx.db.insert("travelers", {
+      userId,
+      firstName: travelerData.firstName,
+      lastName: travelerData.lastName,
+      dateOfBirth: travelerData.dateOfBirth,
+      gender: travelerData.gender,
+      passportNumber: travelerData.passportNumber,
+      passportIssuingCountry: travelerData.passportIssuingCountry,
+      passportExpiryDate: travelerData.passportExpiryDate,
+      email: travelerData.email,
+      phoneCountryCode: travelerData.phoneCountryCode,
+      phoneNumber: travelerData.phoneNumber,
+      isDefault: travelerData.isDefault || isFirstTraveler,
+      createdAt: Date.now(),
+    });
+
+    return id;
   },
 });
 

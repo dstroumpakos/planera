@@ -73,10 +73,17 @@ interface ConvexAuthProviderProps {
 // The Convex site URL for token exchange
 const CONVEX_SITE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
 
-// Helper to extract access token from session
-function extractAccessToken(session: SessionData | null): string | null {
+// Helper to extract session token from session data
+function extractSessionToken(session: SessionData | null): string | null {
   if (!session?.session?.token) return null;
   return session.session.token;
+}
+
+// JWT cache to avoid hitting the token endpoint on every request
+interface JwtCache {
+  jwt: string;
+  expiresAt: number; // ms timestamp
+  sessionToken: string; // the session token it was issued for
 }
 
 // Native auth provider that integrates with Convex properly
@@ -84,6 +91,7 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
   const [session, setSession] = useState<SessionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [initComplete, setInitComplete] = useState(false);
+  const jwtCacheRef = useRef<JwtCache | null>(null);
 
   // Initialize auth and check session on mount
   useEffect(() => {
@@ -145,6 +153,9 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
       console.log("[Auth] Store listener fired, session:", sessionState ? "HAS_SESSION" : "NO_SESSION");
       setSession(sessionState);
 
+      // Clear JWT cache when session changes so we get a fresh JWT
+      jwtCacheRef.current = null;
+
       // If we get a session update after init, we're no longer loading
       if (initComplete) {
         setIsLoading(false);
@@ -158,16 +169,75 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
   }, [initComplete]);
 
   const signOut = useCallback(async () => {
+    jwtCacheRef.current = null;
     await authClient.signOut();
   }, []);
 
   // Compute auth state
-  const isAuthenticated = !!session?.session && !!extractAccessToken(session);
+  const isAuthenticated = !!session?.session && !!extractSessionToken(session);
 
   // Log auth state for debugging
   useEffect(() => {
     console.log("[Auth] State updated - isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
   }, [isAuthenticated, isLoading]);
+
+  // Function to exchange session token for a Convex JWT via custom endpoint
+  const exchangeTokenForJWT = useCallback(async (sessionToken: string, forceRefresh: boolean = false): Promise<string | null> => {
+    if (!CONVEX_SITE_URL) {
+      console.error("[Auth] CONVEX_SITE_URL not set, cannot exchange token");
+      return null;
+    }
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = jwtCacheRef.current;
+      if (cached && cached.sessionToken === sessionToken && cached.expiresAt > Date.now() + 60_000) {
+        console.log("[Auth] Using cached JWT");
+        return cached.jwt;
+      }
+    }
+
+    console.log("[Auth] Exchanging session token for Convex JWT...");
+
+    try {
+      const url = `${CONVEX_SITE_URL}/api/auth/convex-token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ sessionToken }),
+      });
+
+      console.log("[Auth] convex-token response status:", response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("[Auth] convex-token response keys:", Object.keys(data));
+
+        if (data?.token) {
+          console.log("[Auth] Got Convex JWT successfully");
+          // Cache for 4 minutes (JWT typically valid for 5)
+          jwtCacheRef.current = {
+            jwt: data.token,
+            expiresAt: Date.now() + 4 * 60 * 1000,
+            sessionToken,
+          };
+          return data.token;
+        }
+
+        if (data?.error === "jwt_unavailable" && data?.sessionValid) {
+          console.warn("[Auth] Session is valid but JWT not available - crossDomain plugin may not support token endpoint");
+        }
+      }
+    } catch (error) {
+      console.warn("[Auth] Token exchange error:", error);
+    }
+
+    console.warn("[Auth] Could not get JWT, returning null");
+    return null;
+  }, []);
 
   // Create the useAuth hook for ConvexProviderWithAuth
   // This MUST be memoized to prevent infinite re-renders
@@ -178,24 +248,33 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
         async ({ forceRefreshToken }: { forceRefreshToken: boolean }): Promise<string | null> => {
           console.log("[Auth] fetchAccessToken called, forceRefresh:", forceRefreshToken);
 
-          // Try to get token from SecureStore first
+          if (forceRefreshToken) {
+            // Clear cache on force refresh
+            jwtCacheRef.current = null;
+          }
+
+          // Get the session token
           const storedToken = await authClient.getToken();
-          if (storedToken) {
-            console.log("[Auth] fetchAccessToken: FOUND token from SecureStore");
-            return storedToken;
+          const sessionToken = storedToken || extractSessionToken(session);
+
+          if (!sessionToken) {
+            console.log("[Auth] fetchAccessToken: MISSING - no session token available");
+            return null;
           }
 
-          // Fallback: extract from session state
-          const sessionToken = extractAccessToken(session);
-          if (sessionToken) {
-            console.log("[Auth] fetchAccessToken: FOUND token from session state");
-            return sessionToken;
+          // Try to exchange for a proper JWT
+          const jwt = await exchangeTokenForJWT(sessionToken, forceRefreshToken);
+          if (jwt) {
+            console.log("[Auth] fetchAccessToken: Returning Convex JWT");
+            return jwt;
           }
 
-          console.log("[Auth] fetchAccessToken: MISSING - no token available");
-          return null;
+          // Fallback to raw session token
+          // This won't work with getAuthUser but at least Convex knows we have a token
+          console.log("[Auth] fetchAccessToken: Falling back to session token (getAuthUser may not work)");
+          return sessionToken;
         },
-        [session]
+        [session, exchangeTokenForJWT]
       );
 
       return {
@@ -204,7 +283,7 @@ export function ConvexNativeAuthProvider({ client, children }: ConvexAuthProvide
         fetchAccessToken,
       };
     };
-  }, [isLoading, isAuthenticated, session]);
+  }, [isLoading, isAuthenticated, session, exchangeTokenForJWT]);
 
   // Build user object for context
   const user: User | null = session?.user

@@ -9,6 +9,39 @@ import { INTERESTS, COUNTRIES } from "@/lib/data";
 import { AIRPORTS } from "@/lib/airports";
 import * as Haptics from "expo-haptics";
 import { useConvexAuth } from "@/lib/auth-components";
+import { authClient } from "@/lib/auth-client";
+
+const CONVEX_SITE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
+
+// Helper to create a traveler via the HTTP endpoint (session-based auth fallback)
+async function createTravelerViaHttp(travelerData: Record<string, any>): Promise<string> {
+  if (!CONVEX_SITE_URL) {
+    throw new Error("CONVEX_SITE_URL not configured");
+  }
+  // Get the current session token
+  const session = await authClient.getSession();
+  const token = session?.data?.session?.token;
+  if (!token) {
+    throw new Error("No session token available");
+  }
+
+  const response = await fetch(`${CONVEX_SITE_URL}/api/travelers/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(travelerData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(errorData.error || `HTTP ${response.status}`);
+  }
+
+  const result = await response.json();
+  return result.travelerId;
+}
 
 type OnboardingStep = "welcome" | "traveler-choice" | "my-profile" | "add-travelers" | "preferences";
 type TravelerChoice = "just-me" | "me-others" | "skip-profile";
@@ -197,56 +230,59 @@ export default function Onboarding() {
 
     setSaving(true);
 
-    const maxRetries = 5;
-    const retryDelay = 2000;
+    const travelerData = {
+      firstName: myProfile.firstName.trim(),
+      lastName: myProfile.lastName.trim(),
+      dateOfBirth: myProfile.dateOfBirth,
+      gender: myProfile.gender as "male" | "female",
+      passportNumber: myProfile.passportNumber.trim(),
+      passportIssuingCountry: myProfile.passportIssuingCountry,
+      passportExpiryDate: myProfile.passportExpiryDate,
+      email: myProfile.email.trim() || undefined,
+      phoneCountryCode: myProfile.phoneCountryCode.trim() || undefined,
+      phoneNumber: myProfile.phoneNumber.trim() || undefined,
+      isDefault: true,
+    };
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        await createTraveler({
-          firstName: myProfile.firstName.trim(),
-          lastName: myProfile.lastName.trim(),
-          dateOfBirth: myProfile.dateOfBirth,
-          gender: myProfile.gender as "male" | "female",
-          passportNumber: myProfile.passportNumber.trim(),
-          passportIssuingCountry: myProfile.passportIssuingCountry,
-          passportExpiryDate: myProfile.passportExpiryDate,
-          email: myProfile.email.trim() || undefined,
-          phoneCountryCode: myProfile.phoneCountryCode.trim() || undefined,
-          phoneNumber: myProfile.phoneNumber.trim() || undefined,
-          isDefault: true,
-        });
+    // Try the normal Convex mutation first
+    let success = false;
+    try {
+      await createTraveler(travelerData);
+      success = true;
+    } catch (err: any) {
+      const isAuthError =
+        err?.message?.includes("Authentication required") ||
+        err?.message?.includes("Authentication not ready") ||
+        err?.data?.includes("Authentication required") ||
+        err?.data?.includes("Authentication not ready");
 
-        hapticFeedback();
-        
-        if (travelerChoice === "me-others") {
-          setStep("add-travelers");
-        } else {
-          setStep("preferences");
+      if (isAuthError) {
+        // Fallback: use HTTP endpoint with session-based auth
+        console.log("[Onboarding] Convex auth not ready, falling back to HTTP endpoint...");
+        try {
+          await createTravelerViaHttp(travelerData);
+          success = true;
+        } catch (httpErr: any) {
+          console.error("[Onboarding] HTTP fallback also failed:", httpErr);
         }
-        setSaving(false);
-        return; // Success — exit the loop
-      } catch (err: any) {
-        const isAuthError =
-          err?.message?.includes("Authentication required") ||
-          err?.message?.includes("Authentication not ready") ||
-          err?.data?.includes("Authentication required") ||
-          err?.data?.includes("Authentication not ready");
-
-        if (isAuthError && attempt < maxRetries) {
-          console.log(`[Onboarding] Auth not ready for add traveler, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
-          await new Promise((r) => setTimeout(r, retryDelay));
-          continue;
-        }
-
+      } else {
         console.error("Error adding traveler:", err);
-        const msg = isAuthError
-          ? "Your session is still loading. Please wait a few seconds and try again."
-          : "Failed to add traveler. Please try again.";
-        if (Platform.OS !== "web") {
-          Alert.alert("Error", msg);
-        } else {
-          setErrorMessage(msg);
-        }
+      }
+    }
+
+    if (success) {
+      hapticFeedback();
+      if (travelerChoice === "me-others") {
+        setStep("add-travelers");
+      } else {
+        setStep("preferences");
+      }
+    } else {
+      const msg = "Failed to save profile. Please try again.";
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", msg);
+      } else {
+        setErrorMessage(msg);
       }
     }
     setSaving(false);
@@ -266,53 +302,57 @@ export default function Onboarding() {
 
     setSaving(true);
 
-    const maxRetries = 5;
-    const retryDelay = 2000;
+    const travelerData = {
+      firstName: travelerForm.firstName.trim(),
+      lastName: travelerForm.lastName.trim(),
+      dateOfBirth: travelerForm.dateOfBirth,
+      gender: travelerForm.gender as "male" | "female",
+      passportNumber: travelerForm.passportNumber.trim(),
+      passportIssuingCountry: travelerForm.passportIssuingCountry,
+      passportExpiryDate: travelerForm.passportExpiryDate,
+      email: travelerForm.email.trim() || undefined,
+      phoneCountryCode: travelerForm.phoneCountryCode.trim() || undefined,
+      phoneNumber: travelerForm.phoneNumber.trim() || undefined,
+      isDefault: false,
+    };
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        await createTraveler({
-          firstName: travelerForm.firstName.trim(),
-          lastName: travelerForm.lastName.trim(),
-          dateOfBirth: travelerForm.dateOfBirth,
-          gender: travelerForm.gender as "male" | "female",
-          passportNumber: travelerForm.passportNumber.trim(),
-          passportIssuingCountry: travelerForm.passportIssuingCountry,
-          passportExpiryDate: travelerForm.passportExpiryDate,
-          email: travelerForm.email.trim() || undefined,
-          phoneCountryCode: travelerForm.phoneCountryCode.trim() || undefined,
-          phoneNumber: travelerForm.phoneNumber.trim() || undefined,
-          isDefault: false,
-        });
+    // Try Convex mutation first
+    let success = false;
+    try {
+      await createTraveler(travelerData);
+      success = true;
+    } catch (err: any) {
+      const isAuthError =
+        err?.message?.includes("Authentication required") ||
+        err?.message?.includes("Authentication not ready") ||
+        err?.data?.includes?.("Authentication required") ||
+        err?.data?.includes?.("Authentication not ready");
 
-        hapticFeedback();
-        setAdditionalTravelers([...additionalTravelers, { ...travelerForm }]);
-        setTravelerForm({ ...emptyForm });
-        setShowTravelerModal(false);
-        setSaving(false);
-        return;
-      } catch (err: any) {
-        const isAuthError =
-          err?.message?.includes("Authentication required") ||
-          err?.message?.includes("Authentication not ready") ||
-          err?.data?.includes?.("Authentication required") ||
-          err?.data?.includes?.("Authentication not ready");
-
-        if (isAuthError && attempt < maxRetries) {
-          console.log(`[Onboarding] Auth not ready for add traveler, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
-          await new Promise((r) => setTimeout(r, retryDelay));
-          continue;
+      if (isAuthError) {
+        // Fallback: use HTTP endpoint
+        console.log("[Onboarding] Convex auth not ready for add traveler, falling back to HTTP...");
+        try {
+          await createTravelerViaHttp(travelerData);
+          success = true;
+        } catch (httpErr: any) {
+          console.error("[Onboarding] HTTP fallback also failed:", httpErr);
         }
-
+      } else {
         console.error("Error adding traveler:", err);
-        const msg = isAuthError
-          ? "Your session is still loading. Please wait a few seconds and try again."
-          : "Failed to add traveler. Please try again.";
-        if (Platform.OS !== "web") {
-          Alert.alert("Error", msg);
-        } else {
-          setErrorMessage(msg);
-        }
+      }
+    }
+
+    if (success) {
+      hapticFeedback();
+      setAdditionalTravelers([...additionalTravelers, { ...travelerForm }]);
+      setTravelerForm({ ...emptyForm });
+      setShowTravelerModal(false);
+    } else {
+      const msg = "Failed to add traveler. Please try again.";
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", msg);
+      } else {
+        setErrorMessage(msg);
       }
     }
     setSaving(false);
