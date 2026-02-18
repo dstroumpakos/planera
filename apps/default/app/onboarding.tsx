@@ -18,12 +18,23 @@ async function createTravelerViaHttp(travelerData: Record<string, any>): Promise
   if (!CONVEX_SITE_URL) {
     throw new Error("CONVEX_SITE_URL not configured");
   }
+
   // Get the current session token
-  const session = await authClient.getSession();
-  const token = session?.data?.session?.token;
-  if (!token) {
-    throw new Error("No session token available");
+  let token: string | null = null;
+  try {
+    const session = await authClient.getSession();
+    token = session?.data?.session?.token ?? null;
+    console.log("[HTTP Fallback] Got session token:", token ? "YES" : "NO");
+  } catch (e) {
+    console.error("[HTTP Fallback] Failed to get session:", e);
+    throw new Error("Could not retrieve session for HTTP fallback");
   }
+
+  if (!token) {
+    throw new Error("No session token available for HTTP fallback");
+  }
+
+  console.log("[HTTP Fallback] Calling /api/travelers/create...");
 
   const response = await fetch(`${CONVEX_SITE_URL}/api/travelers/create`, {
     method: "POST",
@@ -34,13 +45,28 @@ async function createTravelerViaHttp(travelerData: Record<string, any>): Promise
     body: JSON.stringify(travelerData),
   });
 
+  console.log("[HTTP Fallback] Response status:", response.status);
+
+  const responseText = await response.text();
+  console.log("[HTTP Fallback] Response body:", responseText.substring(0, 500));
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(errorData.error || `HTTP ${response.status}`);
+    let errorMsg = `HTTP ${response.status}`;
+    try {
+      const errorData = JSON.parse(responseText);
+      errorMsg = errorData.error || errorMsg;
+    } catch {
+      // use status code
+    }
+    throw new Error(errorMsg);
   }
 
-  const result = await response.json();
-  return result.travelerId;
+  try {
+    const result = JSON.parse(responseText);
+    return result.travelerId;
+  } catch {
+    throw new Error("Invalid response from server");
+  }
 }
 
 type OnboardingStep = "welcome" | "traveler-choice" | "my-profile" | "add-travelers" | "preferences";
