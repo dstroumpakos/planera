@@ -3,6 +3,65 @@ import { authMutation, authQuery } from "./functions";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { authComponent } from "./auth";
 
+// Shared logic for creating a traveler
+async function createTravelerForUser(
+  ctx: any,
+  userId: string,
+  args: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: "male" | "female";
+    passportNumber: string;
+    passportIssuingCountry: string;
+    passportExpiryDate: string;
+    email?: string;
+    phoneCountryCode?: string;
+    phoneNumber?: string;
+    isDefault?: boolean;
+  }
+) {
+  // If this is marked as default, unmark any existing defaults
+  if (args.isDefault) {
+    const existingTravelers = await ctx.db
+      .query("travelers")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .collect();
+
+    for (const traveler of existingTravelers) {
+      if (traveler.isDefault) {
+        await ctx.db.patch(traveler._id, { isDefault: false });
+      }
+    }
+  }
+
+  // Check if this is the first traveler - make it default
+  const existingCount = await ctx.db
+    .query("travelers")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .collect();
+
+  const isFirstTraveler = existingCount.length === 0;
+
+  const id = await ctx.db.insert("travelers", {
+    userId,
+    firstName: args.firstName,
+    lastName: args.lastName,
+    dateOfBirth: args.dateOfBirth,
+    gender: args.gender,
+    passportNumber: args.passportNumber,
+    passportIssuingCountry: args.passportIssuingCountry,
+    passportExpiryDate: args.passportExpiryDate,
+    email: args.email,
+    phoneCountryCode: args.phoneCountryCode,
+    phoneNumber: args.phoneNumber,
+    isDefault: args.isDefault || isFirstTraveler,
+    createdAt: Date.now(),
+  });
+
+  return id;
+}
+
 // List all travelers for the current user
 // Uses a regular query (not authQuery) to gracefully handle the auth token
 // propagation race condition — returns [] when not yet authenticated.
@@ -78,7 +137,39 @@ export const get = authQuery({
   },
 });
 
-// Internal mutation: Create a traveler for a known userId (called from trusted server-side code only)
+// Create a new traveler profile (public — tries auth, throws AUTH_NOT_READY if unavailable)
+export const create = mutation({
+  args: {
+    firstName: v.string(),
+    lastName: v.string(),
+    dateOfBirth: v.string(),
+    gender: v.union(v.literal("male"), v.literal("female")),
+    passportNumber: v.string(),
+    passportIssuingCountry: v.string(),
+    passportExpiryDate: v.string(),
+    email: v.optional(v.string()),
+    phoneCountryCode: v.optional(v.string()),
+    phoneNumber: v.optional(v.string()),
+    isDefault: v.optional(v.boolean()),
+  },
+  returns: v.id("travelers"),
+  handler: async (ctx, args) => {
+    let user;
+    try {
+      user = await authComponent.getAuthUser(ctx);
+    } catch {
+      user = null;
+    }
+    if (!user) {
+      // Signal to the client to use the HTTP fallback
+      throw new Error("AUTH_NOT_READY");
+    }
+
+    return await createTravelerForUser(ctx, user._id, args);
+  },
+});
+
+// Internal mutation for HTTP endpoint fallback — no auth needed, userId passed directly
 export const createForUser = internalMutation({
   args: {
     userId: v.string(),
@@ -96,117 +187,8 @@ export const createForUser = internalMutation({
   },
   returns: v.id("travelers"),
   handler: async (ctx, args) => {
-    const { userId, ...travelerData } = args;
-
-    // If this is marked as default, unmark any existing defaults
-    if (travelerData.isDefault) {
-      const existingTravelers = await ctx.db
-        .query("travelers")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-      
-      for (const traveler of existingTravelers) {
-        if (traveler.isDefault) {
-          await ctx.db.patch(traveler._id, { isDefault: false });
-        }
-      }
-    }
-
-    // Check if this is the first traveler - make it default
-    const existingCount = await ctx.db
-      .query("travelers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    
-    const isFirstTraveler = existingCount.length === 0;
-
-    const id = await ctx.db.insert("travelers", {
-      userId,
-      firstName: travelerData.firstName,
-      lastName: travelerData.lastName,
-      dateOfBirth: travelerData.dateOfBirth,
-      gender: travelerData.gender,
-      passportNumber: travelerData.passportNumber,
-      passportIssuingCountry: travelerData.passportIssuingCountry,
-      passportExpiryDate: travelerData.passportExpiryDate,
-      email: travelerData.email,
-      phoneCountryCode: travelerData.phoneCountryCode,
-      phoneNumber: travelerData.phoneNumber,
-      isDefault: travelerData.isDefault || isFirstTraveler,
-      createdAt: Date.now(),
-    });
-
-    return id;
-  },
-});
-
-// Create a new traveler profile
-export const create = mutation({
-  args: {
-    firstName: v.string(),
-    lastName: v.string(),
-    dateOfBirth: v.string(),
-    gender: v.union(v.literal("male"), v.literal("female")),
-    passportNumber: v.string(),
-    passportIssuingCountry: v.string(),
-    passportExpiryDate: v.string(),
-    email: v.optional(v.string()),
-    phoneCountryCode: v.optional(v.string()),
-    phoneNumber: v.optional(v.string()),
-    isDefault: v.optional(v.boolean()),
-  },
-  returns: v.id("travelers"),
-  handler: async (ctx, args) => {
-    // Manually resolve user — handles token propagation delay
-    let user;
-    try {
-      user = await authComponent.getAuthUser(ctx);
-    } catch {
-      user = null;
-    }
-    if (!user) {
-      throw new Error("Authentication not ready yet. Please try again in a moment.");
-    }
-
-    // If this is marked as default, unmark any existing defaults
-    if (args.isDefault) {
-      const existingTravelers = await ctx.db
-        .query("travelers")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
-        .collect();
-      
-      for (const traveler of existingTravelers) {
-        if (traveler.isDefault) {
-          await ctx.db.patch(traveler._id, { isDefault: false });
-        }
-      }
-    }
-
-    // Check if this is the first traveler - make it default
-    const existingCount = await ctx.db
-      .query("travelers")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-    
-    const isFirstTraveler = existingCount.length === 0;
-
-    const id = await ctx.db.insert("travelers", {
-      userId: user._id,
-      firstName: args.firstName,
-      lastName: args.lastName,
-      dateOfBirth: args.dateOfBirth,
-      gender: args.gender,
-      passportNumber: args.passportNumber,
-      passportIssuingCountry: args.passportIssuingCountry,
-      passportExpiryDate: args.passportExpiryDate,
-      email: args.email,
-      phoneCountryCode: args.phoneCountryCode,
-      phoneNumber: args.phoneNumber,
-      isDefault: args.isDefault || isFirstTraveler,
-      createdAt: Date.now(),
-    });
-
-    return id;
+    const { userId, ...travelerArgs } = args;
+    return await createTravelerForUser(ctx, userId, travelerArgs);
   },
 });
 
@@ -239,7 +221,7 @@ export const update = authMutation({
         .query("travelers")
         .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
         .collect();
-      
+
       for (const t of existingTravelers) {
         if (t._id !== args.id && t.isDefault) {
           await ctx.db.patch(t._id, { isDefault: false });
@@ -287,7 +269,7 @@ export const isBookingReady = authQuery({
     }
 
     const missingFields: string[] = [];
-    
+
     if (!traveler.firstName) missingFields.push("First Name");
     if (!traveler.lastName) missingFields.push("Last Name");
     if (!traveler.dateOfBirth) missingFields.push("Date of Birth");
@@ -314,7 +296,7 @@ export const isBookingReady = authQuery({
 
 // Get travelers with computed ages for a specific departure date
 export const getWithAges = authQuery({
-  args: { 
+  args: {
     travelerIds: v.array(v.id("travelers")),
     departureDate: v.string(), // YYYY-MM-DD
   },
@@ -333,7 +315,11 @@ export const getWithAges = authQuery({
       phoneNumber: v.optional(v.string()),
       // Computed fields
       age: v.number(),
-      passengerType: v.union(v.literal("adult"), v.literal("child"), v.literal("infant")),
+      passengerType: v.union(
+        v.literal("adult"),
+        v.literal("child"),
+        v.literal("infant")
+      ),
     })
   ),
   handler: async (ctx, args) => {
@@ -348,7 +334,10 @@ export const getWithAges = authQuery({
       const birthDate = new Date(traveler.dateOfBirth);
       let age = departureDate.getFullYear() - birthDate.getFullYear();
       const monthDiff = departureDate.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && departureDate.getDate() < birthDate.getDate())) {
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && departureDate.getDate() < birthDate.getDate())
+      ) {
         age--;
       }
 

@@ -276,11 +276,11 @@ export default function Onboarding() {
       await createTraveler(travelerData);
       success = true;
     } catch (err: any) {
+      const errMsg = err?.message || err?.data || "";
       const isAuthError =
-        err?.message?.includes("Authentication required") ||
-        err?.message?.includes("Authentication not ready") ||
-        err?.data?.includes("Authentication required") ||
-        err?.data?.includes("Authentication not ready");
+        errMsg.includes("AUTH_NOT_READY") ||
+        errMsg.includes("Authentication required") ||
+        errMsg.includes("Authentication not ready");
 
       if (isAuthError) {
         // Fallback: use HTTP endpoint with session-based auth
@@ -348,11 +348,11 @@ export default function Onboarding() {
       await createTraveler(travelerData);
       success = true;
     } catch (err: any) {
+      const errMsg = err?.message || err?.data || "";
       const isAuthError =
-        err?.message?.includes("Authentication required") ||
-        err?.message?.includes("Authentication not ready") ||
-        err?.data?.includes?.("Authentication required") ||
-        err?.data?.includes?.("Authentication not ready");
+        errMsg.includes("AUTH_NOT_READY") ||
+        errMsg.includes("Authentication required") ||
+        errMsg.includes("Authentication not ready");
 
       if (isAuthError) {
         // Fallback: use HTTP endpoint
