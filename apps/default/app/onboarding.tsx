@@ -403,8 +403,8 @@ export default function Onboarding() {
 
   const handleFinishOnboarding = async () => {
     setSaving(true);
-    const maxRetries = 5;
-    const retryDelay = 3000;
+    const maxRetries = 3;
+    const retryDelay = 2000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -424,11 +424,11 @@ export default function Onboarding() {
         setSaving(false);
         return;
       } catch (err: any) {
+        const errMsg = err?.message || err?.data || "";
         const isAuthError =
-          err?.message?.includes("Authentication required") ||
-          err?.message?.includes("Authentication not ready") ||
-          err?.data?.includes("Authentication required") ||
-          err?.data?.includes("Authentication not ready");
+          errMsg.includes("AUTH_NOT_READY") ||
+          errMsg.includes("Authentication required") ||
+          errMsg.includes("Authentication not ready");
 
         if (isAuthError && attempt < maxRetries) {
           console.log(`[Onboarding] Auth not ready for finish, retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
@@ -436,10 +436,18 @@ export default function Onboarding() {
           continue;
         }
 
+        if (isAuthError && attempt === maxRetries) {
+          // Auth never propagated (common for anonymous/guest users).
+          // Navigate home anyway — preferences can be set later.
+          console.log("[Onboarding] Auth retries exhausted. Navigating home without saving preferences.");
+          hapticFeedback();
+          router.replace("/(tabs)");
+          setSaving(false);
+          return;
+        }
+
         console.error("Error completing onboarding:", err);
-        const msg = isAuthError
-          ? "Your session is still loading. Please wait a few seconds and try again."
-          : "Failed to save preferences. Please try again.";
+        const msg = "Failed to save preferences. Please try again.";
         if (Platform.OS !== "web") {
           Alert.alert("Error", msg);
         } else {

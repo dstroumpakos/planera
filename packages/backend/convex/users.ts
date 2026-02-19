@@ -325,9 +325,14 @@ export const completeOnboarding = mutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    const user = await authComponent.getAuthUser(ctx);
+    let user;
+    try {
+      user = await authComponent.getAuthUser(ctx);
+    } catch {
+      user = null;
+    }
     if (!user) {
-      throw new Error("Authentication required");
+      throw new Error("AUTH_NOT_READY");
     }
     const settings = await ctx.db
         .query("userSettings")
@@ -361,9 +366,14 @@ export const saveTravelPreferences = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
+    let user;
+    try {
+      user = await authComponent.getAuthUser(ctx);
+    } catch {
+      user = null;
+    }
     if (!user) {
-      throw new Error("Authentication required");
+      throw new Error("AUTH_NOT_READY");
     }
     const settings = await ctx.db
         .query("userSettings")
